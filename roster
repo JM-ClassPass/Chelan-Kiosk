@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classroom Roster & Activity Logs - Chelan Medical Sciences</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .chelan-primary-green { background-color: #0A4D2E; }
+        .chelan-green-hover:hover { background-color: #063821; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col justify-between">
+
+    <!-- Header Navigation -->
+    <header class="chelan-primary-green text-white shadow-md py-3 px-6 flex justify-between items-center border-b-4 border-emerald-950">
+        <div class="flex items-center gap-4">
+            <img src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" 
+                 alt="Chelan Logo" class="h-12 w-auto object-contain drop-shadow-md">
+            <div class="border-l border-emerald-800/80 pl-4">
+                <h1 class="text-lg font-black tracking-wide uppercase leading-tight">Student Roster & Logs</h1>
+                <p class="text-xs text-emerald-200/90 font-medium">Medical Sciences Classroom Database</p>
+            </div>
+        </div>
+
+        <a href="teacher.html" class="bg-emerald-900 hover:bg-emerald-950 text-emerald-100 text-xs font-bold px-4 py-2 rounded-xl border border-emerald-700 flex items-center gap-1.5 transition">
+            &larr; Return to Dashboard
+        </a>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl w-full mx-auto p-6 space-y-6">
+
+        <!-- Roster Table Card -->
+        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-lg font-black text-slate-800 flex items-center gap-2">
+                        <span>📋</span> Classroom Roster
+                    </h2>
+                    <p class="text-xs text-slate-500">Manage all registered students in the classroom database.</p>
+                </div>
+                <span id="roster-count-tag" class="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">0 Students</span>
+            </div>
+
+            <div class="overflow-x-auto border border-slate-200 rounded-2xl max-h-96 overflow-y-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead class="sticky top-0 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase">
+                        <tr>
+                            <th class="py-2.5 px-4">Student ID</th>
+                            <th class="py-2.5 px-4">First Name</th>
+                            <th class="py-2.5 px-4">Last Name</th>
+                            <th class="py-2.5 px-4 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="roster-table-body" class="text-xs divide-y divide-slate-100"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- System Activity Logs Card -->
+        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-lg font-black text-slate-800 flex items-center gap-2">
+                        <span>📜</span> Activity Log History
+                    </h2>
+                    <p class="text-xs text-slate-500">Audit trail for scans, pass checks, and manual entries.</p>
+                </div>
+                <button onclick="clearLogs()" class="text-xs font-bold text-red-600 border border-red-200 px-3 py-1.5 rounded-xl hover:bg-red-50">
+                    Clear Log History
+                </button>
+            </div>
+
+            <div class="overflow-x-auto border border-slate-200 rounded-2xl max-h-96 overflow-y-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead class="sticky top-0 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase">
+                        <tr>
+                            <th class="py-2.5 px-4">Timestamp</th>
+                            <th class="py-2.5 px-4">Student Name</th>
+                            <th class="py-2.5 px-4">Student ID</th>
+                            <th class="py-2.5 px-4">Action Taken</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logs-table-body" class="text-xs font-mono divide-y divide-slate-100"></tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="bg-slate-900 text-slate-400 py-3 text-center text-xs border-t border-slate-800">
+        Chelan High School Medical Sciences &bull; Database Portal
+    </footer>
+
+    <!-- Firebase Scripts -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, remove, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDOqjLMzMydaR31WWUA35sr1FrNLfHPxuI",
+            authDomain: "chelan-classroom-pass.firebaseapp.com",
+            databaseURL: "https://chelan-classroom-pass-default-rtdb.firebaseio.com",
+            projectId: "chelan-classroom-pass",
+            storageBucket: "chelan-classroom-pass.appspot.com",
+            messagingSenderId: "645480807479",
+            appId: "1:645480807479:web:d280d4ef38e8754a9953b2"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        let roster = {};
+        let logs = {};
+
+        onValue(ref(db, 'classroom_roster'), (snapshot) => {
+            roster = snapshot.val() || {};
+            renderRoster();
+        });
+
+        onValue(ref(db, 'system_logs'), (snapshot) => {
+            logs = snapshot.val() || {};
+            renderLogs();
+        });
+
+        function renderRoster() {
+            const tbody = document.getElementById('roster-table-body');
+            const tag = document.getElementById('roster-count-tag');
+            const keys = Object.keys(roster);
+
+            tag.textContent = `${keys.length} Students`;
+
+            if (keys.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="py-4 text-center text-slate-400 italic">No students on roster.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = keys.map(id => {
+                const s = roster[id];
+                return `
+                    <tr class="hover:bg-slate-50">
+                        <td class="py-2.5 px-4 font-mono font-bold text-slate-700">${id}</td>
+                        <td class="py-2.5 px-4 font-bold text-slate-800">${s.firstName}</td>
+                        <td class="py-2.5 px-4 font-bold text-slate-800">${s.lastName}</td>
+                        <td class="py-2.5 px-4 text-right">
+                            <button onclick="deleteStudent('${id}')" class="text-red-600 hover:text-red-800 font-bold text-xs">Delete</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderLogs() {
+            const tbody = document.getElementById('logs-table-body');
+            const logKeys = Object.keys(logs).reverse();
+
+            if (logKeys.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="py-4 text-center text-slate-400 italic">No log entries found.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = logKeys.map(key => {
+                const l = logs[key];
+                const dateStr = l.timestamp ? new Date(l.timestamp).toLocaleTimeString() : '--';
+                return `
+                    <tr class="hover:bg-slate-50">
+                        <td class="py-2 px-4 text-slate-400">${dateStr}</td>
+                        <td class="py-2 px-4 font-bold text-slate-800">${l.name || 'Unknown'}</td>
+                        <td class="py-2 px-4 text-slate-500">${l.studentId || '--'}</td>
+                        <td class="py-2 px-4 font-bold text-[#0A4D2E]">${l.action || '--'}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        window.deleteStudent = async function(id) {
+            if (confirm(`Remove student ID ${id} from roster?`)) {
+                await remove(ref(db, `classroom_roster/${id}`));
+            }
+        };
+
+        window.clearLogs = async function() {
+            if (confirm("Clear system log history?")) {
+                await remove(ref(db, 'system_logs'));
+            }
+        };
+    </script>
+</body>
+</html>
+                                   
