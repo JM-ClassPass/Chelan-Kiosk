@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teacher Dashboard - Chelan Medical Sciences</title>
+    <title>Teacher Control Panel - Chelan Medical Sciences</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .chelan-primary-green { background-color: #0A4D2E; }
@@ -35,6 +35,344 @@
     </div>
 
     <!-- Header Navigation -->
+    <header class="chelan-primary-green text-white shadow-md py-3 px-6 flex justify-between items-center border-b-4 border-emerald-950">
+        <div class="flex items-center gap-4">
+            <img src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" 
+                 alt="Chelan High School Logo" 
+                 class="h-12 w-auto object-contain drop-shadow-md">
+            <div class="border-l border-emerald-800/80 pl-4">
+                <h1 class="text-lg font-black tracking-wide uppercase leading-tight">Teacher Control Panel</h1>
+                <p class="text-xs text-emerald-200/90 font-medium">Medical Sciences Classroom</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <select id="period-selector" onchange="changeClassPeriod(this.value)" class="bg-emerald-900 text-white text-xs font-bold px-3 py-2 rounded-xl border border-emerald-700 focus:outline-none">
+                <option value="p1">Period 1 - Med Sci</option>
+                <option value="p2">Period 2 - Med Sci</option>
+                <option value="p3">Period 3 - Med Sci</option>
+                <option value="p4">Period 4 - Med Sci</option>
+            </select>
+            <div class="text-right border-l border-emerald-800/80 pl-4">
+                <span id="live-clock" class="text-lg font-mono font-bold tracking-wider block leading-tight">--:-- --</span>
+                <p class="text-[10px] text-emerald-300 uppercase font-semibold tracking-widest">Active Session</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl w-full mx-auto p-6 space-y-6">
+
+        <!-- Navigation Tabs -->
+        <div class="flex border-b border-slate-200 gap-2">
+            <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="py-2.5 px-5 font-bold text-xs rounded-t-2xl bg-white border-t border-x border-slate-200 text-[#0A4D2E]">
+                📊 Active Kiosk Overview
+            </button>
+            <button onclick="switchTab('roster')" id="tab-btn-roster" class="py-2.5 px-5 font-bold text-xs rounded-t-2xl text-slate-500 hover:text-slate-800">
+                📋 Student Roster Management
+            </button>
+            <button onclick="switchTab('logs')" id="tab-btn-logs" class="py-2.5 px-5 font-bold text-xs rounded-t-2xl text-slate-500 hover:text-slate-800">
+                📜 Activity Logs
+            </button>
+        </div>
+
+        <!-- TAB 1: DASHBOARD OVERVIEW -->
+        <div id="tab-content-dashboard" class="space-y-6">
+            
+            <!-- Metrics Overview -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-bold text-slate-500 uppercase">Phones in Rack</p>
+                        <h3 id="dash-phone-count" class="text-3xl font-black text-emerald-800">0</h3>
+                    </div>
+                    <div class="text-4xl">📱</div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-bold text-slate-500 uppercase">Bathroom Pass</p>
+                        <h3 id="dash-pass-count" class="text-3xl font-black text-red-700">0/1</h3>
+                    </div>
+                    <div class="text-4xl">🚻</div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-bold text-slate-500 uppercase">Hall Passes Out</p>
+                        <h3 id="dash-hall-count" class="text-3xl font-black text-indigo-700">0</h3>
+                    </div>
+                    <div class="text-4xl">🎟️</div>
+                </div>
+            </div>
+
+            <!-- Pending Manual Requests Section -->
+            <div id="manual-requests-card" class="bg-amber-50 p-6 rounded-3xl border border-amber-200 shadow-sm hidden">
+                <h2 class="text-lg font-black text-amber-900 flex items-center gap-2 mb-3">
+                    <span>⚠️</span> Pending Manual Entry Requests
+                </h2>
+                <div id="manual-requests-list" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+            </div>
+
+            <!-- Active Class Lists -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                <!-- Active Phones Card -->
+                <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-lg font-black text-slate-800 flex items-center gap-2">
+                            <span>📱</span> Active Phones in Rack
+                        </h2>
+                        <button onclick="clearAllPhones()" class="text-[10px] font-bold text-red-600 border border-red-200 px-2.5 py-1 rounded-lg hover:bg-red-50">
+                            Clear Rack
+                        </button>
+                    </div>
+                    <div id="active-phones-list" class="space-y-2 max-h-80 overflow-y-auto pr-1">
+                        <p class="text-xs text-slate-400 italic">No phones currently checked in.</p>
+                    </div>
+                </div>
+
+                <!-- Active Passes Card -->
+                <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-lg font-black text-slate-800 flex items-center gap-2">
+                            <span>🚻</span> Students Currently Out
+                        </h2>
+                        <button onclick="clearAllPasses()" class="text-[10px] font-bold text-red-600 border border-red-200 px-2.5 py-1 rounded-lg hover:bg-red-50">
+                            Return All Passes
+                        </button>
+                    </div>
+                    <div id="active-passes-list" class="space-y-2 max-h-80 overflow-y-auto pr-1">
+                        <p class="text-xs text-slate-400 italic">No students currently out on passes.</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- TAB 2: ROSTER MANAGEMENT -->
+        <div id="tab-content-roster" class="space-y-6 hidden">
+            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl font-black text-slate-800">Classroom Roster Manager</h2>
+                        <p class="text-xs text-slate-500">Add, edit, or delete students from the active classroom database.</p>
+                    </div>
+                    <button onclick="toggleAddStudentModal()" class="px-5 py-2.5 chelan-primary-green chelan-green-hover text-white text-xs font-bold rounded-xl shadow transition flex items-center justify-center gap-1.5">
+                        <span>➕</span> Add New Student
+                    </button>
+                </div>
+
+                <!-- Add Student Inline Form -->
+                <div id="add-student-container" class="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-3 hidden">
+                    <h3 class="text-xs font-black uppercase text-slate-700">Add New Student Entry</h3>
+                    <form onsubmit="submitNewStudent(event)" class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Student ID / Barcode</label>
+                            <input type="text" id="add-student-id" required placeholder="e.g. 102938" class="w-full px-3 py-2 font-mono text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-[#0A4D2E]">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">First Name</label>
+                            <input type="text" id="add-student-fname" required placeholder="First Name" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-[#0A4D2E]">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Last Name</label>
+                            <input type="text" id="add-student-lname" required placeholder="Last Name" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-[#0A4D2E]">
+                        </div>
+                        <div class="flex items-end gap-2">
+                            <button type="submit" class="w-full py-2 chelan-primary-green chelan-green-hover text-white text-xs font-bold rounded-xl shadow transition">
+                                Save Student
+                            </button>
+                            <button type="button" onclick="toggleAddStudentModal()" class="py-2 px-3 bg-slate-200 text-slate-700 text-xs font-bold rounded-xl">
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Roster Data Table -->
+                <div class="overflow-x-auto border border-slate-200 rounded-2xl">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase">
+                                <th class="py-3 px-4">Student ID</th>
+                                <th class="py-3 px-4">First Name</th>
+                                <th class="py-3 px-4">Last Name</th>
+                                <th class="py-3 px-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="roster-table-body" class="text-xs divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: ACTIVITY LOGS -->
+        <div id="tab-content-logs" class="space-y-6 hidden">
+            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="text-xl font-black text-slate-800">System Activity Logs</h2>
+                        <p class="text-xs text-slate-500">Real-time log of scans, pass requests, and check-outs.</p>
+                    </div>
+                    <button onclick="clearLogs()" class="text-xs font-bold text-slate-500 border border-slate-200 px-3 py-1.5 rounded-xl hover:bg-slate-50">
+                        Clear Log History
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto border border-slate-200 rounded-2xl max-h-96 overflow-y-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase">
+                                <th class="py-3 px-4">Timestamp</th>
+                                <th class="py-3 px-4">Student Name</th>
+                                <th class="py-3 px-4">Student ID</th>
+                                <th class="py-3 px-4">Action Taken</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logs-table-body" class="text-xs font-mono divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="bg-slate-900 text-slate-400 py-3 text-center text-xs border-t border-slate-800">
+        Chelan High School Medical Sciences &bull; Teacher Management Portal
+    </footer>
+
+    <!-- Authorization Check -->
+    <script>
+        const TEACHER_PIN = "486200";
+
+        function checkDeviceAuth() {
+            const isAuth = localStorage.getItem('chelan_teacher_authorized');
+            if (isAuth === 'true') {
+                const lockElem = document.getElementById('device-lock-screen');
+                if (lockElem) lockElem.classList.add('hidden');
+            }
+        }
+
+        function handlePinSubmit(e) {
+            e.preventDefault();
+            const inputPin = document.getElementById('pin-input').value.trim();
+            const errElem = document.getElementById('pin-error');
+
+            if (inputPin === TEACHER_PIN) {
+                localStorage.setItem('chelan_teacher_authorized', 'true');
+                document.getElementById('device-lock-screen').classList.add('hidden');
+            } else {
+                errElem.classList.remove('hidden');
+                document.getElementById('pin-input').value = '';
+            }
+        }
+
+        checkDeviceAuth();
+    </script>
+
+    <!-- Firebase SDK Scripts -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, set, push, remove, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDOqjLMzMydaR31WWUA35sr1FrNLfHPxuI",
+            authDomain: "chelan-classroom-pass.firebaseapp.com",
+            databaseURL: "https://chelan-classroom-pass-default-rtdb.firebaseio.com",
+            projectId: "chelan-classroom-pass",
+            storageBucket: "chelan-classroom-pass.appspot.com",
+            messagingSenderId: "645480807479",
+            appId: "1:645480807479:web:d280d4ef38e8754a9953b2"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        let roster = {};
+        let activePhones = {};
+        let activePasses = {};
+        let activeHallPasses = {};
+        let manualRequests = {};
+        let logs = {};
+
+        // Realtime Listeners
+        onValue(ref(db, 'classroom_roster'), (snapshot) => {
+            roster = snapshot.val() || {};
+            renderRoster();
+        });
+
+        onValue(ref(db, 'active_phones_in_class'), (snapshot) => {
+            activePhones = snapshot.val() || {};
+            renderActivePhones();
+        });
+
+        onValue(ref(db, 'active_bathroom_passes'), (snapshot) => {
+            activePasses = snapshot.val() || {};
+            renderActivePasses();
+        });
+
+        onValue(ref(db, 'active_hall_passes'), (snapshot) => {
+            activeHallPasses = snapshot.val() || {};
+            renderActivePasses();
+        });
+
+        onValue(ref(db, 'manual_requests'), (snapshot) => {
+            manualRequests = snapshot.val() || {};
+            renderManualRequests();
+        });
+
+        onValue(ref(db, 'system_logs'), (snapshot) => {
+            logs = snapshot.val() || {};
+            renderLogs();
+        });
+
+        window.switchTab = function(tabName) {
+            document.getElementById('tab-content-dashboard').classList.add('hidden');
+            document.getElementById('tab-content-roster').classList.add('hidden');
+            document.getElementById('tab-content-logs').classList.add('hidden');
+
+            document.getElementById('tab-btn-dashboard').className = "py-2.5 px-5 font-bold text-xs rounded-t-2xl text-slate-500 hover:text-slate-800";
+            document.getElementById('tab-btn-roster').className = "py-2.5 px-5 font-bold text-xs rounded-t-2xl text-slate-500 hover:text-slate-800";
+            document.getElementById('tab-btn-logs').className = "py-2.5 px-5 font-bold text-xs rounded-t-2xl text-slate-500 hover:text-slate-800";
+
+            document.getElementById(`tab-content-${tabName}`).classList.remove('hidden');
+            document.getElementById(`tab-btn-${tabName}`).className = "py-2.5 px-5 font-bold text-xs rounded-t-2xl bg-white border-t border-x border-slate-200 text-[#0A4D2E]";
+        };
+
+        window.toggleAddStudentModal = function() {
+            document.getElementById('add-student-container').classList.toggle('hidden');
+        };
+
+        window.submitNewStudent = async function(e) {
+            e.preventDefault();
+            const id = document.getElementById('add-student-id').value.trim();
+            const fname = document.getElementById('add-student-fname').value.trim();
+            const lname = document.getElementById('add-student-lname').value.trim();
+
+            if (!id || !fname || !lname) return;
+
+            await set(ref(db, `classroom_roster/${id}`), { firstName: fname, lastName: lname });
+
+            document.getElementById('add-student-id').value = '';
+            document.getElementById('add-student-fname').value = '';
+            document.getElementById('add-student-lname').value = '';
+            document.getElementById('add-student-container').classList.add('hidden');
+        };
+
+        function renderActivePhones() {
+            const container = document.getElementById('active-phones-list');
+            const countElem = document.getElementById('dash-phone-count');
+            const phoneKeys = Object.keys(activePhones);
+            
+            countElem.textContent = phoneKeys.length;
+
+            if (phoneKeys.length === 0) {
+                container.innerHTML = '<p class="text-xs text-slate-400 italic">No phones currently checked in.</p>';
+                return;
+            }
+
+            container.    <!-- Header Navigation -->
     <header class="chelan-primary-green text-white shadow-md py-3 px-6 flex justify-between items-center border-b-4 border-emerald-950">
         <div class="flex items-center gap-4">
             <img src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" 
