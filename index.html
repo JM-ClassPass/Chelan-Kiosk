@@ -11,7 +11,7 @@
 
   <!-- Dark Forest Green Header Bar -->
   <header class="bg-[#0B4F2C] text-white px-6 py-3 shadow-md flex justify-between items-center z-30">
-    <!-- Left: Official Chelan Logo & Title -->
+    <!-- Left: Official Chelan Logo, Title, Subtitle & Version -->
     <div class="flex items-center gap-3">
       <img 
         src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" 
@@ -21,15 +21,16 @@
       <div>
         <h1 class="text-base font-extrabold tracking-wide uppercase leading-none">CHELAN HIGH SCHOOL</h1>
         <p class="text-xs text-emerald-200 font-medium mt-0.5">Classroom Phone & Pass Kiosk</p>
+        <p class="text-[10px] text-amber-300 font-mono font-bold leading-tight mt-0.5">v1.1.10</p>
       </div>
     </div>
 
     <!-- Right: Live Counters, Room Number, & Clock -->
     <div class="flex items-center gap-3">
       <div class="hidden sm:flex items-center gap-2 text-xs font-bold">
-        <!-- Rack Badge -->
+        <!-- Phones Badge (Updated from Rack) -->
         <div class="bg-[#07381e] border border-emerald-500/30 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
-          <i class="fa-solid fa-mobile-screen text-emerald-300"></i> Rack: <span id="rack-count">0</span>
+          <i class="fa-solid fa-mobile-screen text-emerald-300"></i> Phones: <span id="rack-count">0</span>
         </div>
         <!-- Bathroom Badge -->
         <div id="badge-bathroom-header" class="bg-rose-900/80 border border-rose-500/30 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
@@ -95,7 +96,7 @@
         />
       </div>
 
-      <!-- Pocket Selector Box (Visible only in Phone Mode) -->
+      <!-- Pocket Selector Box (Visible in Phone Mode) -->
       <div id="pocket-section" class="w-full max-w-2xl bg-slate-50 border border-slate-200 rounded-2xl p-4 mb-6">
         <div class="flex justify-between items-center mb-3">
           <span class="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
@@ -106,8 +107,8 @@
           </span>
         </div>
 
-        <!-- Scrollable 1-36 Pocket Grid -->
-        <div id="pocket-grid" class="grid grid-cols-6 sm:grid-cols-9 gap-2 max-h-[220px] overflow-y-auto p-1">
+        <!-- 1-36 Pocket Grid -->
+        <div id="pocket-grid" class="grid grid-cols-6 sm:grid-cols-9 gap-2 min-h-[140px] max-h-[220px] overflow-y-auto p-1">
           <!-- Rendered dynamically by app.js -->
         </div>
       </div>
