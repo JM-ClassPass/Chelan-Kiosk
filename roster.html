@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Roster Management - Chelan High</title>
+    <title>Manage Roster - Chelan High</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .bg-chelan { background-color: #0d5235; }
@@ -19,131 +19,164 @@
     <header class="bg-chelan text-white shadow-md py-3 px-6 flex justify-between items-center">
         <div class="flex items-center gap-3">
             <img src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" alt="Logo" class="h-10">
-            <div>
-                <h1 class="text-xl font-bold tracking-wide uppercase leading-tight">Chelan High School</h1>
-                <p class="text-[11px] text-green-200">Classroom Roster Manager <span class="ml-2 font-mono bg-green-900/80 px-1.5 py-0.5 rounded text-[9px]">v1.001</span></p>
+            <div class="flex items-center gap-2">
+                <h1 class="text-xl font-bold tracking-wide leading-tight">Chelan High</h1>
+                <span class="bg-green-800/80 text-green-200 text-xs px-2.5 py-0.5 rounded-full font-semibold border border-green-700/50">Teacher Dashboard</span>
             </div>
         </div>
-        <div>
-            <a href="index.html" class="bg-green-900/80 hover:bg-green-900 text-xs font-bold px-3 py-1.5 rounded-lg border border-green-700 transition-all flex items-center gap-1.5">
-                <span>💻</span> Switch to Kiosk Mode
-            </a>
+        <div class="flex items-center gap-4">
+            <div class="text-right hidden md:block">
+                <span id="live-clock" class="text-lg font-mono font-bold block leading-none">--:--:-- --</span>
+                <span class="text-[10px] text-green-300 uppercase tracking-widest font-bold">MEDICAL SCIENCES</span>
+            </div>
+            <div class="flex gap-2">
+                <a href="dashboard.html" class="bg-green-900/60 hover:bg-green-900 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition-all flex items-center gap-1.5 border border-green-700/60">
+                    Live Dashboard
+                </a>
+                <a href="index.html" class="bg-green-900/60 hover:bg-green-900 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition-all flex items-center gap-1.5 border border-green-700/60">
+                    Kiosk View
+                </a>
+                <a href="roster.html" class="bg-white text-chelan text-xs font-bold px-3.5 py-2 rounded-lg shadow-sm transition-all flex items-center gap-1.5">
+                    Manage Roster
+                </a>
+            </div>
         </div>
     </header>
 
-    <!-- Main Content -->
-    <main class="flex-grow p-4 md:p-8 max-w-7xl mx-auto w-full space-y-6">
+    <!-- Main Content Container -->
+    <main class="flex-grow p-4 md:p-6 max-w-7xl mx-auto w-full space-y-6">
+        
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-        <!-- Section 1: Pending Approvals (3rd Attempt Submissions) -->
-        <div id="pending-card" class="bg-white rounded-2xl shadow-md border border-orange-200 overflow-hidden">
-            <div class="bg-orange-50 px-6 py-4 border-b border-orange-200 flex justify-between items-center">
-                <div>
-                    <h2 class="text-lg font-bold text-orange-900 flex items-center gap-2">
-                        <span>⏳</span> Pending Registration Requests 
-                        <span id="pending-badge" class="bg-orange-200 text-orange-900 text-xs font-black px-2 py-0.5 rounded-full">0</span>
-                    </h2>
-                    <p class="text-xs text-orange-700">Requests submitted by students after 3 unrecognized ID attempts at the kiosk.</p>
-                </div>
-            </div>
-            
-            <div class="p-6">
-                <div id="pending-empty" class="text-center py-6 text-slate-400 font-medium text-sm">
-                    No pending registration requests at this time.
-                </div>
-                <div id="pending-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <!-- Dynamic Pending Cards -->
-                </div>
-            </div>
-        </div>
-
-        <!-- Section 2: Active Roster & Management -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            <!-- Add / Import Controls (1 Column) -->
-            <div class="space-y-6">
+            <!-- LEFT COLUMN: Roster Table & Controls (8 Cols) -->
+            <div class="lg:col-span-8 bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-col">
                 
-                <!-- Manual Student Entry -->
-                <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200">
-                    <h3 class="text-base font-bold text-slate-800 mb-1 flex items-center gap-2">
-                        <span>👤</span> Add Student Manually
-                    </h3>
-                    <p class="text-xs text-slate-500 mb-4">Directly add a new student to the active roster.</p>
+                <!-- Table Header Actions -->
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5">
+                    <div class="flex items-center gap-3">
+                        <h2 class="text-xl font-black text-slate-800 flex items-center gap-2">
+                            <span>👥</span> Class Roster ( <span id="roster-count" class="text-chelan">0 Students</span> )
+                        </h2>
+                    </div>
 
-                    <form id="add-student-form" class="space-y-3">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-600 mb-1 uppercase">Student ID</label>
-                            <input type="text" inputmode="numeric" pattern="[0-9]*" id="add-id" placeholder="e.g. 12345" required onwheel="event.preventDefault(); this.blur();"
-                                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:border-chelan text-sm font-mono font-bold">
+                    <div class="flex items-center gap-2 w-full sm:w-auto">
+                        <!-- Search Bar -->
+                        <div class="relative flex-grow sm:flex-grow-0">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">🔍</span>
+                            <input type="text" id="search-roster" placeholder="Search roster..."
+                                class="w-full sm:w-48 pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-full text-xs font-medium focus:outline-none focus:border-chelan transition-all">
                         </div>
-                        <div class="flex gap-2">
-                            <div class="w-1/2">
-                                <label class="block text-xs font-bold text-slate-600 mb-1 uppercase">First Name</label>
-                                <input type="text" id="add-fname" placeholder="First" required
-                                    class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:border-chelan text-sm font-bold">
-                            </div>
-                            <div class="w-1/2">
-                                <label class="block text-xs font-bold text-slate-600 mb-1 uppercase">Last Name</label>
-                                <input type="text" id="add-lname" placeholder="Last" required
-                                    class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:border-chelan text-sm font-bold">
-                            </div>
-                        </div>
-                        <button type="submit" class="w-full bg-chelan hover:bg-green-800 text-white font-bold py-2.5 rounded-lg text-sm shadow transition-all flex justify-center items-center gap-2 mt-2">
-                            <span>➕</span> Add to Roster
+
+                        <!-- Export CSV Button -->
+                        <button id="export-csv-btn" class="bg-chelan hover:bg-green-800 text-white text-xs font-bold px-3.5 py-2 rounded-lg shadow-sm transition-all flex items-center gap-1">
+                            📥 Export CSV
                         </button>
-                    </form>
-                </div>
 
-                <!-- Bulk CSV Import -->
-                <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200">
-                    <h3 class="text-base font-bold text-slate-800 mb-1 flex items-center gap-2">
-                        <span>📁</span> Bulk CSV Import
-                    </h3>
-                    <p class="text-xs text-slate-500 mb-4">Upload a CSV file with columns: <code class="bg-slate-100 px-1 rounded">ID, First Name, Last Name</code>.</p>
-
-                    <input type="file" id="csv-file-input" accept=".csv" class="block w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 mb-3 cursor-pointer">
-                    <button type="button" id="upload-csv-btn" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 rounded-lg text-sm shadow transition-all flex justify-center items-center gap-2">
-                        <span>📤</span> Import CSV List
-                    </button>
-                </div>
-
-            </div>
-
-            <!-- Active Roster Table (2 Columns) -->
-            <div class="lg:col-span-2 bg-white rounded-2xl shadow-md border border-slate-200 p-6 flex flex-col">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-                    <div>
-                        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
-                            <span>📜</span> Active Classroom Roster
-                            <span id="roster-count" class="bg-slate-100 text-slate-700 text-xs font-bold px-2.5 py-0.5 rounded-full border border-slate-200">0 Students</span>
-                        </h3>
-                    </div>
-                    <!-- Search Field -->
-                    <div class="w-full sm:w-64">
-                        <input type="text" id="search-roster" placeholder="Search by name or ID..."
-                            class="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-chelan">
+                        <!-- Edit All Button -->
+                        <button id="edit-all-btn" class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-3.5 py-2 rounded-lg shadow-sm transition-all flex items-center gap-1">
+                            ✏️ Edit All
+                        </button>
                     </div>
                 </div>
 
-                <!-- Table -->
-                <div class="flex-grow overflow-y-auto max-h-[500px] custom-scrollbar border border-slate-200 rounded-xl">
+                <!-- Roster Table -->
+                <div class="flex-grow overflow-y-auto max-h-[620px] custom-scrollbar border border-slate-100 rounded-xl">
                     <table class="w-full text-left border-collapse">
-                        <thead class="bg-slate-50 border-b border-slate-200 sticky top-0">
+                        <thead class="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
                             <tr>
-                                <th class="p-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Student ID</th>
-                                <th class="p-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Full Name</th>
-                                <th class="p-3 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
+                                <th class="p-3 text-xs font-bold text-slate-500 tracking-wider">ID Code ↑</th>
+                                <th class="p-3 text-xs font-bold text-slate-500 tracking-wider">First Name ↑</th>
+                                <th class="p-3 text-xs font-bold text-slate-500 tracking-wider">Last Name ↑</th>
+                                <th class="p-3 text-xs font-bold text-slate-500 tracking-wider text-right pr-6">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="roster-tbody" class="divide-y divide-slate-100 text-sm">
-                            <!-- Dynamic Roster Rows -->
+                            <!-- Rows Rendered via JS -->
                         </tbody>
                     </table>
                 </div>
             </div>
 
+            <!-- RIGHT COLUMN: Roster Tools (4 Cols) -->
+            <div class="lg:col-span-4 space-y-6">
+                
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <span>🛠️</span> Roster Tools
+                        </h3>
+                        <p class="text-xs text-slate-500 mt-0.5">Manage and bulk import your Chelan student roster.</p>
+                    </div>
+
+                    <!-- Card 1: Quick Add Student -->
+                    <div class="bg-slate-50/60 p-4 rounded-xl border border-slate-200/80 space-y-3">
+                        <span class="text-[11px] font-black text-slate-500 uppercase tracking-wider block">QUICK ADD STUDENT</span>
+                        
+                        <form id="quick-add-form" class="space-y-3">
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 mb-1">ID / Barcode</label>
+                                <input type="text" id="add-id" placeholder="Student ID" required
+                                    class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-mono font-bold focus:outline-none focus:border-chelan">
+                            </div>
+                            <div class="flex gap-2">
+                                <div class="w-1/2">
+                                    <label class="block text-[11px] font-bold text-slate-600 mb-1">First Name</label>
+                                    <input type="text" id="add-fname" placeholder="First Name" required
+                                        class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold focus:outline-none focus:border-chelan">
+                                </div>
+                                <div class="w-1/2">
+                                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Last Name</label>
+                                    <input type="text" id="add-lname" placeholder="Last Name" required
+                                        class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold focus:outline-none focus:border-chelan">
+                                </div>
+                            </div>
+                            <button type="submit" class="w-full bg-chelan hover:bg-green-800 text-white font-bold py-2.5 rounded-lg text-sm shadow transition-all flex justify-center items-center gap-1.5 mt-1">
+                                <span>+</span> Add Student to Roster
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Card 2: Google Sheet / CSV Sync -->
+                    <div class="bg-emerald-50/40 p-4 rounded-xl border border-emerald-100 space-y-3">
+                        <span class="text-[11px] font-black text-emerald-800 uppercase tracking-wider block flex items-center gap-1">
+                            <span>🔗</span> GOOGLE SHEET CSV IMPORT
+                        </span>
+                        <p class="text-[11px] text-slate-500">Paste published Google Sheet CSV link or local CSV file to sync class list.</p>
+
+                        <input type="text" id="csv-url-input" placeholder="https://docs.google.com/.../pub?output=csv"
+                            class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono focus:outline-none focus:border-chelan">
+                        
+                        <div class="space-y-1.5 pt-1">
+                            <label class="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
+                                <input type="radio" name="import-mode" value="replace" checked class="text-chelan focus:ring-chelan">
+                                Replace Entire Roster
+                            </label>
+                            <label class="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
+                                <input type="radio" name="import-mode" value="merge" class="text-chelan focus:ring-chelan">
+                                Add / Merge Students
+                            </label>
+                        </div>
+
+                        <button type="button" id="process-import-btn" class="w-full bg-chelan hover:bg-green-800 text-white font-bold py-2.5 rounded-lg text-sm shadow transition-all flex justify-center items-center gap-1.5">
+                            <span>⚡</span> Process Selection
+                        </button>
+                    </div>
+
+                </div>
+
+            </div>
+
         </div>
 
     </main>
+
+    <!-- Clock Script -->
+    <script>
+        setInterval(() => {
+            const clock = document.getElementById('live-clock');
+            if(clock) clock.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }, 1000);
+    </script>
 
     <!-- Firebase Script Module -->
     <script type="module">
@@ -165,117 +198,208 @@
 
         let activeRoster = {};
         let pendingApprovals = {};
+        let editingRows = new Set();
+        let isEditAllMode = false;
 
-        // Realtime Listeners
+        // Realtime Data Sync
         onValue(ref(db, 'classroom_roster'), snapshot => {
             activeRoster = snapshot.val() || {};
-            renderRoster();
+            renderRosterTable();
         });
 
         onValue(ref(db, 'pending_roster_approvals'), snapshot => {
             pendingApprovals = snapshot.val() || {};
-            renderPending();
+            renderRosterTable();
         });
 
-        // Render Pending Approvals
-        function renderPending() {
-            const pendingList = document.getElementById('pending-list');
-            const pendingEmpty = document.getElementById('pending-empty');
-            const pendingBadge = document.getElementById('pending-badge');
-            
-            const keys = Object.keys(pendingApprovals);
-            pendingBadge.textContent = keys.length;
-
-            if (keys.length === 0) {
-                pendingEmpty.classList.remove('hidden');
-                pendingList.innerHTML = '';
-                return;
-            }
-
-            pendingEmpty.classList.add('hidden');
-            pendingList.innerHTML = '';
-
-            keys.forEach(id => {
-                const item = pendingApprovals[id];
-                const card = document.createElement('div');
-                card.className = "bg-orange-50/50 border border-orange-200 p-4 rounded-xl flex justify-between items-center shadow-sm";
-                card.innerHTML = `
-                    <div>
-                        <span class="font-mono text-xs font-black bg-orange-200 text-orange-900 px-2 py-0.5 rounded">ID: ${id}</span>
-                        <h4 class="font-bold text-slate-800 mt-1 text-base">${item.firstName} ${item.lastName}</h4>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="approveStudent('${id}', '${item.firstName}', '${item.lastName}')" class="bg-green-700 hover:bg-green-800 text-white font-bold px-3 py-1.5 rounded-lg text-xs shadow transition-all">
-                            Approve
-                        </button>
-                        <button onclick="rejectStudent('${id}')" class="bg-red-600 hover:bg-red-700 text-white font-bold px-2.5 py-1.5 rounded-lg text-xs shadow transition-all">
-                            Reject
-                        </button>
-                    </div>
-                `;
-                pendingList.appendChild(card);
-            });
-        }
-
-        // Approve Student Action
-        window.approveStudent = (id, firstName, lastName) => {
-            set(ref(db, `classroom_roster/${id}`), { firstName, lastName });
-            remove(ref(db, `pending_roster_approvals/${id}`));
-        };
-
-        // Reject Student Action
-        window.rejectStudent = (id) => {
-            remove(ref(db, `pending_roster_approvals/${id}`));
-        };
-
-        // Render Roster Table
-        function renderRoster() {
+        // Main Table Rendering
+        function renderRosterTable() {
             const tbody = document.getElementById('roster-tbody');
             const rosterCount = document.getElementById('roster-count');
             const searchTerm = document.getElementById('search-roster').value.toLowerCase().trim();
 
             tbody.innerHTML = '';
             
-            const keys = Object.keys(activeRoster);
-            rosterCount.textContent = `${keys.length} Students`;
+            const activeKeys = Object.keys(activeRoster);
+            const pendingKeys = Object.keys(pendingApprovals);
+            
+            rosterCount.textContent = `${activeKeys.length} Students`;
 
-            const filteredKeys = keys.filter(id => {
-                const student = activeRoster[id];
-                const fullName = `${student.firstName} ${student.lastName}`.toLowerCase();
-                return id.toLowerCase().includes(searchTerm) || fullName.includes(searchTerm);
-            });
-
-            if (filteredKeys.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="3" class="text-center py-6 text-slate-400 font-medium">No students found.</td></tr>`;
-                return;
-            }
-
-            filteredKeys.sort((a, b) => activeRoster[a].lastName.localeCompare(activeRoster[b].lastName)).forEach(id => {
-                const student = activeRoster[id];
+            // 1. RENDER PENDING APPROVALS AT THE TOP OF TABLE
+            pendingKeys.forEach(id => {
+                const p = pendingApprovals[id];
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50 transition-colors";
+                tr.className = "bg-amber-50/80 border-b border-amber-200 font-medium";
                 tr.innerHTML = `
-                    <td class="p-3 font-mono font-bold text-slate-700">${id}</td>
-                    <td class="p-3 font-bold text-slate-800">${student.lastName}, ${student.firstName}</td>
-                    <td class="p-3 text-right">
-                        <button onclick="deleteStudent('${id}')" class="text-red-600 hover:text-red-800 font-bold text-xs bg-red-50 hover:bg-red-100 px-2.5 py-1 rounded border border-red-200 transition-all">
-                            Remove
-                        </button>
+                    <td class="p-3 font-mono font-bold text-amber-900 flex items-center gap-1.5">
+                        <span class="bg-amber-200 text-amber-900 text-[10px] font-black px-1.5 py-0.5 rounded uppercase">Pending</span>
+                        ${id}
+                    </td>
+                    <td class="p-3 font-bold text-slate-800">${p.firstName}</td>
+                    <td class="p-3 font-bold text-slate-800">${p.lastName}</td>
+                    <td class="p-3 text-right pr-4">
+                        <div class="flex justify-end gap-1.5">
+                            <button onclick="approveStudent('${id}', '${p.firstName}', '${p.lastName}')" class="bg-green-700 hover:bg-green-800 text-white font-bold px-3 py-1 rounded-md text-xs shadow-sm transition-all">
+                                Approve
+                            </button>
+                            <button onclick="rejectStudent('${id}')" class="bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1 rounded-md text-xs shadow-sm transition-all">
+                                Reject
+                            </button>
+                        </div>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
+
+            // 2. FILTER & SORT ACTIVE ROSTER
+            const filteredKeys = activeKeys.filter(id => {
+                const s = activeRoster[id];
+                const fullName = `${s.firstName} ${s.lastName}`.toLowerCase();
+                return id.toLowerCase().includes(searchTerm) || fullName.includes(searchTerm);
+            });
+
+            filteredKeys.sort((a, b) => (activeRoster[a].lastName || '').localeCompare(activeRoster[b].lastName || ''));
+
+            if (filteredKeys.length === 0 && pendingKeys.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-slate-400 font-medium">No students currently in roster.</td></tr>`;
+                return;
+            }
+
+            // 3. RENDER ACTIVE ROSTER ROWS
+            filteredKeys.forEach(id => {
+                const s = activeRoster[id];
+                const isEditing = editingRows.has(id) || isEditAllMode;
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50/80 transition-colors border-b border-slate-100";
+
+                if (isEditing) {
+                    tr.innerHTML = `
+                        <td class="p-2 font-mono font-bold text-slate-700">
+                            <input type="text" id="edit-id-${id}" value="${id}" onblur="saveCellChange('${id}')"
+                                class="w-full px-2 py-1 border border-amber-300 bg-amber-50/50 rounded text-xs font-mono font-bold focus:outline-none focus:border-chelan">
+                        </td>
+                        <td class="p-2">
+                            <input type="text" id="edit-fname-${id}" value="${s.firstName}" onblur="saveCellChange('${id}')"
+                                class="w-full px-2 py-1 border border-amber-300 bg-amber-50/50 rounded text-xs font-bold focus:outline-none focus:border-chelan">
+                        </td>
+                        <td class="p-2">
+                            <input type="text" id="edit-lname-${id}" value="${s.lastName}" onblur="saveCellChange('${id}')"
+                                class="w-full px-2 py-1 border border-amber-300 bg-amber-50/50 rounded text-xs font-bold focus:outline-none focus:border-chelan">
+                        </td>
+                        <td class="p-2 text-right pr-4">
+                            <div class="flex items-center justify-end gap-2">
+                                <span id="save-status-${id}" class="text-[11px] font-black text-emerald-600 hidden opacity-0 transition-opacity">✓ Saved</span>
+                                <button onclick="toggleSingleEdit('${id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1 rounded text-xs shadow-sm transition-all">
+                                    Done
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                } else {
+                    tr.innerHTML = `
+                        <td class="p-3 font-mono font-bold text-slate-700">${id}</td>
+                        <td class="p-3 font-bold text-slate-800">${s.firstName}</td>
+                        <td class="p-3 font-bold text-slate-800">${s.lastName}</td>
+                        <td class="p-3 text-right pr-4">
+                            <div class="flex items-center justify-end gap-1.5">
+                                <span id="save-status-${id}" class="text-[11px] font-black text-emerald-600 hidden">✓ Saved</span>
+                                <button onclick="toggleSingleEdit('${id}')" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold px-3 py-1 rounded-md text-xs border border-emerald-200 transition-all">
+                                    Edit
+                                </button>
+                                <button onclick="deleteStudent('${id}')" class="bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold px-3 py-1 rounded-md text-xs border border-rose-200 transition-all">
+                                    Delete
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                }
+
+                tbody.appendChild(tr);
+            });
         }
 
-        // Delete Student
+        // Global Action Helpers
+        window.approveStudent = (id, firstName, lastName) => {
+            set(ref(db, `classroom_roster/${id}`), { firstName, lastName });
+            remove(ref(db, `pending_roster_approvals/${id}`));
+        };
+
+        window.rejectStudent = (id) => {
+            remove(ref(db, `pending_roster_approvals/${id}`));
+        };
+
         window.deleteStudent = (id) => {
-            if (confirm(`Are you sure you want to remove student ID ${id} from the roster?`)) {
+            if (confirm(`Are you sure you want to remove student ID ${id}?`)) {
                 remove(ref(db, `classroom_roster/${id}`));
             }
         };
 
-        // Add Single Student Handler
-        document.getElementById('add-student-form').addEventListener('submit', e => {
+        window.toggleSingleEdit = (id) => {
+            if (editingRows.has(id)) {
+                editingRows.delete(id);
+            } else {
+                editingRows.add(id);
+            }
+            renderRosterTable();
+        };
+
+        // Google Sheets-style auto-save on blur / cell navigation
+        window.saveCellChange = (oldId) => {
+            const newIdInput = document.getElementById(`edit-id-${oldId}`);
+            const fnameInput = document.getElementById(`edit-fname-${oldId}`);
+            const lnameInput = document.getElementById(`edit-lname-${oldId}`);
+
+            if (!newIdInput || !fnameInput || !lnameInput) return;
+
+            const newId = newIdInput.value.trim();
+            const firstName = fnameInput.value.trim();
+            const lastName = lnameInput.value.trim();
+
+            if (!newId || !firstName || !lastName) return;
+
+            // If ID was changed, remove old key and set new key
+            if (newId !== oldId) {
+                remove(ref(db, `classroom_roster/${oldId}`));
+                editingRows.delete(oldId);
+                editingRows.add(newId);
+            }
+
+            set(ref(db, `classroom_roster/${newId}`), { firstName, lastName }).then(() => {
+                showSavedIndicator(newId);
+            });
+        };
+
+        function showSavedIndicator(id) {
+            const badge = document.getElementById(`save-status-${id}`);
+            if (badge) {
+                badge.classList.remove('hidden', 'opacity-0');
+                setTimeout(() => {
+                    badge.classList.add('opacity-0');
+                    setTimeout(() => badge.classList.add('hidden'), 300);
+                }, 1200);
+            }
+        }
+
+        // Edit All Button Toggle
+        document.getElementById('edit-all-btn').addEventListener('click', () => {
+            isEditAllMode = !isEditAllMode;
+            const btn = document.getElementById('edit-all-btn');
+            if (isEditAllMode) {
+                btn.textContent = '✓ Done Editing';
+                btn.className = 'bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2 rounded-lg shadow-sm transition-all flex items-center gap-1';
+            } else {
+                btn.textContent = '✏️ Edit All';
+                btn.className = 'bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-3.5 py-2 rounded-lg shadow-sm transition-all flex items-center gap-1';
+                editingRows.clear();
+            }
+            renderRosterTable();
+        });
+
+        // Search Filter
+        document.getElementById('search-roster').addEventListener('input', renderRosterTable);
+
+        // Quick Add Form
+        document.getElementById('quick-add-form').addEventListener('submit', (e) => {
             e.preventDefault();
             const id = document.getElementById('add-id').value.trim();
             const firstName = document.getElementById('add-fname').value.trim();
@@ -283,48 +407,66 @@
 
             if (id && firstName && lastName) {
                 set(ref(db, `classroom_roster/${id}`), { firstName, lastName });
-                document.getElementById('add-student-form').reset();
+                document.getElementById('quick-add-form').reset();
             }
         });
 
-        // Search Filter Event
-        document.getElementById('search-roster').addEventListener('input', renderRoster);
+        // Export CSV Button
+        document.getElementById('export-csv-btn').addEventListener('click', () => {
+            const keys = Object.keys(activeRoster);
+            if (keys.length === 0) return alert("Roster is currently empty.");
 
-        // CSV Bulk Import Handler
-        document.getElementById('upload-csv-btn').addEventListener('click', () => {
-            const fileInput = document.getElementById('csv-file-input');
-            const file = fileInput.files[0];
-            if (!file) {
-                alert("Please select a CSV file first.");
+            let csvContent = "data:text/csv;charset=utf-8,ID,First Name,Last Name\n";
+            keys.forEach(id => {
+                const s = activeRoster[id];
+                csvContent += `${id},${s.firstName},${s.lastName}\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Chelan_Class_Roster_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        // Google Sheet CSV Sync
+        document.getElementById('process-import-btn').addEventListener('click', () => {
+            const url = document.getElementById('csv-url-input').value.trim();
+            const mode = document.querySelector('input[name="import-mode"]:checked').value;
+
+            if (!url) {
+                alert("Please paste a published Google Sheet CSV link.");
                 return;
             }
 
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const text = e.target.result;
-                const lines = text.split('\n');
-                let count = 0;
+            fetch(url)
+                .then(res => res.text())
+                .then(text => {
+                    const lines = text.split('\n');
+                    let newRoster = mode === 'merge' ? { ...activeRoster } : {};
+                    let count = 0;
 
-                lines.forEach((line, index) => {
-                    const parts = line.split(',').map(p => p.trim());
-                    if (parts.length >= 3 && parts[0] && parts[1] && parts[2]) {
-                        // Skip header row if present
-                        if (index === 0 && (parts[0].toLowerCase().includes('id') || parts[1].toLowerCase().includes('name'))) {
-                            return;
+                    lines.forEach((line, index) => {
+                        const parts = line.split(',').map(p => p.trim());
+                        if (parts.length >= 3 && parts[0] && parts[1] && parts[2]) {
+                            if (index === 0 && (parts[0].toLowerCase().includes('id') || parts[1].toLowerCase().includes('first'))) {
+                                return; // Skip Header
+                            }
+                            newRoster[parts[0]] = { firstName: parts[1], lastName: parts[2] };
+                            count++;
                         }
-                        const id = parts[0];
-                        const firstName = parts[1];
-                        const lastName = parts[2];
+                    });
 
-                        set(ref(db, `classroom_roster/${id}`), { firstName, lastName });
-                        count++;
-                    }
+                    set(ref(db, 'classroom_roster'), newRoster).then(() => {
+                        alert(`Successfully imported/synced ${count} students!`);
+                        document.getElementById('csv-url-input').value = '';
+                    });
+                })
+                .catch(err => {
+                    alert("Error fetching Google Sheet CSV. Please ensure the link is published to the web as CSV.");
                 });
-
-                alert(`Successfully imported/updated ${count} students!`);
-                fileInput.value = '';
-            };
-            reader.readAsText(file);
         });
     </script>
 </body>
