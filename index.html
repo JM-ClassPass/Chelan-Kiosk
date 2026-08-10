@@ -22,33 +22,29 @@
 <body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col">
 
     <!-- Header Navigation -->
-    <header class="bg-chelan text-white shadow-md py-2.5 px-6 flex flex-wrap justify-between items-center gap-4">
+    <header class="bg-chelan text-white shadow-md py-3 px-6 flex justify-between items-center">
         <div class="flex items-center gap-3">
-            <img src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" alt="Logo" class="h-9">
+            <img src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" alt="Logo" class="h-10">
             <div>
-                <h1 class="text-lg font-bold tracking-wide uppercase leading-tight">Chelan High School</h1>
-                <p class="text-[11px] text-green-200 leading-none mt-0.5">Classroom Phone & Pass Kiosk <span id="version-badge" class="ml-1.5 font-mono bg-green-900/80 px-1.5 py-0.5 rounded text-[9px]">v1.1.01</span></p>
+                <h1 class="text-xl font-bold tracking-wide uppercase leading-tight">Chelan High School</h1>
+                <p class="text-[11px] text-green-200">Classroom Phone & Pass Kiosk <span class="ml-2 font-mono bg-green-900/80 px-1.5 py-0.5 rounded text-[9px]">v1.007</span></p>
             </div>
         </div>
-
         <div class="flex items-center gap-6">
-            <!-- Stat Badges Alignment -->
-            <div class="flex items-center gap-2 text-xs font-bold">
-                <div class="bg-green-900/60 px-3 py-1 rounded-full border border-green-700/60 flex items-center gap-1.5">
-                    <span>📱</span> Phones: <span id="count-rack">0</span>
+            <div class="flex gap-2 text-xs font-bold">
+                <div class="bg-green-900/60 px-3 py-1.5 rounded-full border border-green-700/60 flex items-center gap-1.5">
+                    <span>📱</span> Rack: <span id="count-rack">0</span>
                 </div>
-                <div class="bg-red-900/60 px-3 py-1 rounded-full border border-red-700/60 flex items-center gap-1.5">
+                <div class="bg-red-900/60 px-3 py-1.5 rounded-full border border-red-700/60 flex items-center gap-1.5">
                     <span>🚻</span> Bathroom: <span id="count-bath">0</span>/1
                 </div>
-                <div class="bg-indigo-900/60 px-3 py-1 rounded-full border border-indigo-700/60 flex items-center gap-1.5">
+                <div class="bg-indigo-900/60 px-3 py-1.5 rounded-full border border-indigo-700/60 flex items-center gap-1.5">
                     <span>🎟️</span> Hall Pass: <span id="count-hall">0</span>
                 </div>
             </div>
-
-            <!-- Clock Display -->
-            <div class="text-right hidden sm:block">
-                <span id="live-clock" class="text-base font-mono font-bold block leading-none">--:-- --</span>
-                <span class="text-[9px] text-green-300 uppercase tracking-widest block mt-0.5">Medical Sciences</span>
+            <div class="text-right hidden md:block">
+                <span id="live-clock" class="text-lg font-mono font-bold block leading-none">--:-- --</span>
+                <span class="text-[10px] text-green-300 uppercase tracking-widest">Medical Sciences</span>
             </div>
         </div>
     </header>
@@ -155,9 +151,6 @@
     
     <!-- Firebase Module -->
     <script type="module">
-        import { applyVersionBadge } from "./config.js";
-        applyVersionBadge("version-badge");
-
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getDatabase, ref, onValue, set, remove, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
         
