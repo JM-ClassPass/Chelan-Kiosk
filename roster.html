@@ -21,7 +21,7 @@
             <img src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" alt="Logo" class="h-10">
             <div class="flex items-center gap-2">
                 <h1 class="text-xl font-bold tracking-wide leading-tight">Chelan High</h1>
-                <span class="bg-green-800/80 text-green-200 text-xs px-2.5 py-0.5 rounded-full font-semibold border border-green-700/50">Manage Roster v1.004</span>
+                <span class="bg-green-800/80 text-green-200 text-xs px-2.5 py-0.5 rounded-full font-semibold border border-green-700/50">Manage Roster v1.005</span>
             </div>
         </div>
         <div class="flex items-center gap-4">
@@ -52,7 +52,7 @@
             <div class="lg:col-span-8 bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-col">
                 
                 <!-- Table Header Actions -->
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
                     <div class="flex items-center gap-3">
                         <h2 class="text-xl font-black text-slate-800 flex items-center gap-2">
                             <span>👥</span> Class Roster ( <span id="roster-count" class="text-chelan">0 Students</span> )
@@ -79,24 +79,24 @@
                     </div>
                 </div>
 
-                <!-- Roster Table -->
-                <div class="flex-grow overflow-y-auto max-h-[620px] custom-scrollbar border border-slate-100 rounded-xl">
+                <!-- Roster Table (Tightened Vertical Padding) -->
+                <div class="flex-grow overflow-y-auto max-h-[640px] custom-scrollbar border border-slate-100 rounded-xl">
                     <table class="w-full text-left border-collapse">
                         <thead class="bg-slate-50 border-b border-slate-200 sticky top-0 z-10 select-none">
                             <tr>
-                                <th onclick="setSort('id')" class="p-3 text-xs font-bold text-slate-600 tracking-wider cursor-pointer hover:bg-slate-100 transition-colors">
+                                <th onclick="setSort('id')" class="py-2 px-3 text-xs font-bold text-slate-600 tracking-wider cursor-pointer hover:bg-slate-100 transition-colors">
                                     ID Code <span id="sort-icon-id">↑</span>
                                 </th>
-                                <th onclick="setSort('firstName')" class="p-3 text-xs font-bold text-slate-600 tracking-wider cursor-pointer hover:bg-slate-100 transition-colors">
+                                <th onclick="setSort('firstName')" class="py-2 px-3 text-xs font-bold text-slate-600 tracking-wider cursor-pointer hover:bg-slate-100 transition-colors">
                                     First Name <span id="sort-icon-firstName">↑</span>
                                 </th>
-                                <th onclick="setSort('lastName')" class="p-3 text-xs font-bold text-slate-600 tracking-wider cursor-pointer hover:bg-slate-100 transition-colors">
+                                <th onclick="setSort('lastName')" class="py-2 px-3 text-xs font-bold text-slate-600 tracking-wider cursor-pointer hover:bg-slate-100 transition-colors">
                                     Last Name <span id="sort-icon-lastName">↑</span>
                                 </th>
-                                <th class="p-3 text-xs font-bold text-slate-500 tracking-wider text-right pr-6">Actions</th>
+                                <th class="py-2 px-3 text-xs font-bold text-slate-500 tracking-wider text-right pr-4">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="roster-tbody" class="divide-y divide-slate-100 text-sm">
+                        <tbody id="roster-tbody" class="divide-y divide-slate-100 text-xs">
                             <!-- Rows Rendered via JS -->
                         </tbody>
                     </table>
@@ -106,7 +106,7 @@
             <!-- RIGHT COLUMN: Roster Tools (4 Cols) -->
             <div class="lg:col-span-4 space-y-6">
                 
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-5">
                     <div>
                         <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
                             <span>🛠️</span> Roster Tools
@@ -114,42 +114,42 @@
                         <p class="text-xs text-slate-500 mt-0.5">Manage and bulk import your Chelan student roster.</p>
                     </div>
 
-                    <!-- Card 1: Quick Add Student -->
-                    <div class="bg-slate-50/60 p-4 rounded-xl border border-slate-200/80 space-y-3">
+                    <!-- Card 1: Quick Add Student (Inline Row Layout) -->
+                    <div class="bg-slate-50/80 p-4 rounded-xl border border-slate-200 space-y-3">
                         <span class="text-[11px] font-black text-slate-500 uppercase tracking-wider block">QUICK ADD STUDENT</span>
                         
                         <form id="quick-add-form" class="space-y-3">
-                            <div>
-                                <label class="block text-[11px] font-bold text-slate-600 mb-1">ID / Barcode</label>
-                                <input type="text" id="add-id" placeholder="Student ID" required
-                                    class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-mono font-bold focus:outline-none focus:border-chelan">
-                            </div>
-                            <div class="flex gap-2">
-                                <div class="w-1/2">
-                                    <label class="block text-[11px] font-bold text-slate-600 mb-1">First Name</label>
-                                    <input type="text" id="add-fname" placeholder="First Name" required
-                                        class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold focus:outline-none focus:border-chelan">
+                            <div class="grid grid-cols-3 gap-2">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">ID Code</label>
+                                    <input type="text" id="add-id" placeholder="ID #" required
+                                        class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-mono font-bold focus:outline-none focus:border-chelan">
                                 </div>
-                                <div class="w-1/2">
-                                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Last Name</label>
-                                    <input type="text" id="add-lname" placeholder="Last Name" required
-                                        class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold focus:outline-none focus:border-chelan">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">First Name</label>
+                                    <input type="text" id="add-fname" placeholder="First" required
+                                        class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:outline-none focus:border-chelan">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Last Name</label>
+                                    <input type="text" id="add-lname" placeholder="Last" required
+                                        class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:outline-none focus:border-chelan">
                                 </div>
                             </div>
-                            <button type="submit" class="w-full bg-chelan hover:bg-green-800 text-white font-bold py-2.5 rounded-lg text-sm shadow transition-all flex justify-center items-center gap-1.5 mt-1">
+                            <button type="submit" class="w-full bg-chelan hover:bg-green-800 text-white font-bold py-2 rounded-lg text-xs shadow transition-all flex justify-center items-center gap-1">
                                 <span>+</span> Add Student to Roster
                             </button>
                         </form>
                     </div>
 
-                    <!-- Card 2: Enhanced Drag & Drop / Sheet Import -->
+                    <!-- Card 2: Bulk Roster Import -->
                     <div class="bg-emerald-50/40 p-4 rounded-xl border border-emerald-100 space-y-3">
                         <span class="text-[11px] font-black text-emerald-800 uppercase tracking-wider block flex items-center gap-1">
                             <span>📁</span> BULK ROSTER IMPORT (CSV / SHEET)
                         </span>
                         
                         <!-- Import Strategy -->
-                        <div class="space-y-1.5 pt-1">
+                        <div class="space-y-1 pt-0.5">
                             <label class="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
                                 <input type="radio" name="import-mode" value="merge" checked class="text-chelan focus:ring-chelan">
                                 Add / Merge Students (Default)
@@ -161,10 +161,10 @@
                         </div>
 
                         <!-- Drag & Drop Zone -->
-                        <div id="drop-zone" class="border-2 border-dashed border-emerald-300 bg-white p-4 rounded-xl text-center hover:border-chelan transition-colors cursor-pointer space-y-2">
+                        <div id="drop-zone" class="border-2 border-dashed border-emerald-300 bg-white p-3.5 rounded-xl text-center hover:border-chelan transition-colors cursor-pointer space-y-1.5">
                             <p class="text-xs font-bold text-slate-600">Drag & Drop CSV File Here</p>
                             <p class="text-[10px] text-slate-400">or</p>
-                            <button type="button" onclick="document.getElementById('file-browse-input').click()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-3 py-1.5 rounded-md border border-slate-300">
+                            <button type="button" onclick="document.getElementById('file-browse-input').click()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-3 py-1 rounded-md border border-slate-300">
                                 Browse File
                             </button>
                             <input type="file" id="file-browse-input" accept=".csv" class="hidden">
@@ -172,13 +172,13 @@
                         </div>
 
                         <!-- Optional URL Link Input -->
-                        <div class="pt-1">
+                        <div class="pt-0.5">
                             <p class="text-[10px] text-slate-500 mb-1 font-semibold">Or paste Google Sheet Published CSV Link:</p>
                             <input type="text" id="csv-url-input" placeholder="https://docs.google.com/.../pub?output=csv"
-                                class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-mono focus:outline-none focus:border-chelan">
+                                class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-mono focus:outline-none focus:border-chelan">
                         </div>
 
-                        <button type="button" id="process-import-btn" class="w-full bg-chelan hover:bg-green-800 text-white font-bold py-2.5 rounded-lg text-sm shadow transition-all flex justify-center items-center gap-1.5">
+                        <button type="button" id="process-import-btn" class="w-full bg-chelan hover:bg-green-800 text-white font-bold py-2 rounded-lg text-xs shadow transition-all flex justify-center items-center gap-1.5">
                             <span>⚡</span> Process Import
                         </button>
                     </div>
@@ -324,18 +324,18 @@
                 const tr = document.createElement('tr');
                 tr.className = "bg-amber-50/80 border-b border-amber-200 font-medium";
                 tr.innerHTML = `
-                    <td class="p-3 font-mono font-bold text-amber-900 flex items-center gap-1.5">
+                    <td class="py-1.5 px-3 font-mono font-bold text-amber-900 flex items-center gap-1.5">
                         <span class="bg-amber-200 text-amber-900 text-[10px] font-black px-1.5 py-0.5 rounded uppercase">Pending</span>
                         ${id}
                     </td>
-                    <td class="p-3 font-bold text-slate-800">${p.firstName}</td>
-                    <td class="p-3 font-bold text-slate-800">${p.lastName}</td>
-                    <td class="p-3 text-right pr-4">
+                    <td class="py-1.5 px-3 font-bold text-slate-800">${p.firstName}</td>
+                    <td class="py-1.5 px-3 font-bold text-slate-800">${p.lastName}</td>
+                    <td class="py-1.5 px-3 text-right pr-4">
                         <div class="flex justify-end gap-1.5">
-                            <button onclick="approveStudent('${safeId}', '${escapeAttr(p.firstName)}', '${escapeAttr(p.lastName)}')" class="bg-green-700 hover:bg-green-800 text-white font-bold px-3 py-1 rounded-md text-xs shadow-sm transition-all">
+                            <button onclick="approveStudent('${safeId}', '${escapeAttr(p.firstName)}', '${escapeAttr(p.lastName)}')" class="bg-green-700 hover:bg-green-800 text-white font-bold px-2.5 py-0.5 rounded text-[11px] shadow-sm transition-all">
                                 Approve
                             </button>
-                            <button onclick="rejectStudent('${safeId}')" class="bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1 rounded-md text-xs shadow-sm transition-all">
+                            <button onclick="rejectStudent('${safeId}')" class="bg-red-600 hover:bg-red-700 text-white font-bold px-2.5 py-0.5 rounded text-[11px] shadow-sm transition-all">
                                 Reject
                             </button>
                         </div>
@@ -358,7 +358,7 @@
             });
 
             if (filteredKeys.length === 0 && pendingKeys.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-slate-400 font-medium">No students currently in roster.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-slate-400 font-medium">No students currently in roster.</td></tr>`;
                 return;
             }
 
@@ -372,22 +372,22 @@
 
                 if (isEditing) {
                     tr.innerHTML = `
-                        <td class="p-2 font-mono font-bold text-slate-700">
+                        <td class="py-1 px-2 font-mono font-bold text-slate-700">
                             <input type="text" id="edit-id-${safeId}" value="${id}" onblur="saveCellChange('${safeId}')"
-                                class="w-full px-2 py-1 border border-amber-300 bg-amber-50/50 rounded text-xs font-mono font-bold focus:outline-none focus:border-chelan">
+                                class="w-full px-2 py-0.5 border border-amber-300 bg-amber-50/50 rounded text-xs font-mono font-bold focus:outline-none focus:border-chelan">
                         </td>
-                        <td class="p-2">
+                        <td class="py-1 px-2">
                             <input type="text" id="edit-fname-${safeId}" value="${s.firstName || ''}" onblur="saveCellChange('${safeId}')"
-                                class="w-full px-2 py-1 border border-amber-300 bg-amber-50/50 rounded text-xs font-bold focus:outline-none focus:border-chelan">
+                                class="w-full px-2 py-0.5 border border-amber-300 bg-amber-50/50 rounded text-xs font-bold focus:outline-none focus:border-chelan">
                         </td>
-                        <td class="p-2">
+                        <td class="py-1 px-2">
                             <input type="text" id="edit-lname-${safeId}" value="${s.lastName || ''}" onblur="saveCellChange('${safeId}')"
-                                class="w-full px-2 py-1 border border-amber-300 bg-amber-50/50 rounded text-xs font-bold focus:outline-none focus:border-chelan">
+                                class="w-full px-2 py-0.5 border border-amber-300 bg-amber-50/50 rounded text-xs font-bold focus:outline-none focus:border-chelan">
                         </td>
-                        <td class="p-2 text-right pr-4">
-                            <div class="flex items-center justify-end gap-2">
-                                <span id="save-status-${safeId}" class="text-[11px] font-black text-emerald-600 hidden opacity-0 transition-opacity">✓ Saved</span>
-                                <button onclick="toggleSingleEdit('${safeId}')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1 rounded text-xs shadow-sm transition-all">
+                        <td class="py-1 px-2 text-right pr-4">
+                            <div class="flex items-center justify-end gap-1.5">
+                                <span id="save-status-${safeId}" class="text-[10px] font-black text-emerald-600 hidden opacity-0 transition-opacity">✓ Saved</span>
+                                <button onclick="toggleSingleEdit('${safeId}')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2.5 py-0.5 rounded text-[11px] shadow-sm transition-all">
                                     Done
                                 </button>
                             </div>
@@ -395,16 +395,16 @@
                     `;
                 } else {
                     tr.innerHTML = `
-                        <td class="p-3 font-mono font-bold text-slate-700">${id}</td>
-                        <td class="p-3 font-bold text-slate-800">${s.firstName || ''}</td>
-                        <td class="p-3 font-bold text-slate-800">${s.lastName || ''}</td>
-                        <td class="p-3 text-right pr-4">
+                        <td class="py-1.5 px-3 font-mono font-bold text-slate-700">${id}</td>
+                        <td class="py-1.5 px-3 font-bold text-slate-800">${s.firstName || ''}</td>
+                        <td class="py-1.5 px-3 font-bold text-slate-800">${s.lastName || ''}</td>
+                        <td class="py-1.5 px-3 text-right pr-4">
                             <div class="flex items-center justify-end gap-1.5">
-                                <span id="save-status-${safeId}" class="text-[11px] font-black text-emerald-600 hidden">✓ Saved</span>
-                                <button onclick="toggleSingleEdit('${safeId}')" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold px-3 py-1 rounded-md text-xs border border-emerald-200 transition-all">
+                                <span id="save-status-${safeId}" class="text-[10px] font-black text-emerald-600 hidden">✓ Saved</span>
+                                <button onclick="toggleSingleEdit('${safeId}')" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold px-2.5 py-0.5 rounded text-[11px] border border-emerald-200 transition-all">
                                     Edit
                                 </button>
-                                <button onclick="deleteStudent('${safeId}')" class="bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold px-3 py-1 rounded-md text-xs border border-rose-200 transition-all">
+                                <button onclick="deleteStudent('${safeId}')" class="bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold px-2.5 py-0.5 rounded text-[11px] border border-rose-200 transition-all">
                                     Delete
                                 </button>
                             </div>
@@ -546,7 +546,6 @@
         });
 
         function parseAndCheckConflicts(csvText, mode) {
-            // Remove Windows \r carriage returns cleanly before splitting
             const cleanText = csvText.replace(/\r/g, '');
             const lines = cleanText.split('\n');
             pendingImportRoster = {};
@@ -567,12 +566,11 @@
 
                     pendingImportRoster[id] = { firstName, lastName };
 
-                    // Conflict Check (if mode is Merge and ID exists with different names)
                     if (mode === 'merge' && activeRoster[id]) {
                         const existing = activeRoster[id];
                         if (existing.firstName !== firstName || existing.lastName !== lastName) {
                             conflictItems.push({ id, existing, imported: { firstName, lastName } });
-                            conflictResolutions[id] = 'keep_import'; // Default resolution
+                            conflictResolutions[id] = 'keep_import';
                         }
                     }
                 }
