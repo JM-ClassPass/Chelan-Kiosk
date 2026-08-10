@@ -82,8 +82,22 @@
             </div>
         </div>
 
-        <!-- RIGHT COLUMN: Tools & Logs -->
+        <!-- RIGHT COLUMN: Tools, Approvals & Logs -->
         <div class="xl:col-span-2 flex flex-col gap-6">
+
+            <!-- TASK #3: Pending Roster Approvals Card / Banner -->
+            <div id="pending-approvals-card" class="bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 shadow-sm hidden">
+                <div class="flex justify-between items-center mb-3 border-b border-amber-200/80 pb-2">
+                    <h3 class="font-black text-amber-900 text-sm flex items-center gap-2">
+                        <span class="animate-pulse">⚠️</span> Pending Roster Approvals 
+                        <span id="pending-count-badge" class="bg-amber-200 text-amber-900 text-xs px-2 py-0.5 rounded-full font-mono font-bold">0</span>
+                    </h3>
+                    <p class="text-[11px] text-amber-800 font-medium">Students scanned without a pre-existing roster match.</p>
+                </div>
+                <div id="pending-approvals-list" class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-1">
+                    <!-- Dynamic pending student rows populated by Firebase -->
+                </div>
+            </div>
             
             <!-- Top Row Cards -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -193,7 +207,13 @@
         let phonesData = {};
         let bathroomPassesData = {};
         let hallPassesData = {};
+        let pendingApprovalsData = {};
         let currentSort = 'last';
+
+        // Helper function for safe HTML string escaping
+        function escapeAttr(str) {
+            return String(str || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        }
 
         const form = document.getElementById('quick-add-form');
         if (form) {
@@ -252,6 +272,7 @@
             });
         }
 
+        // Realtime Listeners
         onValue(ref(db, 'active_phones_in_class'), s => {
             phonesData = s.val() || {};
             renderPhones();
@@ -266,7 +287,63 @@
             renderPasses('h', hallPassesData);
             renderPhones();
         });
+        onValue(ref(db, 'pending_roster_approvals'), s => {
+            pendingApprovalsData = s.val() || {};
+            renderPendingApprovals();
+        });
         onValue(ref(db, 'system_logs'), s => renderLogs(s.val() || {}));
+
+        // Render Pending Roster Approvals Card
+        function renderPendingApprovals() {
+            const card = document.getElementById('pending-approvals-card');
+            const list = document.getElementById('pending-approvals-list');
+            const badge = document.getElementById('pending-count-badge');
+            
+            const keys = Object.keys(pendingApprovalsData);
+            badge.textContent = keys.length;
+
+            if (keys.length === 0) {
+                card.classList.add('hidden');
+                list.innerHTML = '';
+                return;
+            }
+
+            card.classList.remove('hidden');
+            list.innerHTML = keys.map(id => {
+                const item = pendingApprovalsData[id];
+                const safeId = escapeAttr(id);
+                const safeFirst = escapeAttr(item.firstName || '');
+                const safeLast = escapeAttr(item.lastName || '');
+
+                return `
+                    <div class="flex items-center justify-between bg-white p-2.5 rounded-xl border border-amber-200 shadow-sm">
+                        <div class="flex items-center gap-2">
+                            <span class="font-mono text-xs font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded border border-amber-300">${id}</span>
+                            <span class="font-bold text-sm text-slate-800">${item.firstName || ''} ${item.lastName || ''}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="approvePendingStudent('${safeId}', '${safeFirst}', '${safeLast}')" class="bg-green-700 hover:bg-green-800 text-white font-bold text-xs px-3 py-1 rounded-lg transition shadow-sm">
+                                Approve
+                            </button>
+                            <button onclick="rejectPendingStudent('${safeId}')" class="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-2.5 py-1 rounded-lg transition shadow-sm">
+                                Reject
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Global Approval / Rejection Handlers
+        window.approvePendingStudent = (id, firstName, lastName) => {
+            set(ref(db, `classroom_roster/${id}`), { firstName, lastName })
+                .then(() => remove(ref(db, `pending_roster_approvals/${id}`)))
+                .catch(err => alert("Error approving student: " + err.message));
+        };
+
+        window.rejectPendingStudent = (id) => {
+            remove(ref(db, `pending_roster_approvals/${id}`));
+        };
 
         window.setPhoneSort = (sortType) => {
             currentSort = sortType;
