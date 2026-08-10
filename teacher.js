@@ -5,11 +5,12 @@
 
 document.addEventListener('DOMContentLoaded', () => {
   initClock();
-  initNavigation();
+  initFilters();
+  initSearch();
 });
 
 /**
- * Updates the live header clock in 12-hour AM/PM format
+ * Live 12-hour AM/PM Clock logic for top-right header display
  */
 function initClock() {
   const clockElement = document.getElementById('live-clock');
@@ -23,7 +24,7 @@ function initClock() {
     const ampm = hours >= 12 ? 'PM' : 'AM';
 
     hours = hours % 12;
-    hours = hours ? hours : 12; // Handle midnight (0) as 12
+    hours = hours ? hours : 12;
 
     clockElement.textContent = `${hours}:${minutes} ${ampm}`;
   }
@@ -33,41 +34,59 @@ function initClock() {
 }
 
 /**
- * Handles toggle state between Live Dashboard and Manage Roster
+ * Filter functionality (All Students, In Class, On Pass)
  */
-function initNavigation() {
-  const btnDashboard = document.getElementById('nav-dashboard');
-  const btnRoster = document.getElementById('nav-roster');
-  const viewDashboard = document.getElementById('view-dashboard');
-  const viewRoster = document.getElementById('view-roster');
+function initFilters() {
+  const filterButtons = document.querySelectorAll('.filter-btn');
+  const cards = document.querySelectorAll('.student-card');
 
-  if (!btnDashboard || !btnRoster) return;
+  filterButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const filter = button.getAttribute('data-filter');
 
-  const activeClasses = ['border', 'border-[#22c55e]', 'bg-[#14532d]/50', 'text-white', 'font-bold', 'shadow-sm'];
-  const inactiveClasses = ['text-gray-200', 'hover:text-white', 'font-semibold'];
+      // Update button styling
+      filterButtons.forEach(btn => {
+        btn.classList.remove('bg-[#0d4a2b]', 'text-white', 'active-filter');
+        btn.classList.add('bg-gray-100', 'text-gray-700');
+      });
 
-  function switchTab(activeBtn, inactiveBtn, showView, hideView) {
-    // Update button visual states
-    activeBtn.classList.remove(...inactiveClasses);
-    activeBtn.classList.add(...activeClasses);
+      button.classList.remove('bg-gray-100', 'text-gray-700');
+      button.classList.add('bg-[#0d4a2b]', 'text-white', 'active-filter');
 
-    inactiveBtn.classList.remove(...activeClasses);
-    inactiveBtn.classList.add(...inactiveClasses);
-
-    // Toggle view visibility
-    if (showView && hideView) {
-      showView.classList.remove('hidden');
-      showView.classList.add('block');
-      hideView.classList.remove('block');
-      hideView.classList.add('hidden');
-    }
-  }
-
-  btnDashboard.addEventListener('click', () => {
-    switchTab(btnDashboard, btnRoster, viewDashboard, viewRoster);
+      // Filter student cards
+      cards.forEach(card => {
+        const status = card.getAttribute('data-status');
+        if (filter === 'all' || status === filter) {
+          card.classList.remove('hidden');
+        } else {
+          card.classList.add('hidden');
+        }
+      });
+    });
   });
+}
 
-  btnRoster.addEventListener('click', () => {
-    switchTab(btnRoster, btnDashboard, viewRoster, viewDashboard);
+/**
+ * Live student search input filtering by name or ID
+ */
+function initSearch() {
+  const searchInput = document.getElementById('search-input');
+  const cards = document.querySelectorAll('.student-card');
+
+  if (!searchInput) return;
+
+  searchInput.addEventListener('input', (e) => {
+    const query = e.target.value.toLowerCase().trim();
+
+    cards.forEach(card => {
+      const name = card.getAttribute('data-name') || '';
+      const cardText = card.innerText.toLowerCase();
+
+      if (name.includes(query) || cardText.includes(query)) {
+        card.classList.remove('hidden');
+      } else {
+        card.classList.add('hidden');
+      }
+    });
   });
 }
