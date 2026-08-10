@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manage Roster - Chelan High</title>
+    <!-- Prevent favicon 404 console warning -->
+    <link rel="shortcut icon" href="#">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .bg-chelan { background-color: #0d5235; }
@@ -29,7 +32,7 @@
                 <span id="live-clock" class="text-lg font-mono font-bold block leading-none">--:--:-- --</span>
                 <span class="text-[10px] text-green-300 uppercase tracking-widest font-bold">MEDICAL SCIENCES</span>
             </div>
-            <!-- Header Links: Teacher -> Roster -> Kiosk -->
+            <!-- Header Links: Live Dashboard -> Manage Roster -> Kiosk View -->
             <div class="flex gap-2">
                 <a href="https://morinjn.github.io/Chelan-Kiosk/teacher.html" class="bg-green-900/60 hover:bg-green-900 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition-all flex items-center gap-1.5 border border-green-700/60">
                     Live Dashboard
@@ -72,11 +75,6 @@
                         <button id="export-csv-btn" class="bg-chelan hover:bg-green-800 text-white text-xs font-bold px-3.5 py-2 rounded-lg shadow-sm transition-all flex items-center gap-1">
                             📥 Export CSV
                         </button>
-
-                        <!-- Edit All Button -->
-                        <button id="edit-all-btn" class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-3.5 py-2 rounded-lg shadow-sm transition-all flex items-center gap-1">
-                            ✏️ Edit All
-                        </button>
                     </div>
                 </div>
 
@@ -98,7 +96,7 @@
                             </tr>
                         </thead>
                         <tbody id="roster-tbody" class="divide-y divide-slate-100 text-sm">
-                            <!-- Rows Rendered via JS -->
+                            <!-- Rows Rendered via roster.js -->
                         </tbody>
                     </table>
                 </div>
@@ -143,7 +141,7 @@
                         </form>
                     </div>
 
-                    <!-- Card 2: Enhanced Drag & Drop / Sheet Import -->
+                    <!-- Card 2: Bulk Roster Import -->
                     <div class="bg-emerald-50/40 p-4 rounded-xl border border-emerald-100 space-y-3">
                         <span class="text-[11px] font-black text-emerald-800 uppercase tracking-wider block flex items-center gap-1">
                             <span>📁</span> BULK ROSTER IMPORT (CSV / SHEET)
@@ -232,7 +230,7 @@
         }, 1000);
     </script>
 
-    <!-- Standard Scripts (Loaded in classic global scope with cache-busting) -->
+    <!-- Global System Scripts -->
     <script src="config.js?v=1.004"></script>
     <script src="roster.js?v=1.004"></script>
 </body>
