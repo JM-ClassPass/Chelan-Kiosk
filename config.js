@@ -1,34 +1,55 @@
 /**
- * config.js - Global Configuration & Settings for Chelan High Systems
- * Version: 1.1.10
- * 
- * Loaded globally via standard <script src="config.js?v=1.004"></script>
+ * Chelan High School - Classroom Pass & Phone Tracker
+ * Configuration & Firebase Central Module (v1.1.10)
  */
 
-window.APP_CONFIG = {
-    // Application Metadata
-    appName: "Chelan High School Phone & Pass Kiosk",
-    version: "1.1.10",
-    schoolName: "Chelan High School",
-    department: "ROOM 176",
-
-    // Timeouts and Thresholds (In Minutes)
-    settings: {
-        hallPassTimeoutMinutes: 10,  // Time after which a student on a pass is flagged overdue
-        autoRefreshIntervalMs: 3000,  // Polling interval for live dashboard sync
-        defaultSortColumn: "lastName"
-    },
-
-    // Firebase Credentials (Replace placeholders if connecting to Firebase Live DB)
-    firebaseConfig: {
-        apiKey: "YOUR_API_KEY_HERE",
-        authDomain: "chelan-kiosk.firebaseapp.com",
-        projectId: "chelan-kiosk",
-        storageBucket: "chelan-kiosk.appspot.com",
-        messagingSenderId: "1234567890",
-        appId: "1:1234567890:web:abcdef123456"
-    }
+export const APP_CONFIG = {
+  version: "v1.1.10",
+  schoolName: "Chelan High",
+  department: "ROOM 176",
+  security: {
+    kioskPin: "486200",             // 6-digit PIN for Kiosk setup/exit
+    teacherPassword: "Dizzyskunk68!" // Teacher dashboard access password
+  },
+  pocketsAvailable: 30,             // Total phone pocket slots available
+  maxBathroomPasses: 1,             // Max active bathroom passes allowed
+  maxHallPasses: 2,                  // Max active hall passes allowed
+  firebaseConfig: {
+    apiKey: "AIzaSyDOqjLMzMydaR31WWUA35sr1FrNLfHPxuI",
+    authDomain: "chelan-classroom-pass-a811e.firebaseapp.com",
+    databaseURL: "https://chelan-classroom-pass-a811e-default-rtdb.firebaseio.com",
+    projectId: "chelan-classroom-pass-a811e",
+    storageBucket: "chelan-classroom-pass-a811e.firebasestorage.app",
+    messagingSenderId: "645480807479",
+    appId: "1:645480807479:web:d280d4ef38e8754a9953b2"
+  }
 };
 
-// Optional: Console log confirmation on load for easy debugging
-console.log(`[Config Loaded] ${window.APP_CONFIG.appName} v${window.APP_CONFIG.version}`);
+/**
+ * Shared Helper Functions
+ */
+
+// Formats seconds into "Xm Ys" or "Xs"
+export function formatDuration(seconds) {
+  if (seconds === null || seconds === undefined || isNaN(seconds)) return "--";
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  if (mins > 0) {
+    return `${mins}m ${secs}s`;
+  }
+  return `${secs}s`;
+}
+
+// Formats timestamp into "10:13 AM"
+export function formatTime(dateObj = new Date()) {
+  return dateObj.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true
+  });
+}
+
+// Formats timestamp into "8/10/2026"
+export function formatDate(dateObj = new Date()) {
+  return dateObj.toLocaleDateString("en-US");
+}
