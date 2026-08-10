@@ -55,7 +55,7 @@
         <!-- Kiosk Main Card -->
         <div id="main-card" class="bg-white max-w-3xl w-full rounded-2xl shadow-xl border-l-8 border-l-chelan border-y border-r border-slate-200 p-6 md:p-8 relative overflow-hidden transition-all duration-300">
             
-            <!-- 1-Second Visual Flash Overlay -->
+            <!-- Visual Flash Overlay -->
             <div id="flash-overlay" class="absolute inset-0 bg-white/95 backdrop-blur-sm z-50 hidden flex-col items-center justify-center transition-all">
                 <div id="flash-icon" class="text-6xl mb-2">✅</div>
                 <h2 id="flash-code" class="text-3xl font-black text-slate-800 tracking-tight mb-1">CI-01</h2>
@@ -94,9 +94,13 @@
 
                 <!-- Manual Registration Input (Activates on 3rd Failed Attempt) -->
                 <div id="manual-input-area" class="w-full hidden bg-orange-50 p-4 rounded-xl border border-orange-200">
-                    <p class="text-orange-800 font-bold text-center mb-3 text-sm flex items-center justify-center gap-2">
-                        <span>⚠️</span> ID not recognized. Please enter your name for this session (3/3 attempts).
-                    </p>
+                    <div class="text-center mb-3">
+                        <span class="text-xs font-bold text-orange-800 uppercase tracking-widest block mb-1">Registration Request (3/3 Attempts)</span>
+                        <p class="text-slate-700 font-bold text-sm">
+                            Registering ID: <span id="manual-id-display" class="font-mono bg-orange-200 px-2 py-0.5 rounded text-orange-900 font-black text-base">---</span>
+                        </p>
+                        <p class="text-xs text-slate-500 mt-1">Please enter your First & Last Name to send a registration request for teacher approval.</p>
+                    </div>
                     <div class="flex gap-3">
                         <input type="text" id="manual-fname" placeholder="First Name" class="w-1/2 px-4 py-3 bg-white border-2 border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 text-center font-bold text-lg">
                         <input type="text" id="manual-lname" placeholder="Last Name" class="w-1/2 px-4 py-3 bg-white border-2 border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 text-center font-bold text-lg">
@@ -252,7 +256,6 @@
         function renderGrid() {
             const usedSlots = Object.values(activePhones).map(p => parseInt(p.pocket));
             
-            // Calculate lowest available slot
             let lowestAvailable = 1;
             for (let i = 1; i <= 36; i++) {
                 if (!usedSlots.includes(i)) {
@@ -261,7 +264,6 @@
                 }
             }
 
-            // If user has not manually selected a slot, or selected slot is taken, default to lowest available
             if (!userManuallySelected || usedSlots.includes(selectedSlot)) {
                 selectedSlot = lowestAvailable;
                 userManuallySelected = false;
@@ -284,16 +286,13 @@
                 const btn = document.createElement('div');
 
                 if (isUsed) {
-                    // Grayed out taken slots with NO # sign
                     btn.className = "py-2 px-1 flex flex-col items-center justify-center rounded-xl border border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed select-none";
                     btn.innerHTML = `<span class="font-bold text-sm line-through">${numStr}</span><span class="text-[8px] font-bold uppercase tracking-tighter text-slate-400">TAKEN</span>`;
                 } else if (isSelected) {
-                    // Selected slot
                     btn.className = "py-2 px-1 flex flex-col items-center justify-center rounded-xl bg-chelan text-white shadow-md ring-2 ring-green-300 ring-offset-1 cursor-pointer select-none transition-all";
                     btn.innerHTML = `<span class="font-bold text-sm">${numStr}</span><span class="text-[8px] font-bold uppercase tracking-tighter text-green-200">SELECTED</span>`;
                     btn.onclick = () => selectSlot(i);
                 } else {
-                    // Available slot
                     btn.className = "py-2 px-1 flex flex-col items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 hover:border-chelan hover:text-chelan cursor-pointer select-none transition-all shadow-sm";
                     btn.innerHTML = `<span class="font-bold text-sm">${numStr}</span>`;
                     btn.onclick = () => selectSlot(i);
@@ -314,7 +313,7 @@
             document.getElementById('id-error').textContent = "";
             failedAttempts = 0;
             isManualMode = false;
-            userManuallySelected = false; // Reset slot selection for next student
+            userManuallySelected = false;
 
             document.getElementById('standard-input-area').classList.remove('hidden');
             document.getElementById('manual-input-area').classList.add('hidden');
@@ -330,8 +329,8 @@
             }, 50);
         }
 
-        // 1-Second Flash Overlay Helper
-        function triggerFlashConfirmation(codeStr, msgStr, iconStr = '✅') {
+        // Visual Flash Overlay Helper
+        function triggerFlashConfirmation(codeStr, msgStr, iconStr = '✅', durationMs = 1200) {
             const overlay = document.getElementById('flash-overlay');
             document.getElementById('flash-icon').textContent = iconStr;
             document.getElementById('flash-code').textContent = codeStr;
@@ -344,7 +343,17 @@
                 overlay.classList.add('hidden');
                 overlay.classList.remove('flex');
                 resetForm();
-            }, 1000);
+            }, durationMs);
+        }
+
+        // Helper to handle pass rejection: clear ID input & set error message
+        function handlePassDenial(errorMsg) {
+            document.getElementById('id-error').textContent = errorMsg;
+            const input = document.getElementById('student-id');
+            if (input) {
+                input.value = "";
+                input.focus();
+            }
         }
 
         // Form Submit Handler
@@ -362,7 +371,16 @@
                     return;
                 }
                 studentName = `${fname} ${lname}`;
-                set(ref(db, `classroom_roster/${studentId}`), { firstName: fname, lastName: lname });
+
+                // Send for teacher approval first rather than direct roster addition
+                set(ref(db, `pending_roster_approvals/${studentId}`), {
+                    firstName: fname,
+                    lastName: lname,
+                    studentId: studentId,
+                    timestamp: Date.now()
+                });
+
+                triggerFlashConfirmation('PENDING', `Registration sent for teacher approval (${studentName})`, '⏳', 1800);
             } else {
                 if (roster[studentId]) {
                     studentName = `${roster[studentId].firstName} ${roster[studentId].lastName}`;
@@ -370,6 +388,7 @@
                     failedAttempts++;
                     if (failedAttempts >= 3) {
                         isManualMode = true;
+                        document.getElementById('manual-id-display').textContent = studentId;
                         document.getElementById('standard-input-area').classList.add('hidden');
                         document.getElementById('manual-input-area').classList.remove('hidden');
                         document.getElementById('student-id').required = false;
@@ -386,7 +405,7 @@
             // Mode Execution
             if (currentMode === 'phone') {
                 if (activePhones[studentId]) {
-                    // CHECKOUT PHONE (COS): Auto-clear active passes
+                    // CHECKOUT PHONE (COS)
                     remove(ref(db, `active_phones_in_class/${studentId}`));
                     remove(ref(db, `active_bathroom_passes/${studentId}`));
                     remove(ref(db, `active_hall_passes/${studentId}`));
@@ -418,23 +437,23 @@
                     // Return Bathroom Pass (BP-I)
                     remove(ref(db, `active_bathroom_passes/${studentId}`));
                     push(ref(db, 'system_logs'), { studentId, name: studentName, code: 'BP-I', action: "Bathroom Pass Return", timestamp: Date.now() });
-                    triggerFlashConfirmation('BP-I', `Welcome back, ${studentName}!`, '🚻');
+                    triggerFlashConfirmation('BP-I', `Welcome back, ${studentName}!`, 'BP-I');
                 } else {
                     // Rule 1: Phone must be checked in
                     if (!activePhones[studentId]) {
-                        document.getElementById('id-error').textContent = "⚠️ Phone must be checked in to take a pass!";
+                        handlePassDenial("⚠️ Phone must be checked in to take a pass!");
                         return;
                     }
 
                     // Rule 2: Cannot take BP if already on Hall Pass
                     if (activeHall[studentId]) {
-                        document.getElementById('id-error').textContent = "⚠️ Cannot take Bathroom Pass while on Hall Pass!";
+                        handlePassDenial("⚠️ Cannot take Bathroom Pass while on Hall Pass!");
                         return;
                     }
 
                     // Rule 3: Strict limit of 1 student at a time for Bathroom
                     if (Object.keys(activeBathroom).length >= 1) {
-                        document.getElementById('id-error').textContent = "⚠️ Bathroom pass currently occupied (1 max limit)!";
+                        handlePassDenial("⚠️ Bathroom pass currently occupied (1 max limit)!");
                         return;
                     }
 
@@ -450,17 +469,17 @@
                     // Return Hall Pass (HP-I)
                     remove(ref(db, `active_hall_passes/${studentId}`));
                     push(ref(db, 'system_logs'), { studentId, name: studentName, code: 'HP-I', action: "Hall Pass Return", timestamp: Date.now() });
-                    triggerFlashConfirmation('HP-I', `Welcome back, ${studentName}!`, '🎟️');
+                    triggerFlashConfirmation('HP-I', `Welcome back, ${studentName}!`, 'HP-I');
                 } else {
                     // Rule 1: Phone must be checked in
                     if (!activePhones[studentId]) {
-                        document.getElementById('id-error').textContent = "⚠️ Phone must be checked in to take a pass!";
+                        handlePassDenial("⚠️ Phone must be checked in to take a pass!");
                         return;
                     }
 
                     // Rule 2: Cannot take HP if already on Bathroom Pass
                     if (activeBathroom[studentId]) {
-                        document.getElementById('id-error').textContent = "⚠️ Cannot take Hall Pass while on Bathroom Pass!";
+                        handlePassDenial("⚠️ Cannot take Hall Pass while on Bathroom Pass!");
                         return;
                     }
 
