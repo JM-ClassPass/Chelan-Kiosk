@@ -127,7 +127,7 @@
                     
                     <div class="max-h-[220px] overflow-y-auto custom-scrollbar pr-1">
                         <div id="slot-grid" class="grid grid-cols-4 sm:grid-cols-9 gap-2">
-                            <!-- JS Generated Grid Slots (1 to 36) -->
+                            <!-- JS Generated Grid Slots -->
                         </div>
                     </div>
                 </div>
@@ -154,12 +154,16 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getDatabase, ref, onValue, set, remove, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
         
-        // Import Versioning from config.js
-        import { CONFIG } from './config.js';
-
-        if (CONFIG && CONFIG.version) {
-            document.getElementById('app-version-badge').textContent = `v${CONFIG.version}`;
-        }
+        // DYNAMIC IMPORT FIX: This prevents the app from breaking if config.js is not found during local testing.
+        import('./config.js')
+            .then(module => {
+                if (module.CONFIG && module.CONFIG.version) {
+                    document.getElementById('app-version-badge').textContent = `v${module.CONFIG.version}`;
+                }
+            })
+            .catch(() => {
+                console.warn("config.js not found. App will continue functioning with default version.");
+            });
 
         const firebaseConfig = {
             apiKey: "AIzaSyDOqjLMzMydaR31WWUA35sr1FrNLfHPxuI",
@@ -256,7 +260,7 @@
             document.getElementById('count-hall').textContent = Object.keys(activeHall).length;
         });
 
-        // Tab Switching Logic
+        // Tab Switching Logic (Attached to window so HTML buttons can trigger it)
         window.switchMode = (mode) => {
             currentMode = mode;
             
@@ -290,7 +294,7 @@
             resetForm();
         };
 
-        // Render Pocket Slot Grid (Slots 1 to 36)
+        // Render Pocket Slot Grid
         function renderGrid() {
             const usedSlots = Object.values(activePhones).map(p => parseInt(p.pocket));
             
@@ -523,7 +527,7 @@
             }
         });
 
-        // Initial launch state
+        // Initialize default view
         switchMode('phone');
     </script>
 </body>
