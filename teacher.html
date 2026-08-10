@@ -1,600 +1,275 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teacher Dashboard - Chelan High</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .bg-chelan { background-color: #0d5235; }
-        .text-chelan { color: #0d5235; }
-        .border-chelan { border-color: #0d5235; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chelan High - Live Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* Top-Down 2-Column Fill Container */
+    .student-grid-topdown {
+      columns: 2;
+      column-gap: 0.75rem;
+    }
+    .student-card-item {
+      break-inside: avoid;
+      margin-bottom: 0.75rem;
+    }
+  </style>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans overflow-x-hidden">
 
-    <!-- Device Lock Screen -->
-    <div id="device-lock-screen" class="fixed inset-0 bg-slate-900 z-50 flex flex-col items-center justify-center p-6 text-center text-white">
-        <div class="max-w-md w-full bg-slate-800 p-8 rounded-3xl border border-slate-700 shadow-2xl space-y-6">
-            <div class="text-6xl mb-2">🔒</div>
-            <div>
-                <h2 class="text-2xl font-black">Dashboard Locked</h2>
-            </div>
-            <form onsubmit="handlePinSubmit(event)" class="space-y-4">
-                <input type="password" id="pin-input" maxlength="6" placeholder="PIN" autofocus required
-                    class="w-full text-center font-mono text-3xl tracking-widest px-4 py-3 bg-slate-900 border-2 border-slate-600 rounded-2xl focus:outline-none text-white">
-                <button type="submit" class="w-full py-3.5 bg-chelan hover:bg-green-800 text-white font-bold rounded-2xl">Unlock</button>
-            </form>
+  <!-- Password Access Authentication Modal -->
+  <div id="auth-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-6">
+    <div class="bg-slate-800 border border-slate-700 rounded-3xl p-8 max-w-md w-full shadow-2xl text-center">
+      <div class="text-amber-400 text-5xl mb-3"><i class="fa-solid fa-lock"></i></div>
+      <h2 class="text-2xl font-extrabold text-white mb-1">Teacher Authentication</h2>
+      <p class="text-sm text-slate-400 mb-6">Enter password to access Live Dashboard</p>
+
+      <form id="auth-form" onsubmit="return false;">
+        <input 
+          type="password" 
+          id="auth-password" 
+          class="w-full bg-slate-900 border border-slate-600 text-white text-xl text-center py-3 rounded-xl mb-4 focus:outline-none focus:border-emerald-500 font-mono tracking-widest"
+          placeholder="••••••••••••"
+          autofocus 
+        />
+        <button type="submit" id="auth-submit-btn" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl shadow-lg transition">
+          Unlock Dashboard
+        </button>
+      </form>
+      <p id="auth-error" class="text-rose-400 text-xs mt-3 hidden font-semibold">Incorrect Password. Please try again.</p>
+    </div>
+  </div>
+
+  <!-- Header Navigation Bar -->
+  <header class="bg-slate-800 border-b border-slate-700 px-6 py-3 shadow-lg flex justify-between items-center sticky top-0 z-30">
+    <!-- Branding & Versioning -->
+    <div class="flex items-center gap-4">
+      <div class="bg-amber-500 text-slate-900 font-extrabold px-3 py-1.5 rounded-lg text-xl flex items-center gap-2">
+        <i class="fa-solid fa-paw"></i>
+        <span>CHELAN</span>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-white leading-tight">Chelan High School</h1>
+        <div class="flex items-center gap-2 mt-0.5">
+          <span id="dash-version" class="bg-slate-700 text-amber-400 text-xs font-semibold px-2 py-0.5 rounded-full border border-slate-600">v1.1.10</span>
+          <span id="dash-room" class="text-xs text-slate-400 font-medium">ROOM 176</span>
         </div>
+      </div>
     </div>
 
-    <!-- Header Navigation -->
-    <header class="bg-chelan text-white shadow-md py-3 px-6 flex justify-between items-center">
-        <div class="flex items-center gap-3">
-            <img src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" alt="Logo" class="h-10">
-            <div class="flex items-center gap-2">
-                <h1 class="text-xl font-bold tracking-wide">Chelan High</h1>
-                <span class="bg-green-800/80 text-green-200 text-xs px-2.5 py-0.5 rounded-full font-semibold border border-green-700/50">Teacher Dashboard v1.009</span>
-            </div>
-        </div>
-        <div class="flex items-center gap-6">
-            <div class="text-right hidden sm:block">
-                <span id="live-clock" class="text-lg font-mono font-bold block leading-none">--:--:-- --</span>
-                <span class="text-[10px] text-green-300 uppercase tracking-widest font-bold">MEDICAL SCIENCES</span>
-            </div>
-            <div class="flex gap-2">
-                <a href="teacher.html" class="bg-white text-chelan font-bold text-sm px-4 py-2 rounded-lg shadow">Live Dashboard</a>
-                <a href="roster.html" class="bg-green-900/60 hover:bg-green-900 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition-all border border-green-700/60 flex items-center">Manage Roster</a>
-                <a href="index.html" class="bg-green-900/60 hover:bg-green-900 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition-all border border-green-700/60 flex items-center">Kiosk View</a>
-            </div>
-        </div>
-    </header>
+    <!-- Navigation Tab Buttons -->
+    <nav class="flex items-center gap-2 bg-slate-900 p-1.5 rounded-xl border border-slate-700">
+      <a href="teacher.html" class="bg-slate-700 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center gap-2">
+        <i class="fa-solid fa-gauge-high text-emerald-400"></i> Live Dashboard
+      </a>
+      <a href="roster.html" class="text-slate-400 hover:text-white px-4 py-2 rounded-lg font-bold text-sm transition flex items-center gap-2">
+        <i class="fa-solid fa-users"></i> Manage Roster
+      </a>
+      <a href="index.html" class="text-slate-400 hover:text-white px-4 py-2 rounded-lg font-bold text-sm transition flex items-center gap-2">
+        <i class="fa-solid fa-desktop"></i> Kiosk View
+      </a>
+    </nav>
 
-    <!-- Main Container -->
-    <div class="max-w-[1700px] w-full mx-auto p-4 lg:p-6 flex-grow flex flex-col">
-
-        <!-- Main Grid Layout (12 Columns: 4 Left, 3 Middle, 5 Right) -->
-        <main class="grid grid-cols-1 xl:grid-cols-12 gap-6 flex-grow">
-
-            <!-- LEFT COLUMN: Currently In Room (4 cols) -->
-            <div class="xl:col-span-4 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col h-[500px] xl:h-[calc(100vh-100px)]">
-                <div class="p-4 border-b border-slate-100 flex flex-col gap-2.5">
-                    <div class="flex justify-between items-center">
-                        <h2 class="text-lg font-bold flex items-center gap-2">
-                            <span>📱</span> Currently In Room
-                        </h2>
-                        <button onclick="clearAllPhones()" class="bg-red-700 hover:bg-red-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm">
-                            Check Out All
-                        </button>
-                    </div>
-                    <div class="flex justify-between items-center text-xs font-semibold text-slate-500">
-                        <span id="dash-phone-count" class="text-chelan font-bold">0 Students</span>
-                        <div class="flex gap-1 items-center">
-                            <span class="mr-1">Sort:</span>
-                            <button id="sort-first" onclick="setPhoneSort('first')" class="px-2 py-0.5 rounded-md hover:text-slate-800">First</button>
-                            <button id="sort-last" onclick="setPhoneSort('last')" class="bg-chelan text-white px-2 py-0.5 rounded-md">Last</button>
-                            <button id="sort-pocket" onclick="setPhoneSort('pocket')" class="px-2 py-0.5 rounded-md hover:text-slate-800">Pocket #</button>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- 2-Column List Container -->
-                <div id="active-phones-list" class="p-3 overflow-y-auto custom-scrollbar flex-grow grid grid-cols-2 gap-2 content-start">
-                    <p class="text-xs text-slate-400 italic col-span-2">No phones currently checked in.</p>
-                </div>
-            </div>
-
-            <!-- MIDDLE COLUMN: Tools & Metrics (3 cols - Narrowed) -->
-            <div class="xl:col-span-3 flex flex-col gap-3.5">
-
-                <!-- Pending Roster Approvals Banner -->
-                <div id="pending-approvals-card" class="bg-amber-50 border-2 border-amber-300 rounded-2xl p-3.5 shadow-sm hidden">
-                    <div class="flex justify-between items-center mb-2.5 border-b border-amber-200/80 pb-2">
-                        <h3 class="font-black text-amber-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                            <span class="animate-pulse">⚠️</span> Pending Approvals 
-                            <span id="pending-count-badge" class="bg-amber-200 text-amber-900 text-xs px-2 py-0.5 rounded-full font-mono font-bold">0</span>
-                        </h3>
-                    </div>
-                    <div id="pending-approvals-list" class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-1"></div>
-                </div>
-                
-                <!-- Bathroom Pass -->
-                <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm border-t-4 border-t-red-600 flex flex-col min-h-[110px]">
-                    <div class="flex justify-between items-center mb-1.5">
-                        <h3 class="font-bold text-base flex items-center gap-1.5"><span>🚻</span> Bathroom Pass</h3>
-                        <span id="dash-pass-count" class="bg-red-50 text-red-700 text-xs font-bold px-2 py-0.5 rounded-md border border-red-100">0/1 Out</span>
-                    </div>
-                    <div id="bathroom-status-detail" class="flex-grow flex items-center text-xs text-slate-400 italic">
-                        No students out.
-                    </div>
-                </div>
-
-                <!-- Hall Pass -->
-                <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm border-t-4 border-t-indigo-600 flex flex-col min-h-[110px]">
-                    <div class="flex justify-between items-center mb-1.5">
-                        <h3 class="font-bold text-base flex items-center gap-1.5"><span>🎟️</span> Hall Pass</h3>
-                        <span id="dash-hall-count" class="bg-indigo-50 text-indigo-700 text-xs font-bold px-2 py-0.5 rounded-md border border-indigo-100">0 Out</span>
-                    </div>
-                    <div id="hallpass-status-detail" class="flex-grow flex items-start flex-col gap-1 overflow-y-auto custom-scrollbar text-xs text-slate-400 italic pt-1">
-                        No students out.
-                    </div>
-                </div>
-
-                <!-- Metrics Card -->
-                <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-2">
-                    <h3 class="font-bold text-base flex items-center gap-1.5 mb-0.5"><span>📊</span> Daily Metrics</h3>
-                    
-                    <div class="flex justify-between items-center bg-slate-50 p-2 rounded-xl border border-slate-100">
-                        <div class="flex items-center gap-1.5 text-slate-600">
-                            <span class="text-green-700 text-sm">📱</span>
-                            <span class="text-[11px] font-bold uppercase tracking-wider">Total Check-ins</span>
-                        </div>
-                        <span id="stat-checkins" class="font-black text-slate-800 text-base">0</span>
-                    </div>
-                    
-                    <div class="flex justify-between items-center bg-slate-50 p-2 rounded-xl border border-slate-100">
-                        <div class="flex items-center gap-1.5 text-slate-600">
-                            <span class="text-indigo-700 text-sm">🎟️</span>
-                            <span class="text-[11px] font-bold uppercase tracking-wider">Total Pass Trips</span>
-                        </div>
-                        <span id="stat-passes" class="font-black text-slate-800 text-base">0</span>
-                    </div>
-
-                    <div class="flex justify-between items-center bg-slate-50 p-2 rounded-xl border border-slate-100">
-                        <div class="flex items-center gap-1.5 text-slate-600">
-                            <span class="text-amber-600 text-sm">⚡</span>
-                            <span class="text-[11px] font-bold uppercase tracking-wider">Peak Time</span>
-                        </div>
-                        <span id="stat-peak" class="font-bold text-slate-800 text-xs">--</span>
-                    </div>
-                </div>
-
-                <!-- Quick Add Form -->
-                <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm flex flex-col mt-auto">
-                    <h3 class="font-bold text-xs flex items-center gap-1.5 text-slate-700 mb-2"><span>🛠️</span> Quick Add Student</h3>
-                    <form id="quick-add-form" class="flex flex-col gap-1.5">
-                        <input type="text" id="add-student-id" placeholder="ID / Barcode" required class="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg focus:outline-none focus:border-chelan bg-slate-50">
-                        <div class="flex gap-1.5">
-                            <input type="text" id="add-student-fname" placeholder="First Name" required class="w-1/2 text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg focus:outline-none focus:border-chelan bg-slate-50">
-                            <input type="text" id="add-student-lname" placeholder="Last Name" required class="w-1/2 text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg focus:outline-none focus:border-chelan bg-slate-50">
-                        </div>
-                        <button type="submit" id="add-btn" class="w-full bg-chelan hover:bg-green-800 text-white text-xs font-bold py-1.5 rounded-lg transition mt-0.5">+ Add to Roster</button>
-                    </form>
-                </div>
-            </div>
-
-            <!-- RIGHT COLUMN: Running Log (5 cols - Widened) -->
-            <div class="xl:col-span-5 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col h-[500px] xl:h-[calc(100vh-100px)]">
-                <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-2xl">
-                    <div class="flex items-center gap-2">
-                        <h2 class="font-bold text-slate-800 flex items-center gap-2 text-lg"><span>📋</span> Running Log</h2>
-                        <span id="log-count" class="text-xs text-slate-400 bg-white px-2 py-1 rounded border border-slate-200 shadow-sm font-mono">0</span>
-                    </div>
-                </div>
-                <div class="p-3 border-b border-slate-100">
-                    <input type="text" id="log-search" placeholder="🔍 Search logs by student or action..." class="text-xs border border-slate-200 rounded-full px-4 py-2 w-full bg-slate-50 focus:outline-none focus:border-chelan transition">
-                </div>
-                <div class="overflow-auto custom-scrollbar flex-grow p-0">
-                    <table class="w-full text-left text-sm whitespace-nowrap">
-                        <thead class="bg-slate-50 text-slate-500 font-semibold sticky top-0 border-b border-slate-200 shadow-sm text-xs">
-                            <tr>
-                                <th class="px-4 py-3 w-28">Time</th>
-                                <th class="px-4 py-3">Student</th>
-                                <th class="px-4 py-3">Action Details</th>
-                            </tr>
-                        </thead>
-                        <tbody id="logs-table-body" class="divide-y divide-slate-100">
-                            <tr>
-                                <td colspan="3" class="px-4 py-4 text-center text-slate-400 text-xs italic">No activity logged yet.</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-        </main>
+    <!-- Live Clock & Status -->
+    <div class="text-right">
+      <div id="dash-clock" class="text-2xl font-mono font-bold text-emerald-400">00:00:00 AM</div>
+      <div class="text-xs text-slate-400 font-medium uppercase tracking-wider">Teacher Station</div>
     </div>
+  </header>
 
-    <!-- Scripts -->
-    <script>
-        const TEACHER_PIN = "486200";
-        if (localStorage.getItem('chelan_teacher_authorized') === 'true') {
-            document.getElementById('device-lock-screen').classList.add('hidden');
-        }
-        function handlePinSubmit(e) {
-            e.preventDefault();
-            if (document.getElementById('pin-input').value === TEACHER_PIN) {
-                localStorage.setItem('chelan_teacher_authorized', 'true');
-                document.getElementById('device-lock-screen').classList.add('hidden');
-            }
-        }
-        setInterval(() => {
-            const clock = document.getElementById('live-clock');
-            if(clock) clock.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        }, 1000);
-    </script>
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, set, remove, push, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-        
-        const firebaseConfig = {
-            apiKey: "AIzaSyDOqjLMzMydaR31WWUA35sr1FrNLfHPxuI",
-            authDomain: "chelan-classroom-pass-a811e.firebaseapp.com",
-            databaseURL: "https://chelan-classroom-pass-a811e-default-rtdb.firebaseio.com",
-            projectId: "chelan-classroom-pass-a811e",
-            storageBucket: "chelan-classroom-pass-a811e.firebasestorage.app",
-            messagingSenderId: "645480807479",
-            appId: "1:645480807479:web:d280d4ef38e8754a9953b2"
-        };
+  <!-- Dashboard Workspace Layout (3 Main Columns) -->
+  <main class="flex-1 max-w-[1800px] w-full mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
+    <!-- LEFT COLUMN: Currently In Room (4 Cols) -->
+    <section class="lg:col-span-4 bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 flex flex-col shadow-xl">
+      <!-- Section Header Controls -->
+      <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-700">
+        <div class="flex items-center gap-2">
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-user-check text-emerald-400"></i> Currently In Room
+          </h2>
+          <span id="in-room-count-badge" class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-bold px-2 py-0.5 rounded-full">0 Students</span>
+        </div>
+        <button id="check-out-all-btn" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5">
+          <i class="fa-solid fa-right-from-bracket"></i> Check Out All
+        </button>
+      </div>
 
-        let phonesData = {};
-        let bathroomPassesData = {};
-        let hallPassesData = {};
-        let pendingApprovalsData = {};
-        let logsData = {};
-        let currentSort = 'last';
+      <!-- Sorting Controls -->
+      <div class="flex items-center gap-2 mb-4 text-xs">
+        <span class="text-slate-400 font-medium">Sort:</span>
+        <button id="sort-first-btn" class="bg-slate-700 text-white font-semibold px-2.5 py-1 rounded-md border border-slate-600">First</button>
+        <button id="sort-last-btn" class="bg-slate-800 text-slate-400 hover:text-white font-semibold px-2.5 py-1 rounded-md border border-slate-700">Last</button>
+        <button id="sort-pocket-btn" class="bg-slate-800 text-slate-400 hover:text-white font-semibold px-2.5 py-1 rounded-md border border-slate-700">Pocket #</button>
+      </div>
 
-        function escapeAttr(str) {
-            return String(str || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
-        }
+      <!-- Top-Down 2-Column Card Container Grid -->
+      <div id="student-cards-container" class="student-grid-topdown flex-1 overflow-y-auto min-h-[400px] max-h-[700px] pr-1">
+        <!-- Student cards will be dynamically rendered here via teacher.js -->
+        <p class="text-slate-500 text-sm italic text-center py-8">No students checked in.</p>
+      </div>
+    </section>
 
-        // Quick Add Form Handler
-        const form = document.getElementById('quick-add-form');
-        if (form) {
-            form.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const btn = document.getElementById('add-btn');
-                const idInput = document.getElementById('add-student-id');
-                const fInput = document.getElementById('add-student-fname');
-                const lInput = document.getElementById('add-student-lname');
+    <!-- MIDDLE COLUMN: Active Passes, Metrics & Quick Add (3 Cols) -->
+    <section class="lg:col-span-3 flex flex-col gap-5">
 
-                const studentId = idInput.value.trim();
-                const firstName = fInput.value.trim();
-                const lastName = lInput.value.trim();
+      <!-- Bathroom Pass Card -->
+      <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 shadow-xl border-l-4 border-l-rose-500">
+        <div class="flex justify-between items-center mb-3">
+          <h3 class="text-md font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-restroom text-rose-500"></i> Bathroom Pass
+          </h3>
+          <span id="bathroom-count-badge" class="bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-bold px-2 py-0.5 rounded-full">0/1 Out</span>
+        </div>
+        <div id="bathroom-active-list" class="space-y-2">
+          <p class="text-xs text-slate-500 italic">No students out on bathroom pass.</p>
+        </div>
+      </div>
 
-                if (!studentId || !firstName || !lastName) {
-                    alert("Please fill in all 3 fields.");
-                    return;
-                }
+      <!-- Hall Pass Card -->
+      <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 shadow-xl border-l-4 border-l-purple-500">
+        <div class="flex justify-between items-center mb-3">
+          <h3 class="text-md font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-ticket text-purple-400"></i> Hall Pass
+          </h3>
+          <span id="hall-count-badge" class="bg-purple-500/20 text-purple-400 border border-purple-500/30 text-xs font-bold px-2 py-0.5 rounded-full">0 Out</span>
+        </div>
+        <div id="hall-active-list" class="space-y-2">
+          <p class="text-xs text-slate-500 italic">No students out on hall pass.</p>
+        </div>
+      </div>
 
-                btn.disabled = true;
-                btn.textContent = "Saving...";
+      <!-- Daily Metrics Card -->
+      <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 shadow-xl">
+        <h3 class="text-sm font-bold text-slate-300 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <i class="fa-solid fa-chart-simple text-amber-400"></i> Daily Stats
+        </h3>
+        <div class="grid grid-cols-3 gap-2 text-center">
+          <div class="bg-slate-900/60 p-2.5 rounded-xl border border-slate-700">
+            <div id="metric-checkins" class="text-xl font-bold text-emerald-400">0</div>
+            <div class="text-[10px] text-slate-400 font-semibold uppercase">Check-Ins</div>
+          </div>
+          <div class="bg-slate-900/60 p-2.5 rounded-xl border border-slate-700">
+            <div id="metric-trips" class="text-xl font-bold text-purple-400">0</div>
+            <div class="text-[10px] text-slate-400 font-semibold uppercase">Pass Trips</div>
+          </div>
+          <div class="bg-slate-900/60 p-2.5 rounded-xl border border-slate-700">
+            <div id="metric-peak" class="text-xl font-bold text-amber-400">--</div>
+            <div class="text-[10px] text-slate-400 font-semibold uppercase">Peak Time</div>
+          </div>
+        </div>
+      </div>
 
-                set(ref(db, 'classroom_roster/' + studentId), {
-                    firstName: firstName,
-                    lastName: lastName
-                })
-                .then(() => {
-                    btn.textContent = "✓ Added!";
-                    btn.classList.remove('bg-chelan');
-                    btn.classList.add('bg-green-600');
-                    form.reset();
-                    
-                    setTimeout(() => {
-                        btn.textContent = "+ Add to Roster";
-                        btn.classList.remove('bg-green-600');
-                        btn.classList.add('bg-chelan');
-                        btn.disabled = false;
-                    }, 1500);
-                })
-                .catch((error) => {
-                    alert("Error saving: " + error.message);
-                    btn.disabled = false;
-                });
-            });
-        }
+      <!-- Quick Add Student Card (Single Horizontal Row) -->
+      <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 shadow-xl">
+        <h3 class="text-sm font-bold text-slate-300 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <i class="fa-solid fa-user-plus text-emerald-400"></i> Quick Add Student
+        </h3>
+        <form id="quick-add-form" onsubmit="return false;" class="flex gap-2 items-center">
+          <input 
+            type="text" 
+            id="qa-id" 
+            placeholder="ID" 
+            class="w-20 bg-slate-900 border border-slate-700 text-amber-400 font-mono text-xs p-2 rounded-lg focus:outline-none focus:border-emerald-500" 
+            required 
+          />
+          <input 
+            type="text" 
+            id="qa-first" 
+            placeholder="First" 
+            class="flex-1 bg-slate-900 border border-slate-700 text-white text-xs p-2 rounded-lg focus:outline-none focus:border-emerald-500" 
+            required 
+          />
+          <input 
+            type="text" 
+            id="qa-last" 
+            placeholder="Last" 
+            class="flex-1 bg-slate-900 border border-slate-700 text-white text-xs p-2 rounded-lg focus:outline-none focus:border-emerald-500" 
+            required 
+          />
+          <button type="submit" id="qa-submit-btn" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-2 rounded-lg transition shadow">
+            <i class="fa-solid fa-plus"></i>
+          </button>
+        </form>
+      </div>
 
-        // Realtime Listeners
-        onValue(ref(db, 'active_phones_in_class'), s => {
-            phonesData = s.val() || {};
-            renderPhones();
-        });
-        onValue(ref(db, 'active_bathroom_passes'), s => {
-            bathroomPassesData = s.val() || {};
-            renderPasses('b', bathroomPassesData);
-            renderPhones();
-        });
-        onValue(ref(db, 'active_hall_passes'), s => {
-            hallPassesData = s.val() || {};
-            renderPasses('h', hallPassesData);
-            renderPhones();
-        });
-        onValue(ref(db, 'pending_roster_approvals'), s => {
-            pendingApprovalsData = s.val() || {};
-            renderPendingApprovals();
-        });
-        onValue(ref(db, 'system_logs'), s => {
-            logsData = s.val() || {};
-            renderLogs(logsData);
-            updateStatsOverview();
-        });
+    </section>
 
-        // Analytics Calculation
-        function updateStatsOverview() {
-            const todayStr = new Date().toDateString();
-            const logKeys = Object.keys(logsData);
+    <!-- RIGHT COLUMN: Running Log (5 Cols) -->
+    <section class="lg:col-span-5 bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 flex flex-col shadow-xl">
+      <!-- Running Log Header & Action Buttons -->
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-clock-rotate-left text-amber-400"></i> Running Log
+        </h2>
+        <div class="flex gap-2">
+          <button id="export-csv-btn" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5">
+            <i class="fa-solid fa-file-csv"></i> CSV Export
+          </button>
+          <button id="clear-log-btn" class="bg-rose-900/50 hover:bg-rose-800/70 text-rose-300 border border-rose-700/60 text-xs font-bold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5">
+            <i class="fa-solid fa-trash-can"></i> Clear
+          </button>
+        </div>
+      </div>
 
-            let checkinCount = 0;
-            let passCount = 0;
-            const hourCounts = {};
+      <!-- Real-Time Filter Search Input -->
+      <div class="mb-3">
+        <div class="relative">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+          <input 
+            type="text" 
+            id="log-search-input" 
+            placeholder="Search logs by student or action..." 
+            class="w-full bg-slate-900 border border-slate-700 text-xs text-white pl-8 pr-3 py-2 rounded-xl focus:outline-none focus:border-emerald-500" 
+          />
+        </div>
+      </div>
 
-            logKeys.forEach(k => {
-                const item = logsData[k];
-                if (!item.timestamp) return;
+      <!-- 5-Column Running Log Table -->
+      <div class="flex-1 overflow-x-auto max-h-[600px] border border-slate-700 rounded-xl">
+        <table class="w-full text-left text-xs text-slate-300">
+          <thead class="bg-slate-900 text-slate-400 uppercase font-semibold text-[10px] sticky top-0 border-b border-slate-700">
+            <tr>
+              <th class="py-2.5 px-3">Time</th>
+              <th class="py-2.5 px-3">Student</th>
+              <th class="py-2.5 px-3">Action</th>
+              <th class="py-2.5 px-3">Duration</th>
+              <th class="py-2.5 px-3">Details</th>
+            </tr>
+          </thead>
+          <tbody id="running-log-tbody" class="divide-y divide-slate-700/60 font-mono">
+            <!-- Log entries will render here dynamically -->
+            <tr>
+              <td colspan="5" class="py-8 text-center text-slate-500 italic">No log entries recorded today.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
 
-                const itemDate = new Date(item.timestamp);
-                if (itemDate.toDateString() === todayStr) {
-                    const act = (item.action || '').toLowerCase();
+  </main>
 
-                    if (act.includes('checked in') || act.includes('phone') || act.includes('approved')) {
-                        checkinCount++;
-                    }
+  <!-- Clear Log Pop-Up Confirmation Modal -->
+  <div id="clear-confirm-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md hidden flex items-center justify-center p-6 z-50">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl">
+      <div class="text-rose-500 text-4xl mb-3"><i class="fa-solid fa-triangle-exclamation"></i></div>
+      <h3 class="text-xl font-bold text-white mb-2">Clear Running Log?</h3>
+      <p class="text-xs text-slate-300 mb-6">Are you sure you want to permanently clear all log history? This action cannot be undone.</p>
+      <div class="flex gap-3">
+        <button id="clear-cancel-btn" class="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 py-2 rounded-xl font-bold text-xs">Cancel</button>
+        <button id="clear-confirm-btn" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white py-2 rounded-xl font-bold text-xs">Yes, Clear All</button>
+      </div>
+    </div>
+  </div>
 
-                    if (act.includes('bathroom') || act.includes('hall')) {
-                        passCount++;
-                    }
+  <footer class="text-center py-3 text-xs text-slate-500">
+    Chelan High School Classroom Pass System &bull; Live Teacher Dashboard
+  </footer>
 
-                    const hour = itemDate.getHours();
-                    hourCounts[hour] = (hourCounts[hour] || 0) + 1;
-                }
-            });
-
-            let peakHour = null;
-            let maxCount = 0;
-            Object.keys(hourCounts).forEach(h => {
-                if (hourCounts[h] > maxCount) {
-                    maxCount = hourCounts[h];
-                    peakHour = parseInt(h);
-                }
-            });
-
-            let peakText = "--";
-            if (peakHour !== null) {
-                const ampm = peakHour >= 12 ? 'PM' : 'AM';
-                const formattedHour = peakHour % 12 || 12;
-                peakText = `${formattedHour}:00 ${ampm}`;
-            }
-
-            document.getElementById('stat-checkins').textContent = checkinCount;
-            document.getElementById('stat-passes').textContent = passCount;
-            document.getElementById('stat-peak').textContent = peakText;
-        }
-
-        // Render Pending Approvals
-        function renderPendingApprovals() {
-            const card = document.getElementById('pending-approvals-card');
-            const list = document.getElementById('pending-approvals-list');
-            const badge = document.getElementById('pending-count-badge');
-            
-            const keys = Object.keys(pendingApprovalsData);
-            badge.textContent = keys.length;
-
-            if (keys.length === 0) {
-                card.classList.add('hidden');
-                list.innerHTML = '';
-                return;
-            }
-
-            card.classList.remove('hidden');
-            list.innerHTML = keys.map(id => {
-                const item = pendingApprovalsData[id];
-                const safeId = escapeAttr(id);
-
-                return `
-                    <div class="flex items-center justify-between bg-white p-2 rounded-xl border border-amber-200 shadow-sm text-xs">
-                        <div class="flex items-center gap-1.5">
-                            <span class="font-mono font-bold bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded border border-amber-300">${id}</span>
-                            <div class="flex flex-col">
-                                <span class="font-bold text-slate-800 leading-tight">${item.firstName || ''} ${item.lastName || ''}</span>
-                                ${item.pocket !== undefined ? `<span class="text-[10px] text-green-700 font-bold">Pocket #${item.pocket}</span>` : ''}
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-1">
-                            <button onclick="approvePendingStudent('${safeId}')" class="bg-green-700 hover:bg-green-800 text-white font-bold px-2 py-1 rounded-lg transition shadow-sm">✓</button>
-                            <button onclick="rejectPendingStudent('${safeId}')" class="bg-red-600 hover:bg-red-700 text-white font-bold px-2 py-1 rounded-lg transition shadow-sm">✕</button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        window.approvePendingStudent = async (id) => {
-            const item = pendingApprovalsData[id];
-            if (!item) return;
-
-            const firstName = item.firstName || '';
-            const lastName = item.lastName || '';
-            const fullName = `${firstName} ${lastName}`.trim() || id;
-            const pocketNum = item.pocket !== undefined ? item.pocket : 0;
-
-            try {
-                await set(ref(db, `classroom_roster/${id}`), { firstName, lastName });
-
-                const phoneEntry = {
-                    studentName: fullName,
-                    firstName: firstName,
-                    lastName: lastName,
-                    pocket: pocketNum,
-                    timestamp: Date.now()
-                };
-
-                await set(ref(db, `active_phones_in_class/${id}`), phoneEntry);
-                phonesData[id] = phoneEntry;
-                renderPhones();
-
-                await push(ref(db, 'system_logs'), {
-                    studentId: id,
-                    name: fullName,
-                    action: `Approved & Checked In (Pocket #${pocketNum})`,
-                    timestamp: Date.now()
-                });
-
-                await remove(ref(db, `pending_roster_approvals/${id}`));
-
-            } catch (err) {
-                console.error("Approval error:", err);
-                alert("Error approving student: " + err.message);
-            }
-        };
-
-        window.rejectPendingStudent = (id) => {
-            remove(ref(db, `pending_roster_approvals/${id}`));
-        };
-
-        window.setPhoneSort = (sortType) => {
-            currentSort = sortType;
-            const btnFirst = document.getElementById('sort-first');
-            const btnLast = document.getElementById('sort-last');
-            const btnPocket = document.getElementById('sort-pocket');
-
-            const activeClass = "bg-chelan text-white px-2 py-0.5 rounded-md";
-            const inactiveClass = "px-2 py-0.5 rounded-md hover:text-slate-800";
-
-            btnFirst.className = sortType === 'first' ? activeClass : inactiveClass;
-            btnLast.className = sortType === 'last' ? activeClass : inactiveClass;
-            btnPocket.className = sortType === 'pocket' ? activeClass : inactiveClass;
-
-            renderPhones();
-        };
-
-        // RENDER PHONES WITH TOP-TO-BOTTOM, THEN LEFT-TO-RIGHT COLUMN SORT
-        function renderPhones() {
-            const list = document.getElementById('active-phones-list');
-            const keys = Object.keys(phonesData);
-            document.getElementById('dash-phone-count').textContent = `${keys.length} Students`;
-            
-            if (keys.length === 0) {
-                list.innerHTML = '<p class="text-xs text-slate-400 italic col-span-2">No phones currently checked in.</p>';
-                return;
-            }
-
-            const items = keys.map(id => ({ id, ...phonesData[id] }));
-
-            // 1. Sort master list in order
-            items.sort((a, b) => {
-                if (currentSort === 'first') {
-                    return (a.firstName || a.studentName || '').localeCompare(b.firstName || b.studentName || '');
-                } else if (currentSort === 'pocket') {
-                    return (parseInt(a.pocket) || 0) - (parseInt(b.pocket) || 0);
-                } else {
-                    return (a.lastName || a.studentName || '').localeCompare(b.lastName || b.studentName || '');
-                }
-            });
-
-            // 2. Re-order items so CSS Grid (grid-cols-2) populates down col 1 first, then col 2
-            const total = items.length;
-            const mid = Math.ceil(total / 2);
-            const col1 = items.slice(0, mid);
-            const col2 = items.slice(mid);
-
-            const gridOrderedItems = [];
-            for (let i = 0; i < mid; i++) {
-                if (col1[i]) gridOrderedItems.push(col1[i]);
-                if (col2[i]) gridOrderedItems.push(col2[i]);
-            }
-
-            // 3. Render HTML
-            list.innerHTML = gridOrderedItems.map(item => {
-                const id = item.id;
-                const hasBathroomPass = !!bathroomPassesData[id];
-                const hasHallPass = !!hallPassesData[id];
-
-                let containerClass = "border-green-200 bg-green-50/70";
-                let badgeClass = "text-green-800 bg-green-200/80";
-                let passTag = "";
-
-                if (hasBathroomPass) {
-                    containerClass = "border-red-300 bg-red-100/90 shadow-sm";
-                    badgeClass = "text-red-900 bg-red-200 font-black";
-                    passTag = `<span class="text-[9px] bg-red-600 text-white font-black px-1 py-0.5 rounded uppercase">BP</span>`;
-                } else if (hasHallPass) {
-                    containerClass = "border-indigo-300 bg-indigo-100/90 shadow-sm";
-                    badgeClass = "text-indigo-900 bg-indigo-200 font-black";
-                    passTag = `<span class="text-[9px] bg-indigo-600 text-white font-black px-1 py-0.5 rounded uppercase">HP</span>`;
-                }
-
-                const displayName = item.studentName || `${item.firstName || ''} ${item.lastName || ''}`.trim() || 'Student';
-
-                return `
-                    <div class="flex items-center justify-between border ${containerClass} rounded-xl px-2.5 py-2 transition text-xs">
-                        <div class="flex items-center gap-1.5 overflow-hidden mr-1">
-                            ${passTag}
-                            <span class="font-bold text-slate-800 truncate" title="${displayName}">${displayName}</span>
-                        </div>
-                        <div class="flex items-center gap-1.5 flex-shrink-0">
-                            <span class="text-[11px] ${badgeClass} px-2 py-0.5 rounded-md font-mono font-bold">${item.pocket || 0}</span>
-                            <button onclick="forceRemovePhone('${id}')" title="Check Out" class="text-red-500 hover:text-red-700 font-bold text-sm leading-none">&times;</button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function renderPasses(type, data) {
-            const keys = Object.keys(data);
-            if(type === 'b') {
-                document.getElementById('dash-pass-count').textContent = `${keys.length}/1 Out`;
-                const d = document.getElementById('bathroom-status-detail');
-                d.innerHTML = keys.length ? `<div class="w-full flex justify-between items-center"><span class="font-bold text-slate-800 not-italic">${data[keys[0]].studentName}</span><button onclick="forceClearPass('bathroom', '${keys[0]}')" class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded font-bold not-italic">Return</button></div>` : 'No students out.';
-            } else {
-                document.getElementById('dash-hall-count').textContent = `${keys.length} Out`;
-                const d = document.getElementById('hallpass-status-detail');
-                d.innerHTML = keys.length ? keys.map(k => `<div class="w-full flex justify-between items-center mb-1"><span class="font-bold text-slate-800 not-italic">${data[k].studentName}</span><button onclick="forceClearPass('hall', '${k}')" class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded font-bold not-italic">Return</button></div>`).join('') : 'No students out.';
-            }
-        }
-
-        function renderLogs(data) {
-            const keys = Object.keys(data).reverse();
-            document.getElementById('log-count').textContent = `${keys.length}`;
-            if (keys.length === 0) {
-                document.getElementById('logs-table-body').innerHTML = '<tr><td colspan="3" class="px-4 py-4 text-center text-slate-400 text-xs italic">No activity logged yet.</td></tr>';
-                return;
-            }
-            
-            const searchInput = document.getElementById('log-search');
-            let filterText = searchInput ? searchInput.value.toLowerCase() : '';
-
-            const filteredKeys = keys.filter(k => {
-                const l = data[k];
-                const nameMatch = (l.name || l.studentId || '').toLowerCase().includes(filterText);
-                const actionMatch = (l.action || '').toLowerCase().includes(filterText);
-                return nameMatch || actionMatch;
-            });
-
-            document.getElementById('logs-table-body').innerHTML = filteredKeys.map(k => {
-                const l = data[k];
-                const time = l.timestamp ? new Date(l.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '--';
-                let pill = 'bg-slate-100 text-slate-600';
-                if(l.action && l.action.includes('Bathroom')) pill = 'bg-red-100 text-red-700';
-                if(l.action && l.action.includes('Hall')) pill = 'bg-indigo-100 text-indigo-700';
-                if(l.action && l.action.includes('Approved')) pill = 'bg-emerald-100 text-emerald-800 font-black';
-                else if(l.action && l.action.includes('Phone')) pill = 'bg-green-100 text-green-700';
-                
-                return `<tr>
-                    <td class="px-4 py-2.5 text-slate-500 font-mono text-xs whitespace-nowrap">${time}</td>
-                    <td class="px-4 py-2.5 font-medium text-slate-800 text-xs truncate max-w-[150px]">${l.name || l.studentId || 'Unknown'}</td>
-                    <td class="px-4 py-2.5 text-xs">
-                        <span class="inline-block truncate max-w-[220px]" title="${l.action || '--'}">
-                            <span class="font-bold px-2 py-0.5 rounded-md ${pill} mr-1">${(l.action || 'Log').split(' ')[0]}</span>
-                            <span class="text-slate-500">${l.action || '--'}</span>
-                        </span>
-                    </td>
-                </tr>`;
-            }).join('');
-        }
-
-        document.getElementById('log-search').addEventListener('input', () => {
-            renderLogs(logsData);
-        });
-
-        window.forceRemovePhone = id => remove(ref(db, `active_phones_in_class/${id}`));
-        window.clearAllPhones = () => { if(confirm("Clear phone rack?")) remove(ref(db, 'active_phones_in_class')); };
-        window.forceClearPass = (t, id) => remove(ref(db, `active_${t}_passes/${id}`));
-    </script>
+  <!-- Script Module Import -->
+  <script type="module" src="teacher.js"></script>
 </body>
 </html>
