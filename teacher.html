@@ -3,362 +3,240 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teacher Control Panel - Chelan Medical Sciences</title>
+    <title>Teacher Dashboard - Chelan High</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .chelan-primary-green { background-color: #0A4D2E; }
-        .chelan-green-hover:hover { background-color: #063821; }
+        .bg-chelan { background-color: #0d5235; }
+        .text-chelan { color: #0d5235; }
+        .border-chelan { border-color: #0d5235; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col justify-between">
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
 
     <!-- Device Lock Screen -->
     <div id="device-lock-screen" class="fixed inset-0 bg-slate-900 z-50 flex flex-col items-center justify-center p-6 text-center text-white">
         <div class="max-w-md w-full bg-slate-800 p-8 rounded-3xl border border-slate-700 shadow-2xl space-y-6">
             <div class="text-6xl mb-2">🔒</div>
             <div>
-                <h2 class="text-2xl font-black">Teacher Dashboard Locked</h2>
-                <p class="text-xs text-slate-400 mt-1">Enter your 6-digit PIN to access.</p>
+                <h2 class="text-2xl font-black">Dashboard Locked</h2>
             </div>
             <form onsubmit="handlePinSubmit(event)" class="space-y-4">
-                <input type="password" id="pin-input" maxlength="6" pattern="\d{6}" placeholder="••••••" autofocus required
-                    class="w-full text-center font-mono text-3xl tracking-widest px-4 py-3 bg-slate-900 border-2 border-slate-600 text-white rounded-2xl focus:outline-none focus:border-[#0A4D2E]">
-                <p id="pin-error" class="text-xs font-bold text-red-400 hidden">⚠️ Incorrect PIN. Access denied.</p>
-                <button type="submit" class="w-full py-3.5 chelan-primary-green chelan-green-hover text-white font-bold rounded-2xl text-sm transition shadow">
-                    Unlock Dashboard
-                </button>
+                <input type="password" id="pin-input" maxlength="6" placeholder="PIN" autofocus required
+                    class="w-full text-center font-mono text-3xl tracking-widest px-4 py-3 bg-slate-900 border-2 border-slate-600 rounded-2xl focus:outline-none text-white">
+                <button type="submit" class="w-full py-3.5 bg-chelan hover:bg-green-800 text-white font-bold rounded-2xl">Unlock</button>
             </form>
         </div>
     </div>
 
     <!-- Header Navigation -->
-    <header class="chelan-primary-green text-white shadow-md py-3 px-6 flex justify-between items-center border-b-4 border-emerald-950">
-        <div class="flex items-center gap-4">
-            <img src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" 
-                 alt="Chelan Logo" class="h-12 w-auto object-contain drop-shadow-md">
-            <div class="border-l border-emerald-800/80 pl-4">
-                <h1 class="text-lg font-black tracking-wide uppercase leading-tight">Teacher Control Panel</h1>
-                <p class="text-xs text-emerald-200/90 font-medium">Medical Sciences Classroom</p>
-            </div>
+    <header class="bg-chelan text-white shadow-md py-3 px-6 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <img src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" alt="Logo" class="h-10">
+            <h1 class="text-xl font-bold tracking-wide">Chelan High</h1>
+            <span class="bg-green-800/60 text-green-100 text-[10px] px-2 py-1 rounded-full border border-green-700/50 uppercase tracking-wide">Teacher Dashboard</span>
         </div>
-
-        <div class="text-right">
-            <span id="live-clock" class="text-lg font-mono font-bold tracking-wider block leading-tight">--:-- --</span>
-            <p class="text-[10px] text-emerald-300 uppercase font-semibold tracking-widest">Live Kiosk Monitor</p>
+        <div class="flex items-center gap-6">
+            <div class="text-right">
+                <span id="live-clock" class="text-lg font-mono font-bold block leading-none">--:-- --</span>
+                <span class="text-[10px] text-green-300 uppercase tracking-widest">Medical Sciences</span>
+            </div>
+            <div class="flex gap-2">
+                <a href="teacher.html" class="bg-white text-chelan font-bold text-sm px-4 py-2 rounded-lg shadow">Live Dashboard</a>
+                <a href="roster.html" class="bg-green-800 hover:bg-green-700 text-white font-bold text-sm px-4 py-2 rounded-lg border border-green-700 transition">Manage Roster</a>
+            </div>
         </div>
     </header>
 
-    <!-- Main Content Layout (1/3 Left Column, 2/3 Right Column) -->
-    <main class="flex-grow max-w-7xl w-full mx-auto p-6">
+    <!-- Main Grid Layout -->
+    <main class="flex-grow max-w-[1600px] w-full mx-auto p-4 lg:p-6 grid grid-cols-1 xl:grid-cols-3 gap-6">
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-            <!-- LEFT COLUMN (1/3 Width): Active Phones in Rack -->
-            <div class="lg:col-span-1 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between space-y-4">
-                <div>
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-lg font-black text-slate-800 flex items-center gap-2">
-                            <span>📱</span> Phones in Rack
-                        </h2>
-                        <span id="dash-phone-count" class="bg-emerald-100 text-[#0A4D2E] font-black text-sm px-3 py-1 rounded-full border border-emerald-200">
-                            0
-                        </span>
+        <!-- LEFT COLUMN: Currently In Room -->
+        <div class="xl:col-span-1 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col h-[calc(100vh-120px)]">
+            <div class="p-5 border-b border-slate-100 flex flex-col gap-3">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-lg font-bold flex items-center gap-2">
+                        <span>📱</span> Currently In Room
+                    </h2>
+                    <button onclick="clearAllPhones()" class="bg-red-700 hover:bg-red-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm">
+                        <span class="w-3 h-4 bg-red-500 rounded-sm inline-block"></span> Check Out All
+                    </button>
+                </div>
+                <div class="flex justify-between items-center text-xs font-semibold text-slate-500">
+                    <span id="dash-phone-count" class="text-chelan">0 Students</span>
+                    <div class="flex gap-2 items-center">
+                        <span>Sort:</span>
+                        <button class="hover:text-slate-800">First</button>
+                        <button class="bg-chelan text-white px-2 py-0.5 rounded-md">Last</button>
+                        <button class="hover:text-slate-800 flex items-center gap-1"><span>🔢</span> Pocket #</button>
                     </div>
+                </div>
+            </div>
+            
+            <div id="active-phones-list" class="p-4 space-y-2 overflow-y-auto custom-scrollbar flex-grow">
+                <!-- Phone items inject here -->
+            </div>
+        </div>
 
-                    <div id="active-phones-list" class="space-y-2 max-h-[500px] overflow-y-auto pr-1">
-                        <p class="text-xs text-slate-400 italic">No phones currently checked in.</p>
+        <!-- RIGHT COLUMN: Tools & Logs -->
+        <div class="xl:col-span-2 flex flex-col gap-6">
+            
+            <!-- Top Row Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                
+                <!-- Bathroom Pass -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm border-t-4 border-t-red-600 flex flex-col h-40">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="font-bold text-lg flex items-center gap-2"><span>🚻</span> Bathroom</h3>
+                        <span id="dash-pass-count" class="bg-red-50 text-red-700 text-xs font-bold px-2 py-1 rounded-md border border-red-100">0/1 Out</span>
+                    </div>
+                    <div id="bathroom-status-detail" class="flex-grow flex items-center text-sm text-slate-400 italic">
+                        No students out.
                     </div>
                 </div>
 
-                <button onclick="clearAllPhones()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl border border-slate-300 transition">
-                    🔄 Reset Rack (Clear All)
-                </button>
+                <!-- Hall Pass -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm border-t-4 border-t-indigo-600 flex flex-col h-40">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="font-bold text-lg flex items-center gap-2"><span>🎟️</span> Hall Pass</h3>
+                        <span id="dash-hall-count" class="bg-indigo-50 text-indigo-700 text-xs font-bold px-2 py-1 rounded-md border border-indigo-100">0 Out</span>
+                    </div>
+                    <div id="hallpass-status-detail" class="flex-grow flex items-start flex-col gap-1 overflow-y-auto custom-scrollbar text-sm text-slate-400 italic pt-2">
+                        No students out.
+                    </div>
+                </div>
+
+                <!-- Tools -->
+                <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-40">
+                    <h3 class="font-bold text-sm flex items-center gap-2 text-slate-700 mb-2"><span>🛠️</span> Tools</h3>
+                    <form onsubmit="submitNewStudent(event)" class="flex flex-col gap-1.5 mb-2">
+                        <input type="text" id="add-student-id" placeholder="ID / Barcode" required class="w-full text-xs px-2 py-1.5 border border-slate-200 rounded">
+                        <div class="flex gap-1.5">
+                            <input type="text" id="add-student-fname" placeholder="First" required class="w-1/2 text-xs px-2 py-1 border border-slate-200 rounded">
+                            <input type="text" id="add-student-lname" placeholder="Last" required class="w-1/2 text-xs px-2 py-1 border border-slate-200 rounded">
+                        </div>
+                        <button type="submit" class="w-full bg-chelan text-white text-xs font-bold py-1.5 rounded">+ Quick Add</button>
+                    </form>
+                </div>
             </div>
 
-            <!-- RIGHT COLUMN (2/3 Width): Status Cards, Quick Add, and Roster -->
-            <div class="lg:col-span-2 space-y-6">
-
-                <!-- TOP ROW: Bathroom Pass, Hall Pass, Quick Add Student -->
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-
-                    <!-- Bathroom Pass Status -->
-                    <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between space-y-3">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Bathroom Pass</p>
-                                <h3 id="dash-pass-count" class="text-2xl font-black text-red-700">0/1 Out</h3>
-                            </div>
-                            <span class="text-3xl">🚻</span>
-                        </div>
-                        <div id="bathroom-status-detail" class="text-xs font-medium text-slate-600 min-h-[32px] flex items-center">
-                            <span class="text-emerald-700 font-bold">✓ Available</span>
-                        </div>
+            <!-- Running Log -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm flex-grow flex flex-col min-h-[300px]">
+                <div class="p-4 border-b border-slate-100 flex justify-between items-center">
+                    <div class="flex items-center gap-2">
+                        <h2 class="font-bold text-slate-800 flex items-center gap-2"><span>📋</span> Running Log</h2>
+                        <span id="log-count" class="text-xs text-slate-400">0 entries</span>
                     </div>
-
-                    <!-- Hall Pass Status -->
-                    <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between space-y-3">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Hall Pass</p>
-                                <h3 id="dash-hall-count" class="text-2xl font-black text-indigo-700">0 Out</h3>
-                            </div>
-                            <span class="text-3xl">🎟️</span>
-                        </div>
-                        <div id="hallpass-status-detail" class="text-xs font-medium text-slate-600 min-h-[32px] flex items-center">
-                            <span class="text-emerald-700 font-bold">✓ None Out</span>
-                        </div>
-                    </div>
-
-                    <!-- Quick Add Student Form -->
-                    <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-2">
-                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">⚡ Quick Add Student</p>
-                        <form onsubmit="submitNewStudent(event)" class="space-y-2">
-                            <input type="text" id="add-student-id" required placeholder="ID / Barcode" class="w-full px-3 py-1.5 font-mono text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-[#0A4D2E]">
-                            <div class="grid grid-cols-2 gap-1.5">
-                                <input type="text" id="add-student-fname" required placeholder="First Name" class="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-[#0A4D2E]">
-                                <input type="text" id="add-student-lname" required placeholder="Last Name" class="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-[#0A4D2E]">
-                            </div>
-                            <button type="submit" class="w-full py-2 chelan-primary-green chelan-green-hover text-white text-xs font-bold rounded-xl shadow transition">
-                                + Save Student
-                            </button>
-                        </form>
-                    </div>
-
+                    <input type="text" placeholder="🔍 Search logs..." class="text-xs border border-slate-200 rounded-full px-3 py-1.5 w-48 bg-slate-50">
                 </div>
-
-                <!-- BOTTOM ROW: Roster Table -->
-                <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
-                    <div class="flex justify-between items-center">
-                        <h2 class="text-lg font-black text-slate-800 flex items-center gap-2">
-                            <span>📋</span> Classroom Roster
-                        </h2>
-                        <span id="roster-count-tag" class="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">0 Students</span>
-                    </div>
-
-                    <div class="overflow-x-auto border border-slate-200 rounded-2xl max-h-80 overflow-y-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead class="sticky top-0 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase">
-                                <tr>
-                                    <th class="py-2.5 px-4">Student ID</th>
-                                    <th class="py-2.5 px-4">First Name</th>
-                                    <th class="py-2.5 px-4">Last Name</th>
-                                    <th class="py-2.5 px-4 text-right">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="roster-table-body" class="text-xs divide-y divide-slate-100"></tbody>
-                        </table>
-                    </div>
+                <div class="overflow-auto custom-scrollbar flex-grow p-0">
+                    <table class="w-full text-left text-sm whitespace-nowrap">
+                        <thead class="bg-slate-50 text-slate-500 font-semibold sticky top-0 border-b border-slate-200">
+                            <tr>
+                                <th class="px-4 py-2 w-24">Time &darr;</th>
+                                <th class="px-4 py-2">Student Name &updownarrow;</th>
+                                <th class="px-4 py-2">Type &updownarrow;</th>
+                                <th class="px-4 py-2">Description / Code &updownarrow;</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logs-table-body" class="divide-y divide-slate-100">
+                            <!-- Logs go here -->
+                        </tbody>
+                    </table>
                 </div>
-
             </div>
 
         </div>
-
     </main>
 
-    <footer class="bg-slate-900 text-slate-400 py-3 text-center text-xs border-t border-slate-800">
-        Chelan High School Medical Sciences &bull; Teacher Control Portal
-    </footer>
-
-    <!-- Authorization Script -->
+    <!-- Scripts -->
     <script>
         const TEACHER_PIN = "486200";
-
-        function checkDeviceAuth() {
-            if (localStorage.getItem('chelan_teacher_authorized') === 'true') {
-                const lock = document.getElementById('device-lock-screen');
-                if (lock) lock.classList.add('hidden');
-            }
-        }
-
+        if (localStorage.getItem('chelan_teacher_authorized') === 'true') document.getElementById('device-lock-screen').classList.add('hidden');
         function handlePinSubmit(e) {
             e.preventDefault();
-            if (document.getElementById('pin-input').value.trim() === TEACHER_PIN) {
+            if (document.getElementById('pin-input').value === TEACHER_PIN) {
                 localStorage.setItem('chelan_teacher_authorized', 'true');
                 document.getElementById('device-lock-screen').classList.add('hidden');
-            } else {
-                document.getElementById('pin-error').classList.remove('hidden');
-                document.getElementById('pin-input').value = '';
             }
         }
-
-        checkDeviceAuth();
+        setInterval(() => {
+            document.getElementById('live-clock').textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }, 1000);
     </script>
-
-    <!-- Firebase Database Logic -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getDatabase, ref, set, remove, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyDOqjLMzMydaR31WWUA35sr1FrNLfHPxuI",
-            authDomain: "chelan-classroom-pass.firebaseapp.com",
-            databaseURL: "https://chelan-classroom-pass-default-rtdb.firebaseio.com",
-            projectId: "chelan-classroom-pass",
-            storageBucket: "chelan-classroom-pass.appspot.com",
-            messagingSenderId: "645480807479",
-            appId: "1:645480807479:web:d280d4ef38e8754a9953b2"
-        };
-
+        const firebaseConfig = { apiKey: "AIzaSyDOqjLMzMydaR31WWUA35sr1FrNLfHPxuI", authDomain: "chelan-classroom-pass.firebaseapp.com", databaseURL: "https://chelan-classroom-pass-default-rtdb.firebaseio.com", projectId: "chelan-classroom-pass", storageBucket: "chelan-classroom-pass.appspot.com", messagingSenderId: "645480807479", appId: "1:645480807479:web:d280d4ef38e8754a9953b2" };
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        let roster = {};
-        let activePhones = {};
-        let activePasses = {};
-        let activeHallPasses = {};
+        onValue(ref(db, 'active_phones_in_class'), s => renderPhones(s.val() || {}));
+        onValue(ref(db, 'active_bathroom_passes'), s => renderPasses('b', s.val() || {}));
+        onValue(ref(db, 'active_hall_passes'), s => renderPasses('h', s.val() || {}));
+        onValue(ref(db, 'system_logs'), s => renderLogs(s.val() || {}));
 
-        onValue(ref(db, 'classroom_roster'), (snapshot) => {
-            roster = snapshot.val() || {};
-            renderRoster();
-        });
+        function renderPhones(data) {
+            const list = document.getElementById('active-phones-list');
+            const keys = Object.keys(data);
+            document.getElementById('dash-phone-count').textContent = `${keys.length} Students`;
+            list.innerHTML = keys.map(id => `
+                <div class="flex items-center justify-between border border-green-200 bg-green-50 rounded-lg px-3 py-2">
+                    <span class="font-bold text-sm text-slate-800">${data[id].studentName}</span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] text-green-700 bg-green-200/50 px-2 py-0.5 rounded-full">Pocket #${String(data[id].pocket).padStart(2,'0')}</span>
+                        <button onclick="forceRemovePhone('${id}')" class="text-red-500 hover:text-red-700 font-bold text-xs">&times;</button>
+                    </div>
+                </div>
+            `).join('');
+        }
 
-        onValue(ref(db, 'active_phones_in_class'), (snapshot) => {
-            activePhones = snapshot.val() || {};
-            renderActivePhones();
-        });
+        function renderPasses(type, data) {
+            const keys = Object.keys(data);
+            if(type === 'b') {
+                document.getElementById('dash-pass-count').textContent = `${keys.length}/1 Out`;
+                const d = document.getElementById('bathroom-status-detail');
+                d.innerHTML = keys.length ? `<div class="w-full flex justify-between items-center"><span class="font-bold text-slate-800 not-italic">${data[keys[0]].studentName}</span><button onclick="forceClearPass('bathroom', '${keys[0]}')" class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded not-italic">Return</button></div>` : 'No students out.';
+            } else {
+                document.getElementById('dash-hall-count').textContent = `${keys.length} Out`;
+                const d = document.getElementById('hallpass-status-detail');
+                d.innerHTML = keys.length ? keys.map(k => `<div class="w-full flex justify-between items-center mb-1"><span class="font-bold text-slate-800 not-italic">${data[k].studentName}</span><button onclick="forceClearPass('hall', '${k}')" class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded not-italic">Return</button></div>`).join('') : 'No students out.';
+            }
+        }
 
-        onValue(ref(db, 'active_bathroom_passes'), (snapshot) => {
-            activePasses = snapshot.val() || {};
-            renderActivePasses();
-        });
+        function renderLogs(data) {
+            const keys = Object.keys(data).reverse();
+            document.getElementById('log-count').textContent = `${keys.length} entries`;
+            document.getElementById('logs-table-body').innerHTML = keys.map(k => {
+                const l = data[k];
+                const time = l.timestamp ? new Date(l.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '--';
+                let pill = 'bg-slate-100 text-slate-600';
+                if(l.action.includes('Bathroom')) pill = 'bg-red-100 text-red-700';
+                if(l.action.includes('Hall')) pill = 'bg-indigo-100 text-indigo-700';
+                if(l.action.includes('Phone')) pill = 'bg-green-100 text-green-700';
+                return `<tr>
+                    <td class="px-4 py-2 text-slate-500">${time}</td>
+                    <td class="px-4 py-2 font-medium text-slate-800">${l.name || l.studentId}</td>
+                    <td class="px-4 py-2"><span class="text-xs font-bold px-2 py-1 rounded-md ${pill}">${l.action.split(' ')[0]}</span></td>
+                    <td class="px-4 py-2 text-slate-500 text-xs">${l.action}</td>
+                </tr>`;
+            }).join('');
+        }
 
-        onValue(ref(db, 'active_hall_passes'), (snapshot) => {
-            activeHallPasses = snapshot.val() || {};
-            renderActivePasses();
-        });
-
-        window.submitNewStudent = async function(e) {
+        window.submitNewStudent = async (e) => {
             e.preventDefault();
-            const id = document.getElementById('add-student-id').value.trim();
-            const fname = document.getElementById('add-student-fname').value.trim();
-            const lname = document.getElementById('add-student-lname').value.trim();
-
-            if (!id || !fname || !lname) return;
-
-            await set(ref(db, `classroom_roster/${id}`), { firstName: fname, lastName: lname });
-
-            document.getElementById('add-student-id').value = '';
-            document.getElementById('add-student-fname').value = '';
-            document.getElementById('add-student-lname').value = '';
-        };
-
-        function renderActivePhones() {
-            const container = document.getElementById('active-phones-list');
-            const countElem = document.getElementById('dash-phone-count');
-            const phoneKeys = Object.keys(activePhones);
-            
-            countElem.textContent = phoneKeys.length;
-
-            if (phoneKeys.length === 0) {
-                container.innerHTML = '<p class="text-xs text-slate-400 italic">No phones currently checked in.</p>';
-                return;
-            }
-
-            container.innerHTML = phoneKeys.map(id => {
-                const item = activePhones[id];
-                return `
-                    <div class="flex items-center justify-between p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
-                        <div>
-                            <p class="font-bold text-xs text-emerald-950">${item.studentName}</p>
-                            <p class="text-[10px] text-emerald-700 font-semibold">Slot #${item.pocket < 10 ? '0' + item.pocket : item.pocket}</p>
-                        </div>
-                        <button onclick="forceRemovePhone('${id}')" class="text-[10px] font-bold text-red-600 hover:text-red-800 bg-white px-2 py-1 rounded-lg border border-red-200 shadow-sm">
-                            Clear
-                        </button>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function renderActivePasses() {
-            const bCountElem = document.getElementById('dash-pass-count');
-            const hCountElem = document.getElementById('dash-hall-count');
-            const bDetail = document.getElementById('bathroom-status-detail');
-            const hDetail = document.getElementById('hallpass-status-detail');
-
-            const bKeys = Object.keys(activePasses);
-            const hKeys = Object.keys(activeHallPasses);
-
-            bCountElem.textContent = `${bKeys.length}/1 Out`;
-            hCountElem.textContent = `${hKeys.length} Out`;
-
-            if (bKeys.length === 0) {
-                bDetail.innerHTML = '<span class="text-emerald-700 font-bold">✓ Available</span>';
-            } else {
-                const bStudent = activePasses[bKeys[0]];
-                bDetail.innerHTML = `
-                    <div class="flex items-center justify-between w-full">
-                        <span class="font-bold text-red-900 truncate">${bStudent.studentName}</span>
-                        <button onclick="forceClearPass('bathroom', '${bKeys[0]}')" class="text-[10px] text-red-600 font-bold bg-white px-2 py-0.5 rounded border border-red-200">Return</button>
-                    </div>
-                `;
-            }
-
-            if (hKeys.length === 0) {
-                hDetail.innerHTML = '<span class="text-emerald-700 font-bold">✓ None Out</span>';
-            } else {
-                hDetail.innerHTML = hKeys.map(id => `
-                    <div class="flex items-center justify-between w-full mb-1">
-                        <span class="font-bold text-indigo-900 truncate">${activeHallPasses[id].studentName}</span>
-                        <button onclick="forceClearPass('hall', '${id}')" class="text-[10px] text-indigo-600 font-bold bg-white px-2 py-0.5 rounded border border-indigo-200">Return</button>
-                    </div>
-                `).join('');
-            }
-        }
-
-        function renderRoster() {
-            const tbody = document.getElementById('roster-table-body');
-            const tag = document.getElementById('roster-count-tag');
-            const keys = Object.keys(roster);
-
-            tag.textContent = `${keys.length} Students`;
-
-            if (keys.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="py-4 text-center text-slate-400 italic">No students on roster. Use Quick Add above.</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = keys.map(id => {
-                const s = roster[id];
-                return `
-                    <tr class="hover:bg-slate-50">
-                        <td class="py-2.5 px-4 font-mono font-bold text-slate-700">${id}</td>
-                        <td class="py-2.5 px-4 font-bold text-slate-800">${s.firstName}</td>
-                        <td class="py-2.5 px-4 font-bold text-slate-800">${s.lastName}</td>
-                        <td class="py-2.5 px-4 text-right">
-                            <button onclick="deleteStudent('${id}')" class="text-red-600 hover:text-red-800 font-bold text-xs">Delete</button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        window.deleteStudent = async function(id) {
-            if (confirm(`Remove student ID ${id} from roster?`)) {
-                await remove(ref(db, `classroom_roster/${id}`));
+            const id = document.getElementById('add-student-id').value;
+            const f = document.getElementById('add-student-fname').value;
+            const l = document.getElementById('add-student-lname').value;
+            if(id && f && l) {
+                await set(ref(db, `classroom_roster/${id}`), { firstName: f, lastName: l });
+                e.target.reset();
             }
         };
-
-        window.forceRemovePhone = async function(id) {
-            await remove(ref(db, `active_phones_in_class/${id}`));
-        };
-
-        window.clearAllPhones = async function() {
-            if (confirm("Clear all active phones from the rack?")) {
-                await remove(ref(db, 'active_phones_in_class'));
-            }
-        };
-
-        window.forceClearPass = async function(type, id) {
-            const path = type === 'bathroom' ? `active_bathroom_passes/${id}` : `active_hall_passes/${id}`;
-            await remove(ref(db, path));
-        };
-
-        setInterval(() => {
-            const clock = document.getElementById('live-clock');
-            if (clock) clock.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        }, 1000);
+        window.forceRemovePhone = id => remove(ref(db, `active_phones_in_class/${id}`));
+        window.clearAllPhones = () => { if(confirm("Clear rack?")) remove(ref(db, 'active_phones_in_class')); };
+        window.forceClearPass = (t, id) => remove(ref(db, `active_${t}_passes/${id}`));
     </script>
 </body>
 </html>
