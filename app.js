@@ -15,7 +15,7 @@ const db = getDatabase(app);
 // State
 let rosterData = {};
 let activePasses = {};
-let activeScreen = "phone"; // Default tab: "phone" | "bathroom" | "hall"
+let activeScreen = "phone"; // "phone" (Green) | "bathroom" (Red) | "hall" (Purple)
 let selectedPocket = 1;
 let failedAttemptsCount = 0;
 let pendingUnknownID = "";
@@ -88,7 +88,7 @@ function showFullscreenNotice(title, subtitle, type = "success") {
   }, 1000);
 }
 
-// Screen Tab Navigation (Phone Storage -> Bathroom -> Hall Pass)
+// Tab Navigation with Full Color Coordination (Phone = Green, Bathroom = Red, Hall = Purple)
 function setupTabNavigation() {
   const tabs = {
     phone: document.getElementById("tab-phone"),
@@ -100,6 +100,10 @@ function setupTabNavigation() {
   const title = document.getElementById("screen-title");
   const subtitle = document.getElementById("screen-subtitle");
   const pocketContainer = document.getElementById("phone-pocket-container");
+  const submitBtn = document.getElementById("btn-submit-id");
+  const idInput = document.getElementById("kiosk-id-input");
+
+  const inactiveTabClass = "kiosk-tab py-3.5 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 transition text-slate-600 hover:text-slate-900 hover:bg-white/60";
 
   Object.entries(tabs).forEach(([type, btn]) => {
     if (!btn) return;
@@ -107,35 +111,63 @@ function setupTabNavigation() {
     btn.onclick = () => {
       activeScreen = type;
 
-      // Update Tab Styles
+      // Reset all tabs to inactive styling
       Object.values(tabs).forEach(t => {
-        if (t) {
-          t.className = "kiosk-tab py-3.5 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 transition text-slate-600 hover:text-slate-900 hover:bg-white/60";
-        }
+        if (t) t.className = inactiveTabClass;
       });
-      btn.className = "kiosk-tab py-3.5 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 transition bg-[#0B4F2C] text-white shadow-md";
 
-      // Toggle Pocket Container Visibility & Headers
+      // Apply screen-specific Color Coordination
       if (type === "phone") {
+        // Phone Mode: Green Theme
+        btn.className = "kiosk-tab py-3.5 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 transition bg-[#0B4F2C] text-white shadow-md";
+        badge.className = "inline-block px-3 py-1 rounded-full bg-emerald-100 text-[#0B4F2C] font-extrabold text-xs uppercase tracking-wider mb-2";
         badge.textContent = "Phone Storage Mode Active";
         title.textContent = "Scan Student ID to Store Phone";
         subtitle.textContent = "Scan your ID to check in your mobile device into a classroom pocket.";
+        
+        if (submitBtn) {
+          submitBtn.className = "w-full bg-[#0B4F2C] hover:bg-[#07381e] active:scale-[0.98] text-white font-extrabold py-3.5 rounded-2xl shadow-md transition text-sm uppercase tracking-wider flex items-center justify-center gap-2";
+        }
+        if (idInput) {
+          idInput.className = "w-full text-center text-2xl font-mono font-black py-3.5 px-6 rounded-2xl border-2 border-slate-300 focus:border-[#0B4F2C] focus:ring-4 focus:ring-emerald-100 focus:outline-none transition tracking-widest text-slate-800 bg-slate-50";
+        }
         if (pocketContainer) pocketContainer.classList.remove("hidden");
         renderPocketGrid();
+
       } else if (type === "bathroom") {
+        // Bathroom Pass Mode: Red Theme
+        btn.className = "kiosk-tab py-3.5 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 transition bg-rose-800 text-white shadow-md";
+        badge.className = "inline-block px-3 py-1 rounded-full bg-rose-100 text-rose-800 font-extrabold text-xs uppercase tracking-wider mb-2";
         badge.textContent = "Bathroom Mode Active";
         title.textContent = "Scan Student ID Barcode";
         subtitle.textContent = "Scan or enter your Student ID to check out or return a Bathroom Pass.";
+        
+        if (submitBtn) {
+          submitBtn.className = "w-full bg-rose-800 hover:bg-rose-900 active:scale-[0.98] text-white font-extrabold py-3.5 rounded-2xl shadow-md transition text-sm uppercase tracking-wider flex items-center justify-center gap-2";
+        }
+        if (idInput) {
+          idInput.className = "w-full text-center text-2xl font-mono font-black py-3.5 px-6 rounded-2xl border-2 border-slate-300 focus:border-rose-800 focus:ring-4 focus:ring-rose-100 focus:outline-none transition tracking-widest text-slate-800 bg-slate-50";
+        }
         if (pocketContainer) pocketContainer.classList.add("hidden");
+
       } else if (type === "hall") {
+        // Hall Pass Mode: Purple Theme
+        btn.className = "kiosk-tab py-3.5 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 transition bg-purple-800 text-white shadow-md";
+        badge.className = "inline-block px-3 py-1 rounded-full bg-purple-100 text-purple-800 font-extrabold text-xs uppercase tracking-wider mb-2";
         badge.textContent = "Hall Pass Mode Active";
         title.textContent = "Scan Student ID Barcode";
         subtitle.textContent = "Scan or enter your Student ID to check out or return a Hall Pass.";
+        
+        if (submitBtn) {
+          submitBtn.className = "w-full bg-purple-800 hover:bg-purple-900 active:scale-[0.98] text-white font-extrabold py-3.5 rounded-2xl shadow-md transition text-sm uppercase tracking-wider flex items-center justify-center gap-2";
+        }
+        if (idInput) {
+          idInput.className = "w-full text-center text-2xl font-mono font-black py-3.5 px-6 rounded-2xl border-2 border-slate-300 focus:border-purple-800 focus:ring-4 focus:ring-purple-100 focus:outline-none transition tracking-widest text-slate-800 bg-slate-50";
+        }
         if (pocketContainer) pocketContainer.classList.add("hidden");
       }
 
-      const input = document.getElementById("kiosk-id-input");
-      if (input) input.focus();
+      if (idInput) idInput.focus();
     };
   });
 }
@@ -152,7 +184,6 @@ function renderPocketGrid() {
       .map(p => Number(p.pocketNumber))
   );
 
-  // Auto-select lowest available pocket if current selection is occupied
   if (occupiedPockets.has(selectedPocket) || !selectedPocket) {
     selectedPocket = getLowestAvailablePocket();
   }
@@ -253,7 +284,6 @@ async function handlePassWorkflow(studentId, student) {
 
   // SCENARIO A: RETURN PASS
   if (existingPass) {
-    // Return pass ONLY if student is on corresponding tab screen
     if (existingPass.type !== activeScreen) {
       const requiredScreenName = existingPass.type.toUpperCase();
       showFullscreenNotice(
@@ -284,7 +314,6 @@ async function handlePassWorkflow(studentId, student) {
 
   // SCENARIO B: CREATE PASS
   if (activeScreen === "phone") {
-    // Check in phone to currently selected pocket
     await set(ref(db, `active_passes/${studentId}`), {
       studentId: studentId,
       studentName: `${student.firstName} ${student.lastName}`,
@@ -299,7 +328,6 @@ async function handlePassWorkflow(studentId, student) {
       "success"
     );
 
-    // Auto-advance selection to next lowest available pocket
     selectedPocket = getLowestAvailablePocket();
     renderPocketGrid();
     return;
