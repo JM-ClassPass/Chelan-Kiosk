@@ -21,7 +21,7 @@
             <img src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" alt="Logo" class="h-10">
             <div class="flex items-center gap-2">
                 <h1 class="text-xl font-bold tracking-wide leading-tight">Chelan High</h1>
-                <span class="bg-green-800/80 text-green-200 text-xs px-2.5 py-0.5 rounded-full font-semibold border border-green-700/50">Teacher Dashboard v1.004</span>
+                <span class="bg-green-800/80 text-green-200 text-xs px-2.5 py-0.5 rounded-full font-semibold border border-green-700/50">Teacher Dashboard v1.003</span>
             </div>
         </div>
         <div class="flex items-center gap-4">
@@ -43,10 +43,10 @@
         </div>
     </header>
 
-    <!-- Main Content Grid -->
+    <!-- Main Content Container -->
     <main class="flex-grow p-4 md:p-6 max-w-7xl mx-auto w-full space-y-6">
 
-        <!-- Top Summary Bar -->
+        <!-- Top Summary Cards -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
                 <div>
@@ -89,7 +89,7 @@
             </div>
         </div>
 
-        <!-- Pending Approvals Banner Card (Hidden when 0) -->
+        <!-- Pending Approvals Banner Card -->
         <div id="pending-approvals-card" class="bg-amber-50 border border-amber-200 rounded-2xl p-4 shadow-sm hidden space-y-3">
             <div class="flex justify-between items-center">
                 <h3 class="text-sm font-black text-amber-900 flex items-center gap-2">
@@ -102,7 +102,7 @@
             </div>
         </div>
 
-        <!-- ACTIVE PASSES SECTION -->
+        <!-- Active Passes Section -->
         <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
                 <div>
@@ -122,7 +122,7 @@
             </div>
         </div>
 
-        <!-- PASS HISTORY & LOGS TABLE -->
+        <!-- Pass History Table -->
         <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <div>
@@ -172,7 +172,7 @@
     <!-- Firebase Script Module -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, onValue, set, remove, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDOqjLMzMydaR31WWUA35sr1FrNLfHPxuI",
@@ -192,12 +192,10 @@
         let roster = {};
         let pendingApprovals = {};
 
-        // Helper: Escapes string safely for inline HTML attribute values
         function escapeAttr(str) {
             return String(str || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
         }
 
-        // Realtime Data Sync
         onValue(ref(db, 'classroom_roster'), snapshot => {
             roster = snapshot.val() || {};
             renderAll();
@@ -220,7 +218,6 @@
             renderStats();
         });
 
-        // 1. Render Active Pass Cards & Timers
         function renderActivePasses() {
             const grid = document.getElementById('active-passes-grid');
             const countEl = document.getElementById('active-card-count');
@@ -279,7 +276,6 @@
             });
         }
 
-        // Live Timer Loop
         setInterval(() => {
             Object.keys(activePasses).forEach(key => {
                 const pass = activePasses[key];
@@ -295,7 +291,6 @@
                     const formatted = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
                     timerEl.textContent = formatted;
 
-                    // Color code based on pass duration threshold
                     if (mins >= 15) {
                         timerEl.className = "text-base font-mono font-black text-rose-600 animate-pulse";
                         if (cardEl) cardEl.className = "bg-rose-50 border border-rose-300 rounded-xl p-4 shadow-sm flex flex-col justify-between space-y-3";
@@ -307,7 +302,6 @@
             });
         }, 1000);
 
-        // 2. Render Pending Approvals Banner
         function renderPendingApprovals() {
             const card = document.getElementById('pending-approvals-card');
             const countEl = document.getElementById('pending-card-count');
@@ -349,7 +343,6 @@
             });
         }
 
-        // 3. Render Pass History Table
         function renderHistoryTable() {
             const tbody = document.getElementById('history-tbody');
             const search = document.getElementById('search-history').value.toLowerCase().trim();
@@ -403,7 +396,6 @@
             });
         }
 
-        // 4. Calculate Stats
         function renderStats() {
             const activeCount = Object.keys(activePasses).length;
             document.getElementById('stat-active-count').textContent = activeCount;
@@ -428,11 +420,9 @@
             renderStats();
         }
 
-        // Actions
         window.returnStudent = (key) => {
             const pass = activePasses[key];
             if (pass) {
-                // Log return timestamp to history
                 if (pass.historyKey) {
                     set(ref(db, `pass_history/${pass.historyKey}/returnTimestamp`), Date.now());
                 }
@@ -464,7 +454,6 @@
             remove(ref(db, `pending_roster_approvals/${id}`));
         };
 
-        // Search listener
         document.getElementById('search-history').addEventListener('input', renderHistoryTable);
     </script>
 </body>
