@@ -3,288 +3,196 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chelan High - Manage Roster</title>
+  <title>Chelan High School - Student Roster Management</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans overflow-x-hidden">
+<body class="bg-[#f0f4f8] min-h-screen flex flex-col font-sans text-slate-800 antialiased select-none">
 
-  <!-- Password Access Authentication Modal -->
-  <div id="auth-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-6">
-    <div class="bg-slate-800 border border-slate-700 rounded-3xl p-8 max-w-md w-full shadow-2xl text-center">
-      <div class="text-amber-400 text-5xl mb-3"><i class="fa-solid fa-lock"></i></div>
-      <h2 class="text-2xl font-extrabold text-white mb-1">Teacher Authentication</h2>
-      <p class="text-sm text-slate-400 mb-6">Enter password to access Roster Management</p>
-
-      <form id="auth-form" onsubmit="return false;">
-        <input 
-          type="password" 
-          id="auth-password" 
-          class="w-full bg-slate-900 border border-slate-600 text-white text-xl text-center py-3 rounded-xl mb-4 focus:outline-none focus:border-emerald-500 font-mono tracking-widest"
-          placeholder="••••••••••••"
-          autofocus 
-        />
-        <button type="submit" id="auth-submit-btn" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl shadow-lg transition">
-          Unlock Roster Management
-        </button>
-      </form>
-      <p id="auth-error" class="text-rose-400 text-xs mt-3 hidden font-semibold">Incorrect Password. Please try again.</p>
-    </div>
-  </div>
-
-  <!-- Header Navigation Bar (Identical Layout to Dashboard) -->
-  <header class="bg-slate-800 border-b border-slate-700 px-6 py-3 shadow-lg flex justify-between items-center sticky top-0 z-30">
-    <!-- Branding & Versioning -->
-    <div class="flex items-center gap-4">
-      <div class="bg-amber-500 text-slate-900 font-extrabold px-3 py-1.5 rounded-lg text-xl flex items-center gap-2">
-        <i class="fa-solid fa-paw"></i>
-        <span>CHELAN</span>
-      </div>
+  <!-- Dark Forest Green Header Bar -->
+  <header class="bg-[#0B4F2C] text-white px-6 py-3 shadow-md flex justify-between items-center z-30">
+    <!-- Left: Official Chelan Logo, Title, Subtitle & Version -->
+    <div class="flex items-center gap-3">
+      <img 
+        src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" 
+        alt="Chelan High School Logo" 
+        class="h-10 w-auto object-contain"
+      />
       <div>
-        <h1 class="text-xl font-bold text-white leading-tight">Chelan High School</h1>
-        <div class="flex items-center gap-2 mt-0.5">
-          <span id="roster-version" class="bg-slate-700 text-amber-400 text-xs font-semibold px-2 py-0.5 rounded-full border border-slate-600">v1.1.10</span>
-          <span id="roster-room" class="text-xs text-slate-400 font-medium">ROOM 176</span>
-        </div>
+        <h1 class="text-base font-extrabold tracking-wide uppercase leading-none">CHELAN HIGH SCHOOL</h1>
+        <p class="text-xs text-emerald-200 font-medium mt-0.5">Student Roster Management</p>
+        <p class="text-[10px] text-amber-300 font-mono font-bold leading-tight mt-0.5">v1.1.10</p>
       </div>
     </div>
 
-    <!-- Navigation Tab Buttons -->
-    <nav class="flex items-center gap-2 bg-slate-900 p-1.5 rounded-xl border border-slate-700">
-      <a href="teacher.html" class="text-slate-400 hover:text-white px-4 py-2 rounded-lg font-bold text-sm transition flex items-center gap-2">
-        <i class="fa-solid fa-gauge-high"></i> Live Dashboard
+    <!-- Center Navigation Tabs -->
+    <nav class="hidden md:flex items-center gap-1 bg-[#07381e] p-1.5 rounded-xl border border-emerald-600/30">
+      <a href="teacher.html" class="px-3.5 py-1.5 rounded-lg text-xs font-bold text-emerald-100 hover:text-white hover:bg-emerald-800/50 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-gauge text-emerald-300"></i> Live Dashboard
       </a>
-      <a href="roster.html" class="bg-slate-700 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center gap-2">
-        <i class="fa-solid fa-users text-amber-400"></i> Manage Roster
+      <a href="roster.html" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-[#0B4F2C] text-white shadow-sm border border-emerald-500/30 flex items-center gap-1.5">
+        <i class="fa-solid fa-users text-emerald-300"></i> Manage Roster
       </a>
-      <a href="index.html" class="text-slate-400 hover:text-white px-4 py-2 rounded-lg font-bold text-sm transition flex items-center gap-2">
-        <i class="fa-solid fa-desktop"></i> Kiosk View
+      <a href="index.html" target="_blank" class="px-3.5 py-1.5 rounded-lg text-xs font-bold text-emerald-100 hover:text-white hover:bg-emerald-800/50 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-expand text-emerald-300"></i> Kiosk View <i class="fa-solid fa-arrow-up-right-from-square text-[10px] opacity-70"></i>
       </a>
     </nav>
 
-    <!-- Live Clock & Status -->
-    <div class="text-right">
-      <div id="roster-clock" class="text-2xl font-mono font-bold text-emerald-400">00:00:00 AM</div>
-      <div class="text-xs text-slate-400 font-medium uppercase tracking-wider">Roster Station</div>
+    <!-- Right: Room & Clock -->
+    <div class="flex items-center gap-3">
+      <div class="text-right pl-3 border-l border-emerald-700/60 flex flex-col justify-center">
+        <div id="roster-clock" class="text-base font-mono font-bold tracking-tight">00:00:00 PM</div>
+        <div id="roster-room" class="text-[10px] text-emerald-200 font-bold uppercase tracking-wider">TEACHER STATION &bull; ROOM 176</div>
+      </div>
     </div>
   </header>
 
-  <!-- Roster Workspace Layout (2 Panels) -->
-  <main class="flex-1 max-w-[1800px] w-full mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+  <!-- Main Container -->
+  <main class="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1400px] w-full mx-auto">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-    <!-- LEFT PANEL: Class Roster Table (7 Cols) -->
-    <section class="lg:col-span-7 bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 flex flex-col shadow-xl">
-      <!-- Section Header Controls -->
-      <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-700">
-        <div class="flex items-center gap-3">
-          <h2 class="text-lg font-bold text-white flex items-center gap-2">
-            <i class="fa-solid fa-users text-amber-400"></i> Class Roster
-          </h2>
-          <span id="roster-count-badge" class="bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-bold px-2.5 py-0.5 rounded-full">0 Students</span>
-        </div>
-        <div class="flex gap-2">
-          <button id="export-roster-csv-btn" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5">
-            <i class="fa-solid fa-file-csv"></i> Export CSV
-          </button>
-          <button id="edit-all-btn" class="bg-amber-500 hover:bg-amber-400 text-slate-900 text-xs font-bold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5">
-            <i class="fa-solid fa-pen-to-square"></i> Edit All
-          </button>
-        </div>
-      </div>
-
-      <!-- Real-Time Filter Search Input -->
-      <div class="mb-4">
-        <div class="relative">
-          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
-          <input 
-            type="text" 
-            id="roster-search-input" 
-            placeholder="Search roster by ID or name..." 
-            class="w-full bg-slate-900 border border-slate-700 text-xs text-white pl-8 pr-3 py-2.5 rounded-xl focus:outline-none focus:border-amber-400" 
-          />
-        </div>
-      </div>
-
-      <!-- Roster Data Table -->
-      <div class="flex-1 overflow-x-auto max-h-[650px] border border-slate-700 rounded-xl">
-        <table class="w-full text-left text-xs text-slate-300">
-          <thead class="bg-slate-900 text-slate-400 uppercase font-semibold text-[10px] sticky top-0 border-b border-slate-700 select-none">
-            <tr>
-              <th id="sort-id-btn" class="py-3 px-4 cursor-pointer hover:text-white transition">
-                ID Code <span class="text-amber-400">↕</span>
-              </th>
-              <th id="sort-first-btn" class="py-3 px-4 cursor-pointer hover:text-white transition">
-                First Name <span class="text-amber-400">↕</span>
-              </th>
-              <th id="sort-last-btn" class="py-3 px-4 cursor-pointer hover:text-white transition">
-                Last Name <span class="text-amber-400">↕</span>
-              </th>
-              <th class="py-3 px-4 text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="roster-tbody" class="divide-y divide-slate-700/60 font-mono">
-            <!-- Dynamic Roster Rows will render here -->
-            <tr>
-              <td colspan="4" class="py-8 text-center text-slate-500 italic font-sans">No student records found. Add or import students to begin.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- RIGHT PANEL: Roster Tools & Import (5 Cols) -->
-    <section class="lg:col-span-5 flex flex-col gap-5">
-
-      <!-- Tool A: Quick Add Student (Single-Row Horizontal Layout) -->
-      <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 shadow-xl">
-        <h3 class="text-sm font-bold text-slate-300 uppercase tracking-wider mb-3 flex items-center gap-2">
-          <i class="fa-solid fa-user-plus text-emerald-400"></i> Quick Add Student
-        </h3>
-        <form id="quick-add-form" onsubmit="return false;" class="flex gap-2 items-center">
-          <input 
-            type="text" 
-            id="qa-id" 
-            placeholder="ID / Barcode" 
-            class="w-28 bg-slate-900 border border-slate-700 text-amber-400 font-mono text-xs p-2.5 rounded-lg focus:outline-none focus:border-emerald-500" 
-            required 
-          />
-          <input 
-            type="text" 
-            id="qa-first" 
-            placeholder="First Name" 
-            class="flex-1 bg-slate-900 border border-slate-700 text-white text-xs p-2.5 rounded-lg focus:outline-none focus:border-emerald-500" 
-            required 
-          />
-          <input 
-            type="text" 
-            id="qa-last" 
-            placeholder="Last Name" 
-            class="flex-1 bg-slate-900 border border-slate-700 text-white text-xs p-2.5 rounded-lg focus:outline-none focus:border-emerald-500" 
-            required 
-          />
-          <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3.5 py-2.5 rounded-lg transition shadow flex items-center gap-1.5 whitespace-nowrap">
-            <i class="fa-solid fa-plus"></i> Add
-          </button>
-        </form>
-      </div>
-
-      <!-- Tool B: Bulk Roster Import Options -->
-      <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 shadow-xl flex-1 flex flex-col justify-between">
-        <div>
-          <h3 class="text-sm font-bold text-slate-300 uppercase tracking-wider mb-4 flex items-center gap-2">
-            <i class="fa-solid fa-file-import text-blue-400"></i> Bulk Roster Import Options
-          </h3>
-
-          <!-- Import Mode Selection (Radio Toggles - Default: Add / Merge) -->
-          <div class="mb-5 bg-slate-900/80 border border-slate-700 p-3.5 rounded-xl">
-            <div class="text-xs font-semibold text-slate-400 mb-2">Select Import Mode:</div>
-            <div class="flex flex-col gap-2.5 text-xs">
-              <label class="flex items-center gap-2.5 text-slate-200 cursor-pointer">
-                <input type="radio" name="importMode" id="mode-merge" value="merge" class="accent-emerald-500" checked />
-                <span class="font-bold text-emerald-400">Add / Merge Students</span>
-                <span class="text-[10px] text-slate-400">(Default: Appends new records & updates matches)</span>
-              </label>
-              <label class="flex items-center gap-2.5 text-slate-200 cursor-pointer">
-                <input type="radio" name="importMode" id="mode-replace" value="replace" class="accent-rose-500" />
-                <span class="font-bold text-rose-400">Replace Entire Roster</span>
-                <span class="text-[10px] text-slate-400">(Overwrites whole database)</span>
-              </label>
+      <!-- ================= LEFT COLUMN: ADD & IMPORT TOOLS (4 cols) ================= -->
+      <section class="lg:col-span-4 flex flex-col gap-6">
+        
+        <!-- Add Single Student Card -->
+        <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
+          <div class="flex items-center gap-2.5 border-b border-slate-100 pb-4 mb-4">
+            <div class="w-9 h-9 rounded-xl bg-emerald-100 text-[#0B4F2C] flex items-center justify-center font-bold text-base">
+              <i class="fa-solid fa-user-plus"></i>
+            </div>
+            <div>
+              <h2 class="text-base font-extrabold text-slate-800">Add Single Student</h2>
+              <p class="text-xs text-slate-400 font-medium">Manually register a student</p>
             </div>
           </div>
 
-          <!-- Upload Method 1: Drag & Drop CSV Dropzone -->
-          <div class="mb-5">
-            <div class="text-xs font-semibold text-slate-400 mb-2">Method 1: CSV File Upload</div>
-            <div 
-              id="csv-dropzone" 
-              class="border-2 border-dashed border-slate-600 hover:border-amber-400 bg-slate-900/50 hover:bg-slate-900 rounded-xl p-6 text-center cursor-pointer transition flex flex-col items-center justify-center gap-2"
-            >
-              <i class="fa-solid fa-cloud-arrow-up text-3xl text-amber-400"></i>
-              <div class="text-xs text-slate-300 font-semibold">Drag & Drop `.csv` file here or click to browse</div>
-              <div class="text-[10px] text-slate-500">File format: `ID, First Name, Last Name`</div>
-              <input type="file" id="csv-file-input" accept=".csv" class="hidden" />
-            </div>
-          </div>
-
-          <!-- Upload Method 2: Google Sheet Published CSV Link -->
-          <div>
-            <div class="text-xs font-semibold text-slate-400 mb-2">Method 2: Google Sheet Published CSV Link</div>
-            <div class="flex gap-2">
+          <form id="form-add-student" class="space-y-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wider">Student ID Number *</label>
               <input 
-                type="url" 
-                id="gsheet-url-input" 
-                placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv" 
-                class="flex-1 bg-slate-900 border border-slate-700 text-xs text-white p-2.5 rounded-lg focus:outline-none focus:border-blue-400" 
+                type="text" 
+                id="input-id" 
+                placeholder="e.g. 10482" 
+                class="w-full text-sm font-mono font-bold py-2.5 px-3.5 rounded-xl border border-slate-300 focus:border-[#0B4F2C] focus:outline-none text-slate-800"
+                required
               />
-              <button id="gsheet-fetch-btn" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3.5 py-2.5 rounded-lg transition shadow flex items-center gap-1.5 whitespace-nowrap">
-                <i class="fa-solid fa-sync"></i> Sync
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wider">First Name *</label>
+                <input 
+                  type="text" 
+                  id="input-firstname" 
+                  placeholder="First" 
+                  class="w-full text-sm font-bold py-2.5 px-3.5 rounded-xl border border-slate-300 focus:border-[#0B4F2C] focus:outline-none text-slate-800"
+                  required
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wider">Last Name *</label>
+                <input 
+                  type="text" 
+                  id="input-lastname" 
+                  placeholder="Last" 
+                  class="w-full text-sm font-bold py-2.5 px-3.5 rounded-xl border border-slate-300 focus:border-[#0B4F2C] focus:outline-none text-slate-800"
+                  required
+                />
+              </div>
+            </div>
+
+            <button type="submit" class="w-full bg-[#0B4F2C] hover:bg-[#07381e] text-white font-bold py-3 rounded-xl shadow-md transition text-xs uppercase tracking-wider flex items-center justify-center gap-2 mt-2">
+              <i class="fa-solid fa-plus"></i> Add Student to Roster
+            </button>
+          </form>
+        </div>
+
+        <!-- Bulk CSV Import Card -->
+        <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
+          <div class="flex items-center gap-2.5 border-b border-slate-100 pb-4 mb-4">
+            <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-base">
+              <i class="fa-solid fa-file-csv"></i>
+            </div>
+            <div>
+              <h2 class="text-base font-extrabold text-slate-800">Bulk CSV Import</h2>
+              <p class="text-xs text-slate-400 font-medium">Upload class list via CSV</p>
+            </div>
+          </div>
+
+          <p class="text-xs text-slate-500 mb-3">
+            Expected CSV Header Format: <br>
+            <code class="bg-slate-100 text-emerald-800 px-2 py-1 rounded font-mono font-bold text-[11px]">ID, FirstName, LastName</code>
+          </p>
+
+          <input type="file" id="csv-file-input" accept=".csv" class="hidden" />
+          
+          <button id="btn-trigger-upload" type="button" class="w-full bg-slate-100 hover:bg-emerald-50 hover:text-[#0B4F2C] text-slate-700 font-bold py-3 rounded-xl border-2 border-dashed border-slate-300 hover:border-emerald-400 transition text-xs flex items-center justify-center gap-2">
+            <i class="fa-solid fa-upload"></i> Choose CSV File to Import
+          </button>
+        </div>
+
+      </section>
+
+
+      <!-- ================= RIGHT COLUMN: ROSTER TABLE (8 cols) ================= -->
+      <section class="lg:col-span-8">
+        <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 flex flex-col h-full">
+          
+          <!-- Header & Search Controls -->
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-100 pb-4 mb-4">
+            <div>
+              <h2 class="text-base font-extrabold text-slate-800">Active Student Roster</h2>
+              <p class="text-xs text-slate-400 font-medium">Total Registered: <span id="roster-count" class="font-bold text-[#0B4F2C]">0</span> Students</p>
+            </div>
+
+            <!-- Search Box & Export -->
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+              <div class="relative flex-1 sm:w-64">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input 
+                  type="text" 
+                  id="search-input" 
+                  placeholder="Search by ID or Name..." 
+                  class="w-full pl-9 pr-3.5 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:border-[#0B4F2C] focus:outline-none"
+                />
+              </div>
+
+              <button id="btn-export-roster" type="button" title="Export Roster CSV" class="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition">
+                <i class="fa-solid fa-download"></i>
+              </button>
+
+              <button id="btn-clear-roster" type="button" title="Clear Entire Roster" class="p-2.5 rounded-xl bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-700 text-xs font-bold transition">
+                <i class="fa-solid fa-trash-can"></i>
               </button>
             </div>
           </div>
+
+          <!-- Roster List Table -->
+          <div class="flex-1 overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-slate-200 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                  <th class="py-2.5 px-3">Student ID</th>
+                  <th class="py-2.5 px-3">First Name</th>
+                  <th class="py-2.5 px-3">Last Name</th>
+                  <th class="py-2.5 px-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="roster-table-body" class="divide-y divide-slate-100 text-xs font-bold text-slate-700">
+                <!-- Dynamically populated by roster.js -->
+              </tbody>
+            </table>
+          </div>
+
         </div>
+      </section>
 
-        <div class="mt-6 pt-3 border-t border-slate-700/60 text-[11px] text-slate-400 italic">
-          💡 Roster changes sync immediately across all connected Kiosk and Live Dashboard stations.
-        </div>
-      </div>
-
-    </section>
-
+    </div>
   </main>
 
-  <!-- Replace Roster Pop-Up Confirmation Modal -->
-  <div id="replace-confirm-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md hidden flex items-center justify-center p-6 z-50">
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl">
-      <div class="text-rose-500 text-4xl mb-3"><i class="fa-solid fa-triangle-exclamation"></i></div>
-      <h3 class="text-xl font-bold text-white mb-2">Overwrite Entire Database?</h3>
-      <p class="text-xs text-slate-300 mb-6">Are you sure you want to proceed? Selecting this option will completely delete and replace all existing student records.</p>
-      <div class="flex gap-3">
-        <button id="replace-cancel-btn" class="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 py-2.5 rounded-xl font-bold text-xs">Cancel</button>
-        <button id="replace-confirm-btn" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white py-2.5 rounded-xl font-bold text-xs">Yes, Overwrite</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Duplicate ID Conflict Resolution Modal -->
-  <div id="conflict-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md hidden flex items-center justify-center p-6 z-50">
-    <div class="bg-slate-800 border border-amber-500/50 rounded-2xl p-6 max-w-md w-full text-center shadow-2xl">
-      <div class="text-amber-400 text-4xl mb-3"><i class="fa-solid fa-id-card"></i></div>
-      <h3 class="text-xl font-bold text-white mb-1">Duplicate Student ID Detected</h3>
-      <p id="conflict-student-info" class="text-xs text-amber-300 font-mono mb-5">ID: 1111 (Existing: Jason Morin | Imported: Jason Morin New)</p>
-      <p class="text-xs text-slate-300 mb-5">Choose how you want to handle this duplicate ID entry:</p>
-
-      <div class="flex flex-col gap-2.5">
-        <button id="conflict-use-new-btn" class="bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2">
-          <i class="fa-solid fa-download"></i> Use New Data (Overwrite Existing)
-        </button>
-        <button id="conflict-keep-old-btn" class="bg-slate-700 hover:bg-slate-600 text-slate-200 py-2.5 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2">
-          <i class="fa-solid fa-shield-halved"></i> Keep Old Data (Ignore Imported)
-        </button>
-        <button id="conflict-keep-both-btn" class="bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2">
-          <i class="fa-solid fa-copy"></i> Keep Both Records
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Delete Record Pop-Up Confirmation Modal -->
-  <div id="delete-confirm-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md hidden flex items-center justify-center p-6 z-50">
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl">
-      <div class="text-rose-500 text-4xl mb-3"><i class="fa-solid fa-user-xmark"></i></div>
-      <h3 class="text-xl font-bold text-white mb-2">Delete Student Record?</h3>
-      <p id="delete-student-name" class="text-xs text-slate-300 mb-6">Are you sure you want to remove this student from the roster?</p>
-      <div class="flex gap-3">
-        <button id="delete-cancel-btn" class="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 py-2.5 rounded-xl font-bold text-xs">Cancel</button>
-        <button id="delete-confirm-btn" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white py-2.5 rounded-xl font-bold text-xs">Delete Student</button>
-      </div>
-    </div>
-  </div>
-
-  <footer class="text-center py-3 text-xs text-slate-500">
-    Chelan High School Classroom Pass System &bull; Roster Management Station
+  <footer class="text-center py-3 text-xs text-slate-400 font-medium">
+    Chelan High School Classroom Pass System &bull; Powered by Firebase
   </footer>
 
-  <!-- Script Module Import -->
   <script type="module" src="roster.js"></script>
 </body>
 </html>
