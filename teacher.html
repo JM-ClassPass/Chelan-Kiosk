@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Teacher Control Dashboard - Chelan High</title>
+  <title>Teacher Control Dashboard - Chelan High School</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     .chelan-primary-green { background-color: #0A4D2E; }
@@ -63,29 +63,42 @@
   <!-- Main App Body -->
   <div id="dashboard-content" class="min-h-screen flex flex-col">
     
-    <!-- Top Header Navigation -->
+    <!-- TOP NAVIGATION HEADER -->
     <header class="chelan-primary-green text-white shadow-md py-2.5 px-6 flex justify-between items-center border-b-4 border-emerald-950">
-      <div class="flex items-center gap-4">
+      
+      <!-- LEFT ZONE: Logo, Full Title, Badge & Version -->
+      <div class="flex items-center gap-3">
         <img src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" 
              alt="Chelan High School Logo" 
              class="h-10 w-auto object-contain drop-shadow-md">
-        <h1 class="text-lg font-black tracking-wide flex items-center gap-2 border-l border-emerald-800/80 pl-4">
-          <span>Chelan High</span>
-          <span class="text-xs bg-white/15 text-emerald-100 border border-white/20 px-2 py-0.5 rounded-full font-semibold">Teacher Dashboard</span>
-        </h1>
-      </div>
-
-      <div class="flex items-center gap-6">
-        <div class="text-right hidden sm:block border-r border-emerald-800/80 pr-6">
-          <span id="teacher-live-clock" class="text-base font-mono font-bold tracking-wider">--:-- --</span>
-          <p class="text-[10px] text-emerald-200 uppercase font-semibold tracking-widest">Medical Sciences</p>
-        </div>
-
-        <div class="space-x-2">
-          <button onclick="switchTab('dashboard')" id="btn-dash" class="px-4 py-1.5 bg-white text-emerald-950 rounded-xl font-bold text-xs shadow-sm transition">Live Dashboard</button>
-          <button onclick="switchTab('roster')" id="btn-rost" class="px-4 py-1.5 bg-emerald-900/60 hover:bg-emerald-900 text-emerald-100 rounded-xl font-bold text-xs transition">Manage Roster</button>
+        <div class="border-l border-emerald-800/80 pl-3 flex items-center gap-2">
+          <h1 class="text-lg font-black tracking-wide">
+            <span>Chelan High School</span>
+          </h1>
+          <span class="text-xs bg-white/15 text-emerald-100 border border-white/20 px-2 py-0.5 rounded-full font-semibold hidden sm:inline-block">Teacher Dashboard</span>
+          <span class="text-[10px] font-mono bg-emerald-950/70 text-emerald-200 border border-emerald-700/60 px-2 py-0.5 rounded-full font-bold">v2.1.0</span>
         </div>
       </div>
+
+      <!-- CENTER ZONE: Main Navigation Controls (Dashboard, Roster, Kiosk Link) -->
+      <div class="flex items-center gap-1.5 bg-emerald-950/50 p-1 rounded-2xl border border-emerald-800/60 shadow-inner">
+        <button onclick="switchTab('dashboard')" id="btn-dash" class="px-4 py-1.5 bg-white text-emerald-950 rounded-xl font-bold text-xs shadow-sm transition">
+          Live Dashboard
+        </button>
+        <button onclick="switchTab('roster')" id="btn-rost" class="px-4 py-1.5 hover:bg-emerald-900/80 text-emerald-100 rounded-xl font-bold text-xs transition">
+          Manage Roster
+        </button>
+        <a href="kiosk.html" target="_blank" class="px-4 py-1.5 hover:bg-emerald-900/80 text-emerald-100 rounded-xl font-bold text-xs transition flex items-center gap-1.5">
+          <span>📱</span> Kiosk View
+        </a>
+      </div>
+
+      <!-- RIGHT ZONE: Real-Time Clock & Location Info -->
+      <div class="text-right hidden sm:block">
+        <span id="teacher-live-clock" class="text-base font-mono font-bold tracking-wider block">--:-- --</span>
+        <span class="text-[10px] text-emerald-200 uppercase font-semibold tracking-widest block">Medical Sciences</span>
+      </div>
+
     </header>
 
     <main class="flex-grow p-4 max-w-[1600px] mx-auto w-full space-y-6 flex flex-col">
@@ -108,7 +121,7 @@
         <div class="lg:col-span-5 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col h-full min-h-[650px] relative overflow-hidden">
           <div class="absolute top-0 left-0 w-full h-1 chelan-primary-green"></div>
           
-          <!-- TODAY'S CLASS SUMMARY BANNER (TOP OF CARD) -->
+          <!-- TODAY'S CLASS SUMMARY BANNER -->
           <div class="bg-emerald-50/80 border border-emerald-200 p-3 rounded-xl mb-4 space-y-2">
             <div class="flex justify-between items-center border-b border-emerald-200/60 pb-1.5">
               <span class="text-xs font-bold uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
@@ -157,7 +170,7 @@
             </div>
           </div>
           
-          <!-- TWO-COLUMN VERTICAL GRID (Top-to-Bottom, First Column then Second Column) -->
+          <!-- TWO-COLUMN VERTICAL GRID -->
           <div id="in-room-container" class="grid grid-flow-col grid-cols-2 grid-rows-[repeat(15,minmax(0,auto))] gap-2 max-h-[720px] overflow-y-auto pr-1">
             <p class="text-sm text-slate-400 italic col-span-2 text-center py-6">No students currently checked in.</p>
           </div>
