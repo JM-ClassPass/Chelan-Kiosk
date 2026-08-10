@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Classroom Kiosk - Chelan High</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Config File Load for Versioning -->
-    <script src="config.js"></script>
+    
+    <!-- Safely load config.js if present; fallback if missing -->
+    <script src="config.js" onerror="window.CONFIG = window.CONFIG || { version: '1.000' };"></script>
+
     <style>
         .bg-chelan { background-color: #0d5235; }
         .text-chelan { color: #0d5235; }
@@ -35,7 +37,7 @@
         <div class="flex items-center gap-6">
             <div class="flex gap-2 text-xs font-bold">
                 <div class="bg-green-900/60 px-3 py-1.5 rounded-full border border-green-700/60 flex items-center gap-1.5">
-                    <span>📱</span> Phones: <span id="count-rack">0</span>
+                    <span>📱</span> Rack: <span id="count-rack">0</span>
                 </div>
                 <div class="bg-red-900/60 px-3 py-1.5 rounded-full border border-red-700/60 flex items-center gap-1.5">
                     <span>🚻</span> Bathroom: <span id="count-bath">0</span>/1
@@ -64,11 +66,11 @@
                 <p id="flash-msg" class="text-slate-600 font-bold text-lg text-center px-4">Action Recorded</p>
             </div>
 
-            <!-- Header Badge -->
+            <!-- Header Badge & Headlines -->
             <div class="text-center mb-6">
                 <span id="mode-badge" class="bg-green-50 text-green-800 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider border border-green-200">PHONE CHECK-IN / OUT</span>
                 <h2 id="mode-title" class="text-3xl md:text-4xl font-black text-slate-800 mt-3 mb-1 tracking-tight">Scan/Enter Student Barcode or ID</h2>
-                <p id="mode-desc" class="text-slate-500 text-sm">Scan student ID card or manually type ID, then select a chosen pocket slot.</p>
+                <p id="mode-desc" class="text-slate-500 text-sm">Scan student ID card or manually enter ID, then select a chosen pocket slot.</p>
             </div>
 
             <!-- Mode Selector Tabs -->
@@ -87,10 +89,9 @@
             <!-- Main Form -->
             <form id="kiosk-form" class="space-y-6">
                 
-                <!-- ID Input Area (Scroll Disabled) -->
+                <!-- ID Input Area -->
                 <div id="standard-input-area" class="w-full">
-                    <input type="text" inputmode="numeric" pattern="[0-9]*" id="student-id" placeholder="Scan or Type ID Here..." autofocus autocomplete="off" required
-                        onwheel="event.preventDefault(); this.blur();"
+                    <input type="text" id="student-id" placeholder="Scan or Enter ID Here..." autofocus autocomplete="off" required
                         class="w-full text-center text-3xl font-bold tracking-widest py-4 bg-slate-50 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-chelan shadow-inner placeholder:text-slate-300 placeholder:font-normal placeholder:tracking-normal transition-colors">
                     <p id="id-error" class="text-red-600 text-center text-sm font-bold mt-2 h-5"></p>
                 </div>
@@ -110,7 +111,6 @@
                         <input type="text" id="manual-lname" placeholder="Last Name" class="w-1/2 px-4 py-3 bg-white border-2 border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 text-center font-bold text-lg">
                     </div>
 
-                    <!-- Dedicated Submit Button for 3rd Attempt Registration -->
                     <button type="submit" id="manual-submit-btn" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3.5 rounded-xl text-base shadow-md transition-all flex justify-center items-center gap-2">
                         <span>📩</span> Submit Registration Request
                     </button>
@@ -123,7 +123,7 @@
                             <span>📱</span> Tap Your Chosen Pocket Slot
                         </span>
                         <span id="selected-slot-display" class="bg-green-100 text-green-800 text-xs font-bold px-3 py-1 rounded-full border border-green-200">
-                            Chosen Slot: Pocket 01
+                            Chosen Slot: Pocket #01
                         </span>
                     </div>
                     
@@ -143,17 +143,18 @@
         </div>
     </main>
 
-    <!-- Clock Script & Global Config Setup -->
+    <!-- Clock & Version Script -->
     <script>
         setInterval(() => {
             const clock = document.getElementById('live-clock');
             if(clock) clock.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         }, 1000);
 
-        // Version fallback logic from loaded config.js
-        document.addEventListener("DOMContentLoaded", () => {
+        // Update version badge if CONFIG is defined
+        window.addEventListener('load', () => {
             if (typeof CONFIG !== 'undefined' && CONFIG.version) {
-                document.getElementById('app-version-badge').textContent = `v${CONFIG.version}`;
+                const badge = document.getElementById('app-version-badge');
+                if (badge) badge.textContent = `v${CONFIG.version}`;
             }
         });
     </script>
@@ -176,7 +177,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // State Management
+        // State
         let roster = {};
         let activePhones = {};
         let activeBathroom = {};
@@ -193,58 +194,54 @@
                 color: 'bg-chelan',
                 border: 'border-l-chelan',
                 badge: 'bg-green-50 text-green-800 border-green-200',
-                text: 'PHONE CHECK-IN / OUT',
-                desc: 'Scan student ID card or manually type ID, then select a chosen pocket slot.'
+                badgeText: 'PHONE CHECK-IN / OUT',
+                titleText: 'Scan/Enter Student Barcode or ID',
+                desc: 'Scan student ID card or manually enter ID, then select a chosen pocket slot.'
             },
             bathroom: {
                 color: 'bg-red-700',
                 border: 'border-l-red-700',
                 badge: 'bg-red-50 text-red-800 border-red-200',
-                text: 'BATHROOM PASS (STRICT LIMIT: 1 STUDENT)',
+                badgeText: 'BATHROOM PASS (STRICT LIMIT: 1 STUDENT)',
+                titleText: 'Scan/Enter ID for Bathroom Pass',
                 desc: 'Only 1 student permitted out at a time. Requires phone checked in.'
             },
             hall: {
                 color: 'bg-indigo-600',
                 border: 'border-l-indigo-600',
                 badge: 'bg-indigo-50 text-indigo-800 border-indigo-200',
-                text: 'HALL PASS / ACTIVITY OUT',
+                badgeText: 'HALL PASS / ACTIVITY OUT',
+                titleText: 'Scan/Enter ID for Hall Pass',
                 desc: 'For library, office, nurse, or errant tasks. Requires phone checked in.'
             }
         };
 
-        // Robust Roster Search Helper
+        // Forgiving Roster Lookup
         function findStudentInRoster(inputId) {
             if (!roster || !inputId) return null;
             
-            const rawClean = String(inputId).trim();
-            const unpaddedClean = rawClean.replace(/^0+/, '');
+            const cleanInput = String(inputId).replace(/[^a-zA-Z0-9]/g, '').toLowerCase().trim();
+            const unpaddedInput = cleanInput.replace(/^0+/, '');
 
-            // 1. Direct object key lookup
-            if (roster[rawClean]) return { id: rawClean, data: roster[rawClean] };
-            if (roster[unpaddedClean]) return { id: unpaddedClean, data: roster[unpaddedClean] };
-
-            // 2. Iterate keys and check sub-properties
-            const keys = Object.keys(roster);
-            for (let i = 0; i < keys.length; i++) {
-                const key = String(keys[i]).trim();
+            for (const key in roster) {
                 const student = roster[key];
-
                 if (!student) continue;
 
-                const keyUnpadded = key.replace(/^0+/, '');
-                const subId = student.studentId ? String(student.studentId).trim() : '';
-                const subIdUnpadded = subId.replace(/^0+/, '');
-                const altId = student.id ? String(student.id).trim() : '';
-                const altIdUnpadded = altId.replace(/^0+/, '');
+                const cleanKey = String(key).replace(/[^a-zA-Z0-9]/g, '').toLowerCase().trim();
+                const unpaddedKey = cleanKey.replace(/^0+/, '');
 
-                if (key === rawClean || keyUnpadded === unpaddedClean) {
-                    return { id: keys[i], data: student };
-                }
-                if (subId === rawClean || (subIdUnpadded && subIdUnpadded === unpaddedClean)) {
-                    return { id: keys[i], data: student };
-                }
-                if (altId === rawClean || (altIdUnpadded && altIdUnpadded === unpaddedClean)) {
-                    return { id: keys[i], data: student };
+                const subId = student.studentId ? String(student.studentId).replace(/[^a-zA-Z0-9]/g, '').toLowerCase().trim() : '';
+                const unpaddedSubId = subId.replace(/^0+/, '');
+
+                const altId = student.id ? String(student.id).replace(/[^a-zA-Z0-9]/g, '').toLowerCase().trim() : '';
+                const unpaddedAltId = altId.replace(/^0+/, '');
+
+                if (
+                    cleanKey === cleanInput || (unpaddedInput && unpaddedKey === unpaddedInput) ||
+                    subId === cleanInput || (unpaddedInput && unpaddedSubId === unpaddedInput) ||
+                    altId === cleanInput || (unpaddedInput && unpaddedAltId === unpaddedInput)
+                ) {
+                    return { id: key, data: student };
                 }
             }
 
@@ -290,7 +287,8 @@
             btn.className = `w-full ${themes[mode].color} hover:opacity-90 text-white font-bold py-4 rounded-xl text-lg shadow-md transition-all flex justify-center items-center gap-2`;
 
             document.getElementById('mode-badge').className = `${themes[mode].badge} text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider border`;
-            document.getElementById('mode-badge').textContent = themes[mode].text;
+            document.getElementById('mode-badge').textContent = themes[mode].badgeText;
+            document.getElementById('mode-title').textContent = themes[mode].titleText;
             document.getElementById('mode-desc').textContent = themes[mode].desc;
 
             const gridContainer = document.getElementById('phone-grid-container');
@@ -323,7 +321,7 @@
 
             const slotDisplay = document.getElementById('selected-slot-display');
             if(slotDisplay) {
-                slotDisplay.textContent = `Chosen Slot: Pocket ${String(selectedSlot).padStart(2, '0')}`;
+                slotDisplay.textContent = `Chosen Slot: Pocket #${String(selectedSlot).padStart(2, '0')}`;
             }
 
             const grid = document.getElementById('slot-grid');
@@ -382,7 +380,6 @@
             }, 50);
         }
 
-        // Flash Confirmation Overlay
         function triggerFlashConfirmation(codeStr, msgStr, iconStr = '✅', durationMs = 1200) {
             const overlay = document.getElementById('flash-overlay');
             document.getElementById('flash-icon').textContent = iconStr;
@@ -408,7 +405,7 @@
             }
         }
 
-        // Main Submit Action
+        // Form Submission
         document.getElementById('kiosk-form').addEventListener('submit', (e) => {
             e.preventDefault();
 
@@ -470,7 +467,7 @@
                     remove(ref(db, `active_hall_passes/${studentId}`));
                     
                     push(ref(db, 'system_logs'), {
-                        studentId, name: studentName, code: 'COS', action: "Phone Check-Out (Student Kiosk)", timestamp: Date.now()
+                        studentId, name: studentName, code: 'COS', action: "Phone Check-Out", timestamp: Date.now()
                     });
 
                     triggerFlashConfirmation('COS', `${studentName} - Phone Checked Out`, '📱');
@@ -488,12 +485,12 @@
                         studentId, name: studentName, code: codeStr, action: `Phone Check-In (Pocket #${slotFormatted})`, timestamp: Date.now()
                     });
 
-                    triggerFlashConfirmation(codeStr, `${studentName} - Checked In (Pocket ${slotFormatted})`, '📱');
+                    triggerFlashConfirmation(codeStr, `${studentName} - Checked In (Pocket #${slotFormatted})`, '📱');
                 }
             } else if (currentMode === 'bathroom') {
                 if (activeBathroom[studentId]) {
                     remove(ref(db, `active_bathroom_passes/${studentId}`));
-                    push(ref(db, 'system_logs'), { studentId, name: studentName, code: 'BP-I', action: "Bathroom Pass Return", timestamp: Date.now() });
+                    push(ref(db, 'system_logs'), { studentId, name: studentName, code: 'BP-I', action: "Bathroom Return", timestamp: Date.now() });
                     triggerFlashConfirmation('BP-I', `Welcome back, ${studentName}!`, '🚻');
                 } else {
                     if (!activePhones[studentId]) {
@@ -512,7 +509,7 @@
                     set(ref(db, `active_bathroom_passes/${studentId}`), {
                         studentName: studentName, timestamp: Date.now()
                     });
-                    push(ref(db, 'system_logs'), { studentId, name: studentName, code: 'BP-O', action: "Bathroom Pass Out", timestamp: Date.now() });
+                    push(ref(db, 'system_logs'), { studentId, name: studentName, code: 'BP-O', action: "Bathroom Out", timestamp: Date.now() });
                     triggerFlashConfirmation('BP-O', `Bathroom Pass Issued: ${studentName}`, '🚻');
                 }
             } else if (currentMode === 'hall') {
@@ -539,7 +536,7 @@
             }
         });
 
-        // Initialize default view
+        // Default view setup
         switchMode('phone');
     </script>
 </body>
