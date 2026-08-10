@@ -27,7 +27,7 @@
             <img src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" alt="Logo" class="h-10">
             <div>
                 <h1 class="text-xl font-bold tracking-wide uppercase leading-tight">Chelan High School</h1>
-                <p class="text-[11px] text-green-200">Classroom Phone & Pass Kiosk <span class="ml-2 font-mono bg-green-900/80 px-1.5 py-0.5 rounded text-[9px]">v1.007</span></p>
+                <p class="text-[11px] text-green-200">Classroom Phone & Pass Kiosk <span id="app-version-badge" class="ml-2 font-mono bg-green-900/80 px-1.5 py-0.5 rounded text-[9px]">v1.000</span></p>
             </div>
         </div>
         <div class="flex items-center gap-6">
@@ -149,11 +149,19 @@
         }, 1000);
     </script>
     
-    <!-- Firebase Module -->
+    <!-- Firebase Module & Application Logic -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getDatabase, ref, onValue, set, remove, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
         
+        // Import Versioning and Global Settings from config.js
+        import { CONFIG } from './config.js';
+
+        // Apply Version Number to Badge
+        if (CONFIG && CONFIG.version) {
+            document.getElementById('app-version-badge').textContent = `v${CONFIG.version}`;
+        }
+
         const firebaseConfig = {
             apiKey: "AIzaSyDOqjLMzMydaR31WWUA35sr1FrNLfHPxuI",
             authDomain: "chelan-classroom-pass-a811e.firebaseapp.com",
@@ -203,6 +211,38 @@
                 desc: 'For library, office, nurse, or errant tasks. Requires phone checked in.'
             }
         };
+
+        // Roster Search Helper (Fixes string vs integer ID mismatch issues)
+        function findStudentInRoster(inputId) {
+            if (!roster || !inputId) return null;
+
+            const cleanInput = String(inputId).trim();
+
+            // 1. Direct Object Key match
+            if (roster[cleanInput]) {
+                return { id: cleanInput, data: roster[cleanInput] };
+            }
+
+            // 2. Iterate keys to catch type casting or nested studentId field mismatches
+            const keys = Object.keys(roster);
+            for (let i = 0; i < keys.length; i++) {
+                const key = keys[i];
+                const student = roster[key];
+
+                if (String(key).trim() === cleanInput) {
+                    return { id: key, data: student };
+                }
+                if (student.studentId && String(student.studentId).trim() === cleanInput) {
+                    return { id: key, data: student };
+                }
+                // Check without leading zeros if barcodes contain padded zeros
+                if (String(key).replace(/^0+/, '') === cleanInput.replace(/^0+/, '')) {
+                    return { id: key, data: student };
+                }
+            }
+
+            return null;
+        }
 
         // Realtime Data Sync
         onValue(ref(db, 'classroom_roster'), s => roster = s.val() || {});
@@ -369,7 +409,8 @@
         document.getElementById('kiosk-form').addEventListener('submit', (e) => {
             e.preventDefault();
 
-            let studentId = document.getElementById('student-id').value.trim();
+            let rawInput = document.getElementById('student-id').value.trim();
+            let studentId = rawInput;
             let studentName = "";
 
             if (isManualMode) {
@@ -386,19 +427,24 @@
                     firstName: fname,
                     lastName: lname,
                     studentId: studentId,
+                    pocket: selectedSlot,
                     timestamp: Date.now()
                 });
 
                 triggerFlashConfirmation('PENDING', `Request sent for approval: ${studentName}`, '⏳', 1800);
                 return;
             } else {
-                if (roster[studentId]) {
-                    studentName = `${roster[studentId].firstName} ${roster[studentId].lastName}`;
+                const matchedStudent = findStudentInRoster(rawInput);
+                
+                if (matchedStudent) {
+                    studentId = matchedStudent.id;
+                    const data = matchedStudent.data;
+                    studentName = `${data.firstName || ''} ${data.lastName || ''}`.trim() || studentId;
                 } else {
                     failedAttempts++;
                     if (failedAttempts >= 3) {
                         isManualMode = true;
-                        document.getElementById('manual-id-display').textContent = studentId;
+                        document.getElementById('manual-id-display').textContent = rawInput;
                         document.getElementById('standard-input-area').classList.add('hidden');
                         document.getElementById('submit-btn').classList.add('hidden');
                         document.getElementById('manual-input-area').classList.remove('hidden');
