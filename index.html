@@ -3,164 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Classroom Kiosk - Chelan High</title>
+    <title>Student Kiosk - Chelan High Pass System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .bg-chelan { background-color: #0d5235; }
         .text-chelan { color: #0d5235; }
         .border-chelan { border-color: #0d5235; }
-        
-        /* Hide number input spinners if any */
-        input[type=number]::-webkit-inner-spin-button, 
-        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        
-        /* Custom scrollbar */
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col">
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col items-center justify-center p-4">
 
-    <!-- Header Navigation -->
-    <header class="bg-chelan text-white shadow-md py-2.5 px-6 flex flex-wrap justify-between items-center gap-4">
-        <div class="flex items-center gap-3">
-            <img src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" alt="Logo" class="h-9">
-            <div>
-                <h1 class="text-lg font-bold tracking-wide uppercase leading-tight">Chelan High School</h1>
-                <p class="text-[11px] text-green-200 leading-none mt-0.5">Classroom Phone & Pass Kiosk <span id="version-badge" class="ml-1.5 font-mono bg-green-900/80 px-1.5 py-0.5 rounded text-[9px]">v1.1.01</span></p>
-            </div>
+    <!-- Header / Nav link back to Dashboard -->
+    <div class="fixed top-4 right-4 z-10">
+        <a href="teacher.html" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold px-3 py-2 rounded-lg shadow-md transition">Teacher View 🔒</a>
+    </div>
+
+    <div class="max-w-xl w-full bg-white rounded-3xl shadow-xl border border-slate-200 p-8 space-y-6 text-center">
+        <div class="flex justify-center items-center gap-3 mb-2">
+            <img src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" alt="Logo" class="h-12">
+            <h1 class="text-2xl font-black text-chelan tracking-wide">Chelan High Pass System</h1>
         </div>
 
-        <div class="flex items-center gap-6">
-            <!-- Stat Badges Alignment -->
-            <div class="flex items-center gap-2 text-xs font-bold">
-                <div class="bg-green-900/60 px-3 py-1 rounded-full border border-green-700/60 flex items-center gap-1.5">
-                    <span>📱</span> Phones: <span id="count-rack">0</span>
-                </div>
-                <div class="bg-red-900/60 px-3 py-1 rounded-full border border-red-700/60 flex items-center gap-1.5">
-                    <span>🚻</span> Bathroom: <span id="count-bath">0</span>/1
-                </div>
-                <div class="bg-indigo-900/60 px-3 py-1 rounded-full border border-indigo-700/60 flex items-center gap-1.5">
-                    <span>🎟️</span> Hall Pass: <span id="count-hall">0</span>
-                </div>
+        <div id="status-message" class="min-h-[2rem] text-sm font-bold text-slate-500">
+            Scan your student ID barcode or type your ID to begin.
+        </div>
+
+        <!-- Main Input Form -->
+        <form id="kiosk-form" class="space-y-4">
+            <input type="text" id="student-id-input" placeholder="Scan or Enter ID" autofocus required autocomplete="off"
+                class="w-full text-center font-mono text-2xl tracking-wider px-4 py-4 bg-slate-50 border-2 border-slate-300 rounded-2xl focus:outline-none focus:border-chelan">
+
+            <div id="pocket-selection" class="hidden space-y-2">
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider">Select Pocket Number:</label>
+                <input type="number" id="pocket-input" min="1" max="50" placeholder="Pocket #"
+                    class="w-full text-center font-mono text-2xl px-4 py-3 bg-slate-50 border-2 border-slate-300 rounded-2xl focus:outline-none focus:border-chelan">
             </div>
 
-            <!-- Clock Display -->
-            <div class="text-right hidden sm:block">
-                <span id="live-clock" class="text-base font-mono font-bold block leading-none">--:-- --</span>
-                <span class="text-[9px] text-green-300 uppercase tracking-widest block mt-0.5">Medical Sciences</span>
+            <!-- Action Selectors -->
+            <div class="grid grid-cols-3 gap-3 pt-2">
+                <button type="button" onclick="handleAction('phone')" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-4 rounded-2xl shadow transition text-sm flex flex-col items-center gap-1">
+                    <span class="text-xl">📱</span>
+                    <span>Phone Check In/Out</span>
+                </button>
+                <button type="button" onclick="handleAction('bathroom')" class="bg-red-700 hover:bg-red-800 text-white font-bold py-4 rounded-2xl shadow transition text-sm flex flex-col items-center gap-1">
+                    <span class="text-xl">🚻</span>
+                    <span>Bathroom Pass</span>
+                </button>
+                <button type="button" onclick="handleAction('hall')" class="bg-indigo-700 hover:bg-indigo-800 text-white font-bold py-4 rounded-2xl shadow transition text-sm flex flex-col items-center gap-1">
+                    <span class="text-xl">🎟️</span>
+                    <span>Hall Pass</span>
+                </button>
+            </div>
+        </form>
+
+        <!-- Unrecognized Student Modal / Form -->
+        <div id="new-student-modal" class="hidden bg-amber-50 border-2 border-amber-300 p-6 rounded-2xl text-left space-y-4">
+            <h3 class="font-bold text-amber-900 text-sm uppercase tracking-wider flex items-center gap-2">
+                <span>⚠️</span> Unrecognized ID
+            </h3>
+            <p class="text-xs text-amber-800">Your ID was not found in the roster. Enter your name below to request teacher approval.</p>
+            <div class="grid grid-cols-2 gap-2">
+                <input type="text" id="new-first-name" placeholder="First Name" class="text-xs px-3 py-2 border border-amber-300 rounded-lg bg-white focus:outline-none">
+                <input type="text" id="new-last-name" placeholder="Last Name" class="text-xs px-3 py-2 border border-amber-300 rounded-lg bg-white focus:outline-none">
+            </div>
+            <div class="flex gap-2">
+                <button type="button" onclick="submitPendingStudent()" class="w-full bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold py-2 rounded-lg transition">Submit Request</button>
+                <button type="button" onclick="cancelPendingStudent()" class="bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-bold px-4 py-2 rounded-lg transition">Cancel</button>
             </div>
         </div>
-    </header>
+    </div>
 
-    <!-- Main Content -->
-    <main class="flex-grow flex items-center justify-center p-4">
-        
-        <!-- Kiosk Main Card -->
-        <div id="main-card" class="bg-white max-w-3xl w-full rounded-2xl shadow-xl border-l-8 border-l-chelan border-y border-r border-slate-200 p-6 md:p-8 relative overflow-hidden transition-all duration-300">
-            
-            <!-- Visual Flash Overlay -->
-            <div id="flash-overlay" class="absolute inset-0 bg-white/95 backdrop-blur-sm z-50 hidden flex-col items-center justify-center transition-all">
-                <div id="flash-icon" class="text-6xl mb-2">✅</div>
-                <h2 id="flash-code" class="text-3xl font-black text-slate-800 tracking-tight mb-1">CI-01</h2>
-                <p id="flash-msg" class="text-slate-600 font-bold text-lg text-center px-4">Action Recorded</p>
-            </div>
-
-            <!-- Header Badge -->
-            <div class="text-center mb-6">
-                <span id="mode-badge" class="bg-green-50 text-green-800 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider border border-green-200">PHONE CHECK-IN / OUT</span>
-                <h2 id="mode-title" class="text-3xl md:text-4xl font-black text-slate-800 mt-3 mb-1 tracking-tight">Scan/Enter Student Barcode or ID</h2>
-                <p id="mode-desc" class="text-slate-500 text-sm">Scan student ID card or manually type ID, then select a chosen pocket slot.</p>
-            </div>
-
-            <!-- Mode Selector Tabs -->
-            <div class="bg-slate-100 p-1.5 rounded-xl flex gap-1 mb-6 border border-slate-200">
-                <button type="button" onclick="switchMode('phone')" id="tab-phone" class="flex-1 py-2.5 rounded-lg text-sm font-bold bg-chelan text-white shadow-sm transition-all flex justify-center items-center gap-2">
-                    <span>📱</span> Phone Mode
-                </button>
-                <button type="button" onclick="switchMode('bathroom')" id="tab-bathroom" class="flex-1 py-2.5 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-200 transition-all flex justify-center items-center gap-2">
-                    <span>🚻</span> Bathroom (1 Max)
-                </button>
-                <button type="button" onclick="switchMode('hall')" id="tab-hall" class="flex-1 py-2.5 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-200 transition-all flex justify-center items-center gap-2">
-                    <span>🎟️</span> Hall Pass
-                </button>
-            </div>
-
-            <!-- Main Form -->
-            <form id="kiosk-form" class="space-y-6">
-                
-                <!-- ID Input Area (Scroll Disabled) -->
-                <div id="standard-input-area" class="w-full">
-                    <input type="text" inputmode="numeric" pattern="[0-9]*" id="student-id" placeholder="Scan or Type ID Here..." autofocus autocomplete="off" required
-                        onwheel="event.preventDefault(); this.blur();"
-                        class="w-full text-center text-3xl font-bold tracking-widest py-4 bg-slate-50 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-chelan shadow-inner placeholder:text-slate-300 placeholder:font-normal placeholder:tracking-normal transition-colors">
-                    <p id="id-error" class="text-red-600 text-center text-sm font-bold mt-2 h-5"></p>
-                </div>
-
-                <!-- Manual Registration Input (Activates on 3rd Failed Attempt) -->
-                <div id="manual-input-area" class="w-full hidden bg-orange-50 p-5 rounded-xl border border-orange-200 space-y-4">
-                    <div class="text-center">
-                        <span class="text-xs font-bold text-orange-800 uppercase tracking-widest block mb-1">Registration Request (3rd Attempt)</span>
-                        <p class="text-slate-700 font-bold text-base">
-                            Registering ID: <span id="manual-id-display" class="font-mono bg-orange-200 px-2.5 py-0.5 rounded text-orange-900 font-black text-lg">---</span>
-                        </p>
-                        <p class="text-xs text-slate-500 mt-1">Type your First & Last Name below to send a registration request for teacher approval.</p>
-                    </div>
-                    
-                    <div class="flex gap-3">
-                        <input type="text" id="manual-fname" placeholder="First Name" class="w-1/2 px-4 py-3 bg-white border-2 border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 text-center font-bold text-lg">
-                        <input type="text" id="manual-lname" placeholder="Last Name" class="w-1/2 px-4 py-3 bg-white border-2 border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 text-center font-bold text-lg">
-                    </div>
-
-                    <!-- Dedicated Submit Button for 3rd Attempt Registration -->
-                    <button type="submit" id="manual-submit-btn" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3.5 rounded-xl text-base shadow-md transition-all flex justify-center items-center gap-2">
-                        <span>📩</span> Submit Registration Request
-                    </button>
-                </div>
-
-                <!-- Phone Pocket Grid (Phone Mode Only) -->
-                <div id="phone-grid-container" class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                    <div class="flex justify-between items-center mb-3">
-                        <span class="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-                            <span>📱</span> Tap Your Chosen Pocket Slot
-                        </span>
-                        <span id="selected-slot-display" class="bg-green-100 text-green-800 text-xs font-bold px-3 py-1 rounded-full border border-green-200">
-                            Chosen Slot: Pocket 01
-                        </span>
-                    </div>
-                    
-                    <div class="max-h-[220px] overflow-y-auto custom-scrollbar pr-1">
-                        <div id="slot-grid" class="grid grid-cols-4 sm:grid-cols-9 gap-2">
-                            <!-- JS Generated Grid Slots -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Primary Submit Button -->
-                <button type="submit" id="submit-btn" class="w-full bg-chelan hover:bg-green-800 text-white font-bold py-4 rounded-xl text-lg shadow-md transition-all flex justify-center items-center gap-2">
-                    <span>⚡</span> Submit Scan / Entry
-                </button>
-
-            </form>
-        </div>
-    </main>
-
-    <!-- Clock Script -->
-    <script>
-        setInterval(() => {
-            const clock = document.getElementById('live-clock');
-            if(clock) clock.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        }, 1000);
-    </script>
-    
-    <!-- Firebase Module -->
     <script type="module">
-        import { applyVersionBadge } from "./config.js";
-        applyVersionBadge("version-badge");
-
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, onValue, set, remove, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-        
+        import { getDatabase, ref, get, set, remove, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
         const firebaseConfig = {
             apiKey: "AIzaSyDOqjLMzMydaR31WWUA35sr1FrNLfHPxuI",
             authDomain: "chelan-classroom-pass-a811e.firebaseapp.com",
@@ -174,339 +90,206 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // Firebase State
-        let roster = {};
-        let activePhones = {};
-        let activeBathroom = {};
-        let activeHall = {};
-        
-        // UI State
-        let currentMode = 'phone'; 
-        let failedAttempts = 0;
-        let selectedSlot = 1;
-        let userManuallySelected = false;
-        let isManualMode = false;
+        let currentUnrecognizedId = null;
+        let pendingActionType = null;
 
-        const themes = {
-            phone: {
-                color: 'bg-chelan',
-                border: 'border-l-chelan',
-                badge: 'bg-green-50 text-green-800 border-green-200',
-                text: 'PHONE CHECK-IN / OUT',
-                desc: 'Scan student ID card or manually type ID, then select a chosen pocket slot.'
-            },
-            bathroom: {
-                color: 'bg-red-700',
-                border: 'border-l-red-700',
-                badge: 'bg-red-50 text-red-800 border-red-200',
-                text: 'BATHROOM PASS (STRICT LIMIT: 1 STUDENT)',
-                desc: 'Only 1 student permitted out at a time. Requires phone checked in.'
-            },
-            hall: {
-                color: 'bg-indigo-600',
-                border: 'border-l-indigo-600',
-                badge: 'bg-indigo-50 text-indigo-800 border-indigo-200',
-                text: 'HALL PASS / ACTIVITY OUT',
-                desc: 'For library, office, nurse, or errant tasks. Requires phone checked in.'
-            }
-        };
+        window.handleAction = async (actionType) => {
+            const idInput = document.getElementById('student-id-input');
+            const studentId = idInput.value.trim();
+            const status = document.getElementById('status-message');
 
-        // Realtime Data Sync
-        onValue(ref(db, 'classroom_roster'), s => roster = s.val() || {});
-        
-        onValue(ref(db, 'active_phones_in_class'), s => {
-            activePhones = s.val() || {};
-            document.getElementById('count-rack').textContent = Object.keys(activePhones).length;
-            if (currentMode === 'phone') renderGrid();
-        });
-
-        onValue(ref(db, 'active_bathroom_passes'), s => {
-            activeBathroom = s.val() || {};
-            document.getElementById('count-bath').textContent = Object.keys(activeBathroom).length;
-        });
-
-        onValue(ref(db, 'active_hall_passes'), s => {
-            activeHall = s.val() || {};
-            document.getElementById('count-hall').textContent = Object.keys(activeHall).length;
-        });
-
-        // Tab Switching Logic
-        window.switchMode = (mode) => {
-            currentMode = mode;
-            
-            ['phone', 'bathroom', 'hall'].forEach(m => {
-                const tab = document.getElementById(`tab-${m}`);
-                if (m === mode) {
-                    tab.className = `flex-1 py-2.5 rounded-lg text-sm font-bold ${themes[m].color} text-white shadow-sm transition-all flex justify-center items-center gap-2`;
-                } else {
-                    tab.className = `flex-1 py-2.5 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-200 transition-all flex justify-center items-center gap-2`;
-                }
-            });
-
-            // Card Style Update
-            const card = document.getElementById('main-card');
-            card.className = `bg-white max-w-3xl w-full rounded-2xl shadow-xl border-l-8 ${themes[mode].border} border-y border-r border-slate-200 p-6 md:p-8 relative overflow-hidden transition-all duration-300`;
-
-            const btn = document.getElementById('submit-btn');
-            btn.className = `w-full ${themes[mode].color} hover:opacity-90 text-white font-bold py-4 rounded-xl text-lg shadow-md transition-all flex justify-center items-center gap-2`;
-
-            // Text Updates
-            document.getElementById('mode-badge').className = `${themes[mode].badge} text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider border`;
-            document.getElementById('mode-badge').textContent = themes[mode].text;
-            document.getElementById('mode-desc').textContent = themes[mode].desc;
-
-            // Toggle Grid
-            const gridContainer = document.getElementById('phone-grid-container');
-            if (mode === 'phone') {
-                gridContainer.classList.remove('hidden');
-                renderGrid();
-            } else {
-                gridContainer.classList.add('hidden');
+            if (!studentId) {
+                setStatus("Please scan or enter your student ID.", "text-red-600");
+                return;
             }
 
-            resetForm();
-        };
-
-        // Render Pocket Slot Grid
-        function renderGrid() {
-            const usedSlots = Object.values(activePhones).map(p => parseInt(p.pocket));
-            
-            let lowestAvailable = 1;
-            for (let i = 1; i <= 36; i++) {
-                if (!usedSlots.includes(i)) {
-                    lowestAvailable = i;
-                    break;
-                }
-            }
-
-            if (!userManuallySelected || usedSlots.includes(selectedSlot)) {
-                selectedSlot = lowestAvailable;
-                userManuallySelected = false;
-            }
-
-            const slotDisplay = document.getElementById('selected-slot-display');
-            if(slotDisplay) {
-                slotDisplay.textContent = `Chosen Slot: Pocket ${String(selectedSlot).padStart(2, '0')}`;
-            }
-
-            const grid = document.getElementById('slot-grid');
-            if(!grid) return;
-            grid.innerHTML = "";
-
-            for (let i = 1; i <= 36; i++) {
-                const isUsed = usedSlots.includes(i);
-                const isSelected = i === selectedSlot && !isUsed;
-                const numStr = String(i).padStart(2, '0');
-
-                const btn = document.createElement('div');
-
-                if (isUsed) {
-                    btn.className = "py-2 px-1 flex flex-col items-center justify-center rounded-xl border border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed select-none";
-                    btn.innerHTML = `<span class="font-bold text-sm line-through">${numStr}</span><span class="text-[8px] font-bold uppercase tracking-tighter text-slate-400">TAKEN</span>`;
-                } else if (isSelected) {
-                    btn.className = "py-2 px-1 flex flex-col items-center justify-center rounded-xl bg-chelan text-white shadow-md ring-2 ring-green-300 ring-offset-1 cursor-pointer select-none transition-all";
-                    btn.innerHTML = `<span class="font-bold text-sm">${numStr}</span><span class="text-[8px] font-bold uppercase tracking-tighter text-green-200">SELECTED</span>`;
-                    btn.onclick = () => selectSlot(i);
-                } else {
-                    btn.className = "py-2 px-1 flex flex-col items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 hover:border-chelan hover:text-chelan cursor-pointer select-none transition-all shadow-sm";
-                    btn.innerHTML = `<span class="font-bold text-sm">${numStr}</span>`;
-                    btn.onclick = () => selectSlot(i);
-                }
-
-                grid.appendChild(btn);
-            }
-        }
-
-        window.selectSlot = (slotNum) => {
-            selectedSlot = slotNum;
-            userManuallySelected = true;
-            renderGrid();
-        };
-
-        function resetForm() {
-            document.getElementById('kiosk-form').reset();
-            document.getElementById('id-error').textContent = "";
-            failedAttempts = 0;
-            isManualMode = false;
-            userManuallySelected = false;
-
-            document.getElementById('standard-input-area').classList.remove('hidden');
-            document.getElementById('manual-input-area').classList.add('hidden');
-            document.getElementById('submit-btn').classList.remove('hidden');
-            document.getElementById('student-id').required = true;
-
-            if (currentMode === 'phone') {
-                renderGrid();
-            }
-
-            setTimeout(() => {
-                const input = document.getElementById('student-id');
-                if(input) input.focus();
-            }, 50);
-        }
-
-        // Visual Flash Overlay Helper
-        function triggerFlashConfirmation(codeStr, msgStr, iconStr = '✅', durationMs = 1200) {
-            const overlay = document.getElementById('flash-overlay');
-            document.getElementById('flash-icon').textContent = iconStr;
-            document.getElementById('flash-code').textContent = codeStr;
-            document.getElementById('flash-msg').textContent = msgStr;
-            
-            overlay.classList.remove('hidden');
-            overlay.classList.add('flex');
-
-            setTimeout(() => {
-                overlay.classList.add('hidden');
-                overlay.classList.remove('flex');
-                resetForm();
-            }, durationMs);
-        }
-
-        // Helper to handle pass rejection: clear ID input & set error message
-        function handlePassDenial(errorMsg) {
-            document.getElementById('id-error').textContent = errorMsg;
-            const input = document.getElementById('student-id');
-            if (input) {
-                input.value = "";
-                input.focus();
-            }
-        }
-
-        // Form Submit Handler
-        document.getElementById('kiosk-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-
-            let studentId = document.getElementById('student-id').value.trim();
-            let studentName = "";
-
-            if (isManualMode) {
-                const fname = document.getElementById('manual-fname').value.trim();
-                const lname = document.getElementById('manual-lname').value.trim();
-                if (!fname || !lname) {
-                    document.getElementById('id-error').textContent = "Please enter First and Last name.";
+            try {
+                // Check roster
+                const rosterSnap = await get(ref(db, `classroom_roster/${studentId}`));
+                if (!rosterSnap.exists()) {
+                    currentUnrecognizedId = studentId;
+                    pendingActionType = actionType;
+                    document.getElementById('new-student-modal').classList.remove('hidden');
                     return;
                 }
-                studentName = `${fname} ${lname}`;
 
-                // Send for teacher approval using pending roster node
-                set(ref(db, `pending_roster_approvals/${studentId}`), {
-                    firstName: fname,
-                    lastName: lname,
+                const student = rosterSnap.val();
+                const studentName = `${student.firstName || ''} ${student.lastName || ''}`.trim() || studentId;
+
+                if (actionType === 'phone') {
+                    await processPhoneAction(studentId, studentName, student);
+                } else if (actionType === 'bathroom') {
+                    await processBathroomAction(studentId, studentName);
+                } else if (actionType === 'hall') {
+                    await processHallAction(studentId, studentName);
+                }
+
+                idInput.value = '';
+                document.getElementById('pocket-selection').classList.add('hidden');
+                document.getElementById('pocket-input').value = '';
+
+            } catch (err) {
+                console.error("Action error:", err);
+                setStatus("An error occurred. Please try again.", "text-red-600");
+            }
+        };
+
+        async function processPhoneAction(studentId, studentName, student) {
+            const phoneSnap = await get(ref(db, `active_phones_in_class/${studentId}`));
+            
+            if (phoneSnap.exists()) {
+                // Check Out
+                await remove(ref(db, `active_phones_in_class/${studentId}`));
+                await push(ref(db, 'system_logs'), {
                     studentId: studentId,
+                    name: studentName,
+                    type: 'Phone',
+                    details: 'COS',
+                    timestamp: Date.now()
+                });
+                setStatus(`Phone Checked Out for ${studentName}`, "text-green-700");
+            } else {
+                // Check In - requires pocket #
+                const pocketInput = document.getElementById('pocket-input');
+                const pocketVal = pocketInput.value.trim();
+                const pocketElem = document.getElementById('pocket-selection');
+
+                if (pocketElem.classList.contains('hidden')) {
+                    pocketElem.classList.remove('hidden');
+                    pocketInput.focus();
+                    setStatus(`Enter Pocket # for ${studentName}`, "text-amber-700");
+                    return;
+                }
+
+                if (!pocketVal) {
+                    setStatus("Please enter a valid pocket number.", "text-red-600");
+                    return;
+                }
+
+                const pocketNum = parseInt(pocketVal, 10);
+                const formattedPocket = String(pocketNum).padStart(2, '0');
+
+                await set(ref(db, `active_phones_in_class/${studentId}`), {
+                    studentName: studentName,
+                    firstName: student.firstName || '',
+                    lastName: student.lastName || '',
+                    pocket: pocketNum,
                     timestamp: Date.now()
                 });
 
-                triggerFlashConfirmation('PENDING', `Request sent for approval: ${studentName}`, '⏳', 1800);
-                return;
+                await push(ref(db, 'system_logs'), {
+                    studentId: studentId,
+                    name: studentName,
+                    type: 'Phone',
+                    details: `CI-${formattedPocket}`,
+                    timestamp: Date.now()
+                });
+
+                setStatus(`Phone Checked In (Pocket #${pocketNum}) for ${studentName}`, "text-green-700");
+            }
+        }
+
+        async function processBathroomAction(studentId, studentName) {
+            const passSnap = await get(ref(db, `active_bathroom_passes/${studentId}`));
+
+            if (passSnap.exists()) {
+                // Return
+                await remove(ref(db, `active_bathroom_passes/${studentId}`));
+                await push(ref(db, 'system_logs'), {
+                    studentId: studentId,
+                    name: studentName,
+                    type: 'Bathroom',
+                    details: 'BP-I',
+                    timestamp: Date.now()
+                });
+                setStatus(`Bathroom Pass Returned: ${studentName}`, "text-green-700");
             } else {
-                if (roster[studentId]) {
-                    studentName = `${roster[studentId].firstName} ${roster[studentId].lastName}`;
-                } else {
-                    failedAttempts++;
-                    if (failedAttempts >= 3) {
-                        isManualMode = true;
-                        document.getElementById('manual-id-display').textContent = studentId;
-                        document.getElementById('standard-input-area').classList.add('hidden');
-                        document.getElementById('submit-btn').classList.add('hidden');
-                        document.getElementById('manual-input-area').classList.remove('hidden');
-                        document.getElementById('student-id').required = false;
-                        document.getElementById('manual-fname').focus();
-                    } else {
-                        document.getElementById('id-error').textContent = `ID not recognized (${failedAttempts}/3 attempts). Try again.`;
-                        document.getElementById('student-id').value = "";
-                        document.getElementById('student-id').focus();
-                    }
-                    return;
-                }
+                // Out
+                await set(ref(db, `active_bathroom_passes/${studentId}`), {
+                    studentName: studentName,
+                    timestamp: Date.now()
+                });
+                await push(ref(db, 'system_logs'), {
+                    studentId: studentId,
+                    name: studentName,
+                    type: 'Bathroom',
+                    details: 'BP-O',
+                    timestamp: Date.now()
+                });
+                setStatus(`Bathroom Pass Out: ${studentName}`, "text-red-600");
+            }
+        }
+
+        async function processHallAction(studentId, studentName) {
+            const passSnap = await get(ref(db, `active_hall_passes/${studentId}`));
+
+            if (passSnap.exists()) {
+                // Return
+                await remove(ref(db, `active_hall_passes/${studentId}`));
+                await push(ref(db, 'system_logs'), {
+                    studentId: studentId,
+                    name: studentName,
+                    type: 'Hall Pass',
+                    details: 'HP-I',
+                    timestamp: Date.now()
+                });
+                setStatus(`Hall Pass Returned: ${studentName}`, "text-green-700");
+            } else {
+                // Out
+                await set(ref(db, `active_hall_passes/${studentId}`), {
+                    studentName: studentName,
+                    timestamp: Date.now()
+                });
+                await push(ref(db, 'system_logs'), {
+                    studentId: studentId,
+                    name: studentName,
+                    type: 'Hall Pass',
+                    details: 'HP-O',
+                    timestamp: Date.now()
+                });
+                setStatus(`Hall Pass Out: ${studentName}`, "text-indigo-600");
+            }
+        }
+
+        window.submitPendingStudent = async () => {
+            const fname = document.getElementById('new-first-name').value.trim();
+            const lname = document.getElementById('new-last-name').value.trim();
+            const pocketVal = document.getElementById('pocket-input').value.trim();
+
+            if (!fname || !lname) {
+                alert("Please enter both first and last name.");
+                return;
             }
 
-            // Mode Execution with Standard Descriptive Actions and Nomenclature Codes
-            if (currentMode === 'phone') {
-                if (activePhones[studentId]) {
-                    // CHECKOUT PHONE (COS)
-                    remove(ref(db, `active_phones_in_class/${studentId}`));
-                    remove(ref(db, `active_bathroom_passes/${studentId}`));
-                    remove(ref(db, `active_hall_passes/${studentId}`));
-                    
-                    push(ref(db, 'system_logs'), {
-                        studentId, name: studentName, code: 'COS', action: "Phone Check-Out (Student Kiosk)", timestamp: Date.now()
-                    });
+            try {
+                await set(ref(db, `pending_roster_approvals/${currentUnrecognizedId}`), {
+                    firstName: fname,
+                    lastName: lname,
+                    pocket: pocketVal ? parseInt(pocketVal, 10) : 0,
+                    timestamp: Date.now()
+                });
 
-                    triggerFlashConfirmation('COS', `${studentName} - Phone Checked Out`, '📱');
-                } else {
-                    // CHECKIN PHONE (CI-XX)
-                    const slotFormatted = String(selectedSlot).padStart(2, '0');
-                    const codeStr = `CI-${slotFormatted}`;
-                    
-                    set(ref(db, `active_phones_in_class/${studentId}`), {
-                        studentName: studentName,
-                        pocket: selectedSlot,
-                        timestamp: Date.now()
-                    });
-
-                    push(ref(db, 'system_logs'), {
-                        studentId, name: studentName, code: codeStr, action: `Phone Check-In (Pocket #${slotFormatted})`, timestamp: Date.now()
-                    });
-
-                    triggerFlashConfirmation(codeStr, `${studentName} - Checked In (Pocket ${slotFormatted})`, '📱');
-                }
-            } else if (currentMode === 'bathroom') {
-                if (activeBathroom[studentId]) {
-                    // Return Bathroom Pass (BP-I)
-                    remove(ref(db, `active_bathroom_passes/${studentId}`));
-                    push(ref(db, 'system_logs'), { studentId, name: studentName, code: 'BP-I', action: "Bathroom Pass Return", timestamp: Date.now() });
-                    triggerFlashConfirmation('BP-I', `Welcome back, ${studentName}!`, '🚻');
-                } else {
-                    // Pass Validation Rules
-                    if (!activePhones[studentId]) {
-                        handlePassDenial("⚠️ Phone must be checked in to take a pass!");
-                        return;
-                    }
-                    if (activeHall[studentId]) {
-                        handlePassDenial("⚠️ Cannot take Bathroom Pass while on Hall Pass!");
-                        return;
-                    }
-                    if (Object.keys(activeBathroom).length >= 1) {
-                        handlePassDenial("⚠️ Bathroom pass currently occupied (1 max limit)!");
-                        return;
-                    }
-
-                    // Issue Bathroom Pass (BP-O)
-                    set(ref(db, `active_bathroom_passes/${studentId}`), {
-                        studentName: studentName, timestamp: Date.now()
-                    });
-                    push(ref(db, 'system_logs'), { studentId, name: studentName, code: 'BP-O', action: "Bathroom Pass Out", timestamp: Date.now() });
-                    triggerFlashConfirmation('BP-O', `Bathroom Pass Issued: ${studentName}`, '🚻');
-                }
-            } else if (currentMode === 'hall') {
-                if (activeHall[studentId]) {
-                    // Return Hall Pass (HP-I)
-                    remove(ref(db, `active_hall_passes/${studentId}`));
-                    push(ref(db, 'system_logs'), { studentId, name: studentName, code: 'HP-I', action: "Hall Pass Return", timestamp: Date.now() });
-                    triggerFlashConfirmation('HP-I', `Welcome back, ${studentName}!`, '🎟️');
-                } else {
-                    // Pass Validation Rules
-                    if (!activePhones[studentId]) {
-                        handlePassDenial("⚠️ Phone must be checked in to take a pass!");
-                        return;
-                    }
-                    if (activeBathroom[studentId]) {
-                        handlePassDenial("⚠️ Cannot take Hall Pass while on Bathroom Pass!");
-                        return;
-                    }
-
-                    // Issue Hall Pass (HP-O)
-                    set(ref(db, `active_hall_passes/${studentId}`), {
-                        studentName: studentName, timestamp: Date.now()
-                    });
-                    push(ref(db, 'system_logs'), { studentId, name: studentName, code: 'HP-O', action: "Hall Pass Out", timestamp: Date.now() });
-                    triggerFlashConfirmation('HP-O', `Hall Pass Issued: ${studentName}`, '🎟️');
-                }
+                document.getElementById('new-student-modal').classList.add('hidden');
+                document.getElementById('student-id-input').value = '';
+                document.getElementById('new-first-name').value = '';
+                document.getElementById('new-last-name').value = '';
+                
+                setStatus("Approval request submitted to teacher.", "text-amber-700");
+            } catch (err) {
+                console.error("Pending approval error:", err);
             }
-        });
+        };
 
-        // Initialize default view
-        switchMode('phone');
+        window.cancelPendingStudent = () => {
+            document.getElementById('new-student-modal').classList.add('hidden');
+            currentUnrecognizedId = null;
+        };
+
+        function setStatus(msg, colorClass = "text-slate-500") {
+            const s = document.getElementById('status-message');
+            s.className = `min-h-[2rem] text-sm font-bold ${colorClass}`;
+            s.textContent = msg;
+        }
     </script>
 </body>
 </html>
