@@ -85,17 +85,16 @@ function switchTab(tab) {
     document.getElementById('view-dashboard').classList.remove('hidden');
     document.getElementById('view-roster').classList.add('hidden');
     document.getElementById('btn-dash').className = 'px-4 py-1.5 bg-white text-emerald-950 rounded-xl font-bold text-xs shadow-sm transition';
-    document.getElementById('btn-rost').className = 'px-4 py-1.5 bg-emerald-900/60 hover:bg-emerald-900 text-emerald-100 rounded-xl font-bold text-xs transition';
+    document.getElementById('btn-rost').className = 'px-4 py-1.5 hover:bg-emerald-900/80 text-emerald-100 rounded-xl font-bold text-xs transition';
   } else {
     document.getElementById('view-dashboard').classList.add('hidden');
     document.getElementById('view-roster').classList.remove('hidden');
     document.getElementById('btn-rost').className = 'px-4 py-1.5 bg-white text-emerald-950 rounded-xl font-bold text-xs shadow-sm transition';
-    document.getElementById('btn-dash').className = 'px-4 py-1.5 bg-emerald-900/60 hover:bg-emerald-900 text-emerald-100 rounded-xl font-bold text-xs transition';
+    document.getElementById('btn-dash').className = 'px-4 py-1.5 hover:bg-emerald-900/80 text-emerald-100 rounded-xl font-bold text-xs transition';
     renderRoster();
   }
 }
 
-// Helper for converting shorthand detail codes to plain English descriptions
 function getReadableDetails(code) {
   if (!code || code === '--') return 'Activity Recorded';
   if (code.startsWith('CI-')) {
@@ -112,7 +111,6 @@ function getReadableDetails(code) {
   return code;
 }
 
-// Helper for parsing "Xm Ys" formatted duration back into milliseconds
 function parseDurationToMs(durStr) {
   if (!durStr || durStr === '--' || durStr === 'Active') return 0;
   let totalMs = 0;
@@ -349,7 +347,7 @@ function menuToggleHallPass() {
     });
   } else {
     delete activePasses[id];
-    activePasses[id] = Date.now();
+    activeHallPasses[id] = Date.now();
 
     logs.unshift({
       timestamp: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -600,7 +598,6 @@ function refreshData() {
 
   const todayDateStr = new Date().toLocaleDateString();
 
-  // Today's Class Summary Analytics Calculations
   let totalPassMsToday = 0;
   let highestActivityMsToday = 0;
 
@@ -617,7 +614,6 @@ function refreshData() {
     }
   });
 
-  // Include currently active passes into total pass time calculation
   Object.keys(activePasses).forEach(id => {
     let passMs = Date.now() - activePasses[id];
     totalPassMsToday += passMs;
@@ -629,13 +625,11 @@ function refreshData() {
     if (passMs > highestActivityMsToday) highestActivityMsToday = passMs;
   });
 
-  // Update Top Summary Banner Display
   const elemCombined = document.getElementById('summary-combined-pass-time');
   const elemHighest = document.getElementById('summary-highest-activity');
   if (elemCombined) elemCombined.textContent = formatDuration(totalPassMsToday);
   if (elemHighest) elemHighest.textContent = formatDuration(highestActivityMsToday);
 
-  // Pending Requests Banner Rendering
   const reqBanner = document.getElementById('pending-requests-banner');
   const reqList = document.getElementById('pending-requests-list');
   const reqCount = document.getElementById('pending-requests-count');
@@ -669,7 +663,6 @@ function refreshData() {
     reqBanner.classList.add('hidden');
   }
 
-  // Render "Students Currently in Class" Card Grid
   const inRoomContainer = document.getElementById('in-room-container');
   const phoneKeys = Object.keys(activePhonesInClass);
   const countBadge = document.getElementById('count-in-room-badge');
@@ -732,7 +725,6 @@ function refreshData() {
     }).join('');
   }
 
-  // Bathroom Active Pass Card Name Resolution Fix
   const activeContainer = document.getElementById('active-passes');
   const passKeys = Object.keys(activePasses);
   document.getElementById('count-out-room').textContent = `${passKeys.length}/1`;
@@ -751,7 +743,6 @@ function refreshData() {
     }).join('');
   }
 
-  // Hall Pass Active Pass Card Name Resolution Fix
   const hallContainer = document.getElementById('active-hall-passes');
   const hallKeys = Object.keys(activeHallPasses);
   document.getElementById('count-hall-pass').textContent = `${hallKeys.length} Out`;
@@ -770,7 +761,6 @@ function refreshData() {
     }).join('');
   }
 
-  // Running Log Table Output with Human-Readable Nomenclature
   const searchQuery = (document.getElementById('search-log')?.value || '').toLowerCase().trim();
   let filteredLogs = logs.filter(l => {
     if (!searchQuery) return true;
