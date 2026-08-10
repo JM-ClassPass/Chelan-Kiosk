@@ -21,7 +21,7 @@
             <img src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" alt="Logo" class="h-10">
             <div class="flex items-center gap-2">
                 <h1 class="text-xl font-bold tracking-wide leading-tight">Chelan High</h1>
-                <span class="bg-green-800/80 text-green-200 text-xs px-2.5 py-0.5 rounded-full font-semibold border border-green-700/50">Teacher Dashboard</span>
+                <span class="bg-green-800/80 text-green-200 text-xs px-2.5 py-0.5 rounded-full font-semibold border border-green-700/50">Manage Roster v1.004</span>
             </div>
         </div>
         <div class="flex items-center gap-4">
@@ -148,7 +148,7 @@
                             <span>📁</span> BULK ROSTER IMPORT (CSV / SHEET)
                         </span>
                         
-                        <!-- Import Strategy (Add/Merge Defaulted First) -->
+                        <!-- Import Strategy -->
                         <div class="space-y-1.5 pt-1">
                             <label class="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
                                 <input type="radio" name="import-mode" value="merge" checked class="text-chelan focus:ring-chelan">
@@ -263,6 +263,11 @@
         let conflictItems = [];
         let conflictResolutions = {};
 
+        // Helper: Escapes string safely for inline HTML attribute values
+        function escapeAttr(str) {
+            return String(str || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        }
+
         // Realtime Data Sync
         onValue(ref(db, 'classroom_roster'), snapshot => {
             activeRoster = snapshot.val() || {};
@@ -315,6 +320,7 @@
             // 1. RENDER PENDING APPROVALS AT THE TOP OF TABLE
             pendingKeys.forEach(id => {
                 const p = pendingApprovals[id];
+                const safeId = escapeAttr(id);
                 const tr = document.createElement('tr');
                 tr.className = "bg-amber-50/80 border-b border-amber-200 font-medium";
                 tr.innerHTML = `
@@ -326,10 +332,10 @@
                     <td class="p-3 font-bold text-slate-800">${p.lastName}</td>
                     <td class="p-3 text-right pr-4">
                         <div class="flex justify-end gap-1.5">
-                            <button onclick="approveStudent('${id}', '${p.firstName}', '${p.lastName}')" class="bg-green-700 hover:bg-green-800 text-white font-bold px-3 py-1 rounded-md text-xs shadow-sm transition-all">
+                            <button onclick="approveStudent('${safeId}', '${escapeAttr(p.firstName)}', '${escapeAttr(p.lastName)}')" class="bg-green-700 hover:bg-green-800 text-white font-bold px-3 py-1 rounded-md text-xs shadow-sm transition-all">
                                 Approve
                             </button>
-                            <button onclick="rejectStudent('${id}')" class="bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1 rounded-md text-xs shadow-sm transition-all">
+                            <button onclick="rejectStudent('${safeId}')" class="bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1 rounded-md text-xs shadow-sm transition-all">
                                 Reject
                             </button>
                         </div>
@@ -341,7 +347,7 @@
             // 2. FILTER & SORT ACTIVE ROSTER
             const filteredKeys = activeKeys.filter(id => {
                 const s = activeRoster[id];
-                const fullName = `${s.firstName} ${s.lastName}`.toLowerCase();
+                const fullName = `${s.firstName || ''} ${s.lastName || ''}`.toLowerCase();
                 return id.toLowerCase().includes(searchTerm) || fullName.includes(searchTerm);
             });
 
@@ -359,6 +365,7 @@
             // 3. RENDER ACTIVE ROSTER ROWS
             filteredKeys.forEach(id => {
                 const s = activeRoster[id];
+                const safeId = escapeAttr(id);
                 const isEditing = editingRows.has(id) || isEditAllMode;
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50/80 transition-colors border-b border-slate-100";
@@ -366,21 +373,21 @@
                 if (isEditing) {
                     tr.innerHTML = `
                         <td class="p-2 font-mono font-bold text-slate-700">
-                            <input type="text" id="edit-id-${id}" value="${id}" onblur="saveCellChange('${id}')"
+                            <input type="text" id="edit-id-${safeId}" value="${id}" onblur="saveCellChange('${safeId}')"
                                 class="w-full px-2 py-1 border border-amber-300 bg-amber-50/50 rounded text-xs font-mono font-bold focus:outline-none focus:border-chelan">
                         </td>
                         <td class="p-2">
-                            <input type="text" id="edit-fname-${id}" value="${s.firstName}" onblur="saveCellChange('${id}')"
+                            <input type="text" id="edit-fname-${safeId}" value="${s.firstName || ''}" onblur="saveCellChange('${safeId}')"
                                 class="w-full px-2 py-1 border border-amber-300 bg-amber-50/50 rounded text-xs font-bold focus:outline-none focus:border-chelan">
                         </td>
                         <td class="p-2">
-                            <input type="text" id="edit-lname-${id}" value="${s.lastName}" onblur="saveCellChange('${id}')"
+                            <input type="text" id="edit-lname-${safeId}" value="${s.lastName || ''}" onblur="saveCellChange('${safeId}')"
                                 class="w-full px-2 py-1 border border-amber-300 bg-amber-50/50 rounded text-xs font-bold focus:outline-none focus:border-chelan">
                         </td>
                         <td class="p-2 text-right pr-4">
                             <div class="flex items-center justify-end gap-2">
-                                <span id="save-status-${id}" class="text-[11px] font-black text-emerald-600 hidden opacity-0 transition-opacity">✓ Saved</span>
-                                <button onclick="toggleSingleEdit('${id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1 rounded text-xs shadow-sm transition-all">
+                                <span id="save-status-${safeId}" class="text-[11px] font-black text-emerald-600 hidden opacity-0 transition-opacity">✓ Saved</span>
+                                <button onclick="toggleSingleEdit('${safeId}')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1 rounded text-xs shadow-sm transition-all">
                                     Done
                                 </button>
                             </div>
@@ -389,15 +396,15 @@
                 } else {
                     tr.innerHTML = `
                         <td class="p-3 font-mono font-bold text-slate-700">${id}</td>
-                        <td class="p-3 font-bold text-slate-800">${s.firstName}</td>
-                        <td class="p-3 font-bold text-slate-800">${s.lastName}</td>
+                        <td class="p-3 font-bold text-slate-800">${s.firstName || ''}</td>
+                        <td class="p-3 font-bold text-slate-800">${s.lastName || ''}</td>
                         <td class="p-3 text-right pr-4">
                             <div class="flex items-center justify-end gap-1.5">
-                                <span id="save-status-${id}" class="text-[11px] font-black text-emerald-600 hidden">✓ Saved</span>
-                                <button onclick="toggleSingleEdit('${id}')" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold px-3 py-1 rounded-md text-xs border border-emerald-200 transition-all">
+                                <span id="save-status-${safeId}" class="text-[11px] font-black text-emerald-600 hidden">✓ Saved</span>
+                                <button onclick="toggleSingleEdit('${safeId}')" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold px-3 py-1 rounded-md text-xs border border-emerald-200 transition-all">
                                     Edit
                                 </button>
-                                <button onclick="deleteStudent('${id}')" class="bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold px-3 py-1 rounded-md text-xs border border-rose-200 transition-all">
+                                <button onclick="deleteStudent('${safeId}')" class="bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold px-3 py-1 rounded-md text-xs border border-rose-200 transition-all">
                                     Delete
                                 </button>
                             </div>
@@ -519,7 +526,7 @@
             }
         });
 
-        // Import Processing Engine with Conflict Detection
+        // Import Processing Engine with CSV Sanitization & Conflict Detection
         document.getElementById('process-import-btn').addEventListener('click', () => {
             const url = document.getElementById('csv-url-input').value.trim();
             const mode = document.querySelector('input[name="import-mode"]:checked').value;
@@ -539,7 +546,9 @@
         });
 
         function parseAndCheckConflicts(csvText, mode) {
-            const lines = csvText.split('\n');
+            // Remove Windows \r carriage returns cleanly before splitting
+            const cleanText = csvText.replace(/\r/g, '');
+            const lines = cleanText.split('\n');
             pendingImportRoster = {};
             conflictItems = [];
             conflictResolutions = {};
@@ -550,9 +559,11 @@
                     if (index === 0 && (parts[0].toLowerCase().includes('id') || parts[1].toLowerCase().includes('first'))) {
                         return; // Header skip
                     }
-                    const id = parts[0];
-                    const firstName = parts[1];
-                    const lastName = parts[2];
+                    const id = String(parts[0]).trim();
+                    const firstName = String(parts[1]).trim();
+                    const lastName = String(parts[2]).trim();
+
+                    if (!id) return;
 
                     pendingImportRoster[id] = { firstName, lastName };
 
@@ -589,7 +600,7 @@
                     <div class="font-mono font-bold text-slate-700">ID: ${c.id}</div>
                     <div class="text-slate-600">Original: <span class="font-bold text-slate-800">${c.existing.firstName} ${c.existing.lastName}</span></div>
                     <div class="text-emerald-700">Import: <span class="font-bold">${c.imported.firstName} ${c.imported.lastName}</span></div>
-                    <select onchange="setIndividualConflictResolution('${c.id}', this.value)" class="bg-white border border-slate-300 rounded px-2 py-1 font-bold text-xs focus:outline-none">
+                    <select onchange="setIndividualConflictResolution('${escapeAttr(c.id)}', this.value)" class="bg-white border border-slate-300 rounded px-2 py-1 font-bold text-xs focus:outline-none">
                         <option value="keep_import" ${conflictResolutions[c.id] === 'keep_import' ? 'selected' : ''}>Keep Import</option>
                         <option value="keep_original" ${conflictResolutions[c.id] === 'keep_original' ? 'selected' : ''}>Keep Original</option>
                     </select>
