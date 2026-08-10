@@ -24,7 +24,8 @@
             <img src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" alt="Logo" class="h-10">
             <div class="flex items-center gap-2">
                 <h1 class="text-xl font-bold tracking-wide leading-tight">Chelan High</h1>
-                <span class="bg-green-800/80 text-green-200 text-xs px-2.5 py-0.5 rounded-full font-semibold border border-green-700/50">Manage Roster v1.004</span>
+                <!-- Dynamic Version Badge -->
+                <span id="app-version-tag" class="bg-green-800/80 text-green-200 text-xs px-2.5 py-0.5 rounded-full font-semibold border border-green-700/50">Manage Roster</span>
             </div>
         </div>
         <div class="flex items-center gap-4">
@@ -231,7 +232,13 @@
     </script>
 
     <!-- Global System Scripts -->
-    <script src="config.js?v=1.004"></script>
-    <script src="roster.js?v=1.004"></script>
+    <script src="config.js?v=1.1.01"></script>
+    <script>
+        // Dynamically set header version tag from config.js
+        if (window.APP_CONFIG && window.APP_CONFIG.version) {
+            document.getElementById('app-version-tag').textContent = `Manage Roster v${window.APP_CONFIG.version}`;
+        }
+    </script>
+    <script src="roster.js?v=1.1.01"></script>
 </body>
 </html>
