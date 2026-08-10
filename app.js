@@ -15,7 +15,7 @@ const db = getDatabase(app);
 // State
 let rosterData = {};
 let activePasses = {};
-let activeScreen = "bathroom"; // "bathroom" | "hall" | "phone"
+let activeScreen = "phone"; // Default tab: "phone" | "bathroom" | "hall"
 let selectedPocket = 1;
 let failedAttemptsCount = 0;
 let pendingUnknownID = "";
@@ -24,7 +24,6 @@ document.addEventListener("DOMContentLoaded", () => {
   initClock();
   setupTabNavigation();
   setupInputHandlers();
-  setupPocketModal();
   setupGuestModal();
   attachFirebaseListeners();
 });
@@ -48,10 +47,11 @@ function attachFirebaseListeners() {
 
   onValue(ref(db, "active_passes"), (snapshot) => {
     activePasses = snapshot.exists() ? snapshot.val() : {};
+    renderPocketGrid();
   });
 }
 
-// Fullscreen Timed Confirmation Alert (Exact 1.0 Second Notice - Requirement #6)
+// Fullscreen Timed Notice (Exactly 1.0 Second)
 function showFullscreenNotice(title, subtitle, type = "success") {
   const notice = document.getElementById("fullscreen-notice");
   const iconEl = document.getElementById("fullscreen-notice-icon");
@@ -78,7 +78,6 @@ function showFullscreenNotice(title, subtitle, type = "success") {
   notice.classList.remove("hidden");
   notice.classList.add("flex");
 
-  // Dismiss after 1000ms (1 second)
   setTimeout(() => {
     notice.classList.add("hidden");
     notice.classList.remove("flex");
@@ -89,17 +88,18 @@ function showFullscreenNotice(title, subtitle, type = "success") {
   }, 1000);
 }
 
-// Screen Tab Navigation (Requirement #5)
+// Screen Tab Navigation (Phone Storage -> Bathroom -> Hall Pass)
 function setupTabNavigation() {
   const tabs = {
+    phone: document.getElementById("tab-phone"),
     bathroom: document.getElementById("tab-bathroom"),
-    hall: document.getElementById("tab-hall"),
-    phone: document.getElementById("tab-phone")
+    hall: document.getElementById("tab-hall")
   };
 
   const badge = document.getElementById("screen-badge");
   const title = document.getElementById("screen-title");
   const subtitle = document.getElementById("screen-subtitle");
+  const pocketContainer = document.getElementById("phone-pocket-container");
 
   Object.entries(tabs).forEach(([type, btn]) => {
     if (!btn) return;
@@ -115,25 +115,93 @@ function setupTabNavigation() {
       });
       btn.className = "kiosk-tab py-3.5 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 transition bg-[#0B4F2C] text-white shadow-md";
 
-      // Update Header Labels
-      if (type === "bathroom") {
+      // Toggle Pocket Container Visibility & Headers
+      if (type === "phone") {
+        badge.textContent = "Phone Storage Mode Active";
+        title.textContent = "Scan Student ID to Store Phone";
+        subtitle.textContent = "Scan your ID to check in your mobile device into a classroom pocket.";
+        if (pocketContainer) pocketContainer.classList.remove("hidden");
+        renderPocketGrid();
+      } else if (type === "bathroom") {
         badge.textContent = "Bathroom Mode Active";
         title.textContent = "Scan Student ID Barcode";
         subtitle.textContent = "Scan or enter your Student ID to check out or return a Bathroom Pass.";
+        if (pocketContainer) pocketContainer.classList.add("hidden");
       } else if (type === "hall") {
         badge.textContent = "Hall Pass Mode Active";
         title.textContent = "Scan Student ID Barcode";
         subtitle.textContent = "Scan or enter your Student ID to check out or return a Hall Pass.";
-      } else if (type === "phone") {
-        badge.textContent = "Phone Storage Mode Active";
-        title.textContent = "Scan Student ID to Store Phone";
-        subtitle.textContent = "Scan your ID to check in your mobile device into a classroom pocket.";
+        if (pocketContainer) pocketContainer.classList.add("hidden");
       }
 
       const input = document.getElementById("kiosk-id-input");
       if (input) input.focus();
     };
   });
+}
+
+// Render Inline Phone Pocket Grid (Pockets 1 through 36)
+function renderPocketGrid() {
+  const grid = document.getElementById("pocket-grid");
+  const numDisplay = document.getElementById("selected-pocket-num");
+  if (!grid || activeScreen !== "phone") return;
+
+  const occupiedPockets = new Set(
+    Object.values(activePasses)
+      .filter(p => p.type === "phone" && p.pocketNumber)
+      .map(p => Number(p.pocketNumber))
+  );
+
+  // Auto-select lowest available pocket if current selection is occupied
+  if (occupiedPockets.has(selectedPocket) || !selectedPocket) {
+    selectedPocket = getLowestAvailablePocket();
+  }
+
+  if (numDisplay) numDisplay.textContent = selectedPocket;
+
+  grid.innerHTML = "";
+
+  for (let i = 1; i <= 36; i++) {
+    const isOccupied = occupiedPockets.has(i);
+    const isSelected = i === selectedPocket;
+
+    let btnClass = "py-2.5 rounded-xl font-mono text-xs font-black transition border flex items-center justify-center ";
+    if (isOccupied) {
+      btnClass += "bg-rose-100 text-rose-700 border-rose-300 cursor-not-allowed opacity-80";
+    } else if (isSelected) {
+      btnClass += "bg-[#0B4F2C] text-white border-[#0B4F2C] shadow-md ring-2 ring-emerald-400 scale-105 font-bold";
+    } else {
+      btnClass += "bg-white text-slate-700 border-slate-200 hover:bg-emerald-50 hover:border-emerald-300";
+    }
+
+    const pocketBtn = document.createElement("button");
+    pocketBtn.type = "button";
+    pocketBtn.className = btnClass;
+    pocketBtn.textContent = i;
+    pocketBtn.disabled = isOccupied;
+
+    pocketBtn.onclick = () => {
+      selectedPocket = i;
+      renderPocketGrid();
+    };
+
+    grid.appendChild(pocketBtn);
+  }
+}
+
+// Find Lowest Available Unoccupied Pocket
+function getLowestAvailablePocket() {
+  const occupiedPockets = new Set(
+    Object.values(activePasses)
+      .filter(p => p.type === "phone" && p.pocketNumber)
+      .map(p => Number(p.pocketNumber))
+  );
+
+  let pocket = 1;
+  while (occupiedPockets.has(pocket) && pocket <= 36) {
+    pocket++;
+  }
+  return pocket <= 36 ? pocket : 1;
 }
 
 // Handle ID Submission
@@ -145,7 +213,7 @@ function setupInputHandlers() {
     const rawId = input.value.trim();
     if (!rawId) return;
 
-    // Validate against Roster with 3-Attempt Rule (Requirement #1)
+    // Validate Roster ID with 3-Attempt Rule
     const student = rosterData[rawId];
     if (!student) {
       failedAttemptsCount++;
@@ -158,16 +226,12 @@ function setupInputHandlers() {
           "error"
         );
       } else {
-        // Attempt 3 -> Open Pop-up to send request to Dashboard
         openGuestModal(rawId);
       }
       return;
     }
 
-    // Reset failed attempts on valid ID scan
     failedAttemptsCount = 0;
-
-    // Process Pass Request / Return
     handlePassWorkflow(rawId, student);
   };
 
@@ -183,15 +247,14 @@ function setupInputHandlers() {
   }
 }
 
-// Pass Creation and Screen-Specific Check-In Logic (Requirements #3, #5)
+// Pass Creation & Screen-Specific Return Workflow
 async function handlePassWorkflow(studentId, student) {
   const existingPass = activePasses[studentId];
 
-  // ================= SCENARIO A: RETURN PASS =================
+  // SCENARIO A: RETURN PASS
   if (existingPass) {
-    // Requirement #5: Return pass ONLY if student is on the corresponding active screen
+    // Return pass ONLY if student is on corresponding tab screen
     if (existingPass.type !== activeScreen) {
-      const activeScreenName = activeScreen.toUpperCase();
       const requiredScreenName = existingPass.type.toUpperCase();
       showFullscreenNotice(
         "WRONG SCREEN FOR RETURN",
@@ -201,7 +264,6 @@ async function handlePassWorkflow(studentId, student) {
       return;
     }
 
-    // Check in pass (remove from active_passes, log to pass_logs)
     await remove(ref(db, `active_passes/${studentId}`));
     await push(ref(db, "pass_logs"), {
       studentId: studentId,
@@ -220,15 +282,34 @@ async function handlePassWorkflow(studentId, student) {
     return;
   }
 
-  // ================= SCENARIO B: CREATE PASS =================
+  // SCENARIO B: CREATE PASS
   if (activeScreen === "phone") {
-    // Open Phone Pocket Modal with lowest available number pre-selected (Requirements #2, #4)
-    openPocketModal(studentId, student);
+    // Check in phone to currently selected pocket
+    await set(ref(db, `active_passes/${studentId}`), {
+      studentId: studentId,
+      studentName: `${student.firstName} ${student.lastName}`,
+      type: "phone",
+      pocketNumber: selectedPocket,
+      timeOut: new Date().toISOString()
+    });
+
+    showFullscreenNotice(
+      `PHONE STORED IN POCKET #${selectedPocket}`,
+      `Phone stored for ${student.firstName} ${student.lastName}.`,
+      "success"
+    );
+
+    // Auto-advance selection to next lowest available pocket
+    selectedPocket = getLowestAvailablePocket();
+    renderPocketGrid();
     return;
   }
 
-  // Requirement #3: Hall or Bathroom Pass NOT allowed without checking in phone first!
-  const hasPhoneCheckedIn = hasActivePhoneCheckin(studentId);
+  // Require phone check-in prior to issuing Bathroom or Hall pass
+  const hasPhoneCheckedIn = Object.values(activePasses).some(
+    pass => pass.studentId === studentId && pass.type === "phone"
+  );
+
   if (!hasPhoneCheckedIn) {
     showFullscreenNotice(
       "PHONE CHECK-IN REQUIRED",
@@ -253,104 +334,7 @@ async function handlePassWorkflow(studentId, student) {
   );
 }
 
-// Helper: Check if student has checked in phone
-function hasActivePhoneCheckin(studentId) {
-  return Object.values(activePasses).some(
-    pass => pass.studentId === studentId && pass.type === "phone"
-  );
-}
-
-// Helper: Find Lowest Available Pocket Number (Requirement #2)
-function getLowestAvailablePocket() {
-  const occupiedPockets = new Set(
-    Object.values(activePasses)
-      .filter(p => p.type === "phone" && p.pocketNumber)
-      .map(p => Number(p.pocketNumber))
-  );
-
-  let pocket = 1;
-  while (occupiedPockets.has(pocket)) {
-    pocket++;
-  }
-  return pocket;
-}
-
-// Phone Pocket Modal setup (Requirement #2, #4)
-function openPocketModal(studentId, student) {
-  const modal = document.getElementById("phone-pocket-modal");
-  const grid = document.getElementById("pocket-grid");
-  if (!modal || !grid) return;
-
-  // Auto-select lowest available pocket
-  selectedPocket = getLowestAvailablePocket();
-
-  // Render Pockets 1 through 36
-  grid.innerHTML = "";
-  const occupiedPockets = new Set(
-    Object.values(activePasses)
-      .filter(p => p.type === "phone" && p.pocketNumber)
-      .map(p => Number(p.pocketNumber))
-  );
-
-  for (let i = 1; i <= 36; i++) {
-    const isOccupied = occupiedPockets.has(i);
-    const isSelected = i === selectedPocket;
-
-    let btnClass = "py-2 rounded-xl text-xs font-black transition border ";
-    if (isOccupied) {
-      btnClass += "bg-slate-200 text-slate-400 border-slate-300 cursor-not-allowed";
-    } else if (isSelected) {
-      btnClass += "bg-[#0B4F2C] text-white border-[#0B4F2C] shadow-md ring-2 ring-emerald-400";
-    } else {
-      btnClass += "bg-white text-slate-700 border-slate-200 hover:bg-emerald-50 hover:border-emerald-300";
-    }
-
-    const pocketBtn = document.createElement("button");
-    pocketBtn.type = "button";
-    pocketBtn.className = btnClass;
-    pocketBtn.textContent = i;
-    pocketBtn.disabled = isOccupied;
-
-    pocketBtn.onclick = () => {
-      selectedPocket = i;
-      openPocketModal(studentId, student); // re-render selections
-    };
-
-    grid.appendChild(pocketBtn);
-  }
-
-  modal.classList.remove("hidden");
-
-  // Confirm Button
-  const confirmBtn = document.getElementById("btn-confirm-pocket");
-  confirmBtn.onclick = async () => {
-    modal.classList.add("hidden");
-
-    await set(ref(db, `active_passes/${studentId}`), {
-      studentId: studentId,
-      studentName: `${student.firstName} ${student.lastName}`,
-      type: "phone",
-      pocketNumber: selectedPocket,
-      timeOut: new Date().toISOString()
-    });
-
-    showFullscreenNotice(
-      `PHONE STORED IN POCKET #${selectedPocket}`,
-      `Phone stored for ${student.firstName} ${student.lastName}.`,
-      "success"
-    );
-  };
-}
-
-function setupPocketModal() {
-  const cancelBtn = document.getElementById("btn-cancel-pocket");
-  const modal = document.getElementById("phone-pocket-modal");
-  if (cancelBtn && modal) {
-    cancelBtn.onclick = () => modal.classList.add("hidden");
-  }
-}
-
-// Guest Pop-up Modal setup for Attempt 3 (Requirement #1)
+// Guest Request Pop-up Modal setup for Attempt 3
 function openGuestModal(rawId) {
   const modal = document.getElementById("guest-request-modal");
   const displayId = document.getElementById("guest-id-display");
@@ -384,7 +368,6 @@ function setupGuestModal() {
         return;
       }
 
-      // Submit request directly to Firebase Dashboard under teacher_requests & active_passes
       const requestId = pendingUnknownID || "GUEST_" + Date.now().toString().slice(-4);
 
       await set(ref(db, `active_passes/${requestId}`), {
