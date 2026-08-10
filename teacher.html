@@ -36,7 +36,7 @@
             <img src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" alt="Logo" class="h-10">
             <div class="flex items-center gap-2">
                 <h1 class="text-xl font-bold tracking-wide">Chelan High</h1>
-                <span class="bg-green-800/80 text-green-200 text-xs px-2.5 py-0.5 rounded-full font-semibold border border-green-700/50">Teacher Dashboard v1.005</span>
+                <span class="bg-green-800/80 text-green-200 text-xs px-2.5 py-0.5 rounded-full font-semibold border border-green-700/50">Teacher Dashboard v1.006</span>
             </div>
         </div>
         <div class="flex items-center gap-6">
@@ -311,15 +311,13 @@
             list.innerHTML = keys.map(id => {
                 const item = pendingApprovalsData[id];
                 const safeId = escapeAttr(id);
-                const safeFirst = escapeAttr(item.firstName || '');
-                const safeLast = escapeAttr(item.lastName || '');
 
                 return `
                     <div class="flex items-center justify-between bg-white p-2.5 rounded-xl border border-amber-200 shadow-sm">
                         <div class="flex items-center gap-2">
                             <span class="font-mono text-xs font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded border border-amber-300">${id}</span>
                             <span class="font-bold text-sm text-slate-800">${item.firstName || ''} ${item.lastName || ''}</span>
-                            ${item.pocket ? `<span class="text-[10px] bg-green-100 text-green-800 font-bold px-1.5 py-0.5 rounded border border-green-200">Pocket #${item.pocket}</span>` : ''}
+                            ${item.pocket !== undefined ? `<span class="text-[10px] bg-green-100 text-green-800 font-bold px-1.5 py-0.5 rounded border border-green-200">Pocket #${item.pocket}</span>` : ''}
                         </div>
                         <div class="flex items-center gap-1.5">
                             <button onclick="approvePendingStudent('${safeId}')" class="bg-green-700 hover:bg-green-800 text-white font-bold text-xs px-3 py-1 rounded-lg transition shadow-sm">
@@ -334,53 +332,50 @@
             }).join('');
         }
 
-        // Updated Approval Handler
-        window.approvePendingStudent = (id) => {
+        // Updated Direct Approval & Auto Check-in Handler
+        window.approvePendingStudent = async (id) => {
             const item = pendingApprovalsData[id];
             if (!item) return;
 
             const firstName = item.firstName || '';
             const lastName = item.lastName || '';
             const fullName = `${firstName} ${lastName}`.trim() || id;
+            const pocketNum = item.pocket !== undefined ? item.pocket : 0;
 
-            // 1. Save to Roster
-            set(ref(db, `classroom_roster/${id}`), { firstName, lastName })
-                .then(() => {
-                    const isPhoneSubmission = item.source === 'phone' || item.pocket !== undefined;
+            try {
+                // 1. Add to Classroom Roster
+                await set(ref(db, `classroom_roster/${id}`), { firstName, lastName });
 
-                    // 2. If submission came from phone portal, check in to room
-                    if (isPhoneSubmission) {
-                        const pocketNum = item.pocket || 0;
+                // 2. Add directly to Currently In Room (Active Phones in Class)
+                const phoneEntry = {
+                    studentName: fullName,
+                    firstName: firstName,
+                    lastName: lastName,
+                    pocket: pocketNum,
+                    timestamp: Date.now()
+                };
 
-                        set(ref(db, `active_phones_in_class/${id}`), {
-                            studentName: fullName,
-                            firstName: firstName,
-                            lastName: lastName,
-                            pocket: pocketNum,
-                            timestamp: Date.now()
-                        });
+                await set(ref(db, `active_phones_in_class/${id}`), phoneEntry);
 
-                        // 3. Log to Running Log
-                        push(ref(db, 'system_logs'), {
-                            studentId: id,
-                            name: fullName,
-                            action: `Approved & Checked in (Pocket #${pocketNum})`,
-                            timestamp: Date.now()
-                        });
-                    } else {
-                        // Regular Roster Approval log
-                        push(ref(db, 'system_logs'), {
-                            studentId: id,
-                            name: fullName,
-                            action: 'Approved & Added to Roster',
-                            timestamp: Date.now()
-                        });
-                    }
+                // Update local memory & UI immediately
+                phonesData[id] = phoneEntry;
+                renderPhones();
 
-                    // 4. Clean up pending request
-                    return remove(ref(db, `pending_roster_approvals/${id}`));
-                })
-                .catch(err => alert("Error approving student: " + err.message));
+                // 3. Add Log to Running Log
+                await push(ref(db, 'system_logs'), {
+                    studentId: id,
+                    name: fullName,
+                    action: `Approved & Checked In (Pocket #${pocketNum})`,
+                    timestamp: Date.now()
+                });
+
+                // 4. Remove from Pending Roster Approvals
+                await remove(ref(db, `pending_roster_approvals/${id}`));
+
+            } catch (err) {
+                console.error("Approval error:", err);
+                alert("Error approving student: " + err.message);
+            }
         };
 
         window.rejectPendingStudent = (id) => {
