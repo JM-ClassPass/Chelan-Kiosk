@@ -5,7 +5,7 @@
 import { APP_CONFIG, formatTime } from './config.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
 import { 
-  getDatabase, ref, onValue, set, remove 
+  getDatabase, ref, onValue, set, remove, update 
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 
 // Initialize Firebase
@@ -17,12 +17,21 @@ let rosterData = {};
 let searchQuery = "";
 let selectedFile = null;
 
+// Sorting State
+let sortColumn = "lastName";
+let sortDirection = "asc"; // "asc" | "desc"
+
+// Bulk Edit State
+let isEditAllMode = false;
+
 document.addEventListener("DOMContentLoaded", () => {
   initClock();
   setupAddForm();
   setupDragAndDrop();
   setupSearch();
   setupExport();
+  setupSorting();
+  setupEditAll();
   attachFirebaseListeners();
 });
 
@@ -30,11 +39,11 @@ document.addEventListener("DOMContentLoaded", () => {
 function initClock() {
   const clockEl = document.getElementById("roster-clock");
   if (!clockEl) return;
-  const update = () => {
+  const updateClock = () => {
     clockEl.textContent = formatTime(new Date());
   };
-  setInterval(update, 1000);
-  update();
+  setInterval(updateClock, 1000);
+  updateClock();
 }
 
 // Realtime Firebase Listener
@@ -42,6 +51,37 @@ function attachFirebaseListeners() {
   onValue(ref(db, "roster"), (snapshot) => {
     rosterData = snapshot.exists() ? snapshot.val() : {};
     renderRosterTable();
+  });
+}
+
+// Setup Column Header Sorting
+function setupSorting() {
+  document.querySelectorAll(".sort-header").forEach(th => {
+    th.onclick = () => {
+      const col = th.getAttribute("data-sort");
+      if (sortColumn === col) {
+        sortDirection = sortDirection === "asc" ? "desc" : "asc";
+      } else {
+        sortColumn = col;
+        sortDirection = "asc";
+      }
+      updateSortIcons();
+      renderRosterTable();
+    };
+  });
+}
+
+function updateSortIcons() {
+  ["id", "firstName", "lastName"].forEach(col => {
+    const icon = document.getElementById(`sort-icon-${col}`);
+    if (!icon) return;
+    if (col === sortColumn) {
+      icon.textContent = sortDirection === "asc" ? "↑" : "↓";
+      icon.className = "ml-0.5 text-[#0B4F2C] font-black";
+    } else {
+      icon.textContent = "↑↓";
+      icon.className = "ml-0.5 text-slate-300";
+    }
   });
 }
 
@@ -86,28 +126,66 @@ function renderRosterTable() {
     return;
   }
 
-  // Sort by Last Name
-  filtered.sort(([_, a], [__, b]) => (a.lastName || "").localeCompare(b.lastName || ""));
+  // Sort Logic
+  filtered.sort(([idA, studentA], [idB, studentB]) => {
+    let valA = "";
+    let valB = "";
 
-  tbody.innerHTML = filtered.map(([id, student]) => `
-    <tr class="hover:bg-slate-50 transition">
-      <td class="py-3 px-3 font-mono text-[#0B4F2C] font-black">${id}</td>
-      <td class="py-3 px-3 text-slate-800">${student.firstName || ''}</td>
-      <td class="py-3 px-3 text-slate-800">${student.lastName || ''}</td>
-      <td class="py-3 px-3 text-right">
-        <div class="flex items-center justify-end gap-1.5">
-          <button data-edit="${id}" class="btn-edit-student px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-[11px] transition">
-            Edit
-          </button>
-          <button data-delete="${id}" class="btn-delete-student px-2.5 py-1 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold text-[11px] transition">
+    if (sortColumn === "id") {
+      valA = idA.toLowerCase();
+      valB = idB.toLowerCase();
+    } else if (sortColumn === "firstName") {
+      valA = (studentA.firstName || "").toLowerCase();
+      valB = (studentB.firstName || "").toLowerCase();
+    } else {
+      valA = (studentA.lastName || "").toLowerCase();
+      valB = (studentB.lastName || "").toLowerCase();
+    }
+
+    const comparison = valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' });
+    return sortDirection === "asc" ? comparison : -comparison;
+  });
+
+  // Render Rows based on mode (Normal vs Edit All)
+  if (isEditAllMode) {
+    tbody.innerHTML = filtered.map(([id, student]) => `
+      <tr class="bg-amber-50/40 hover:bg-amber-100/40 transition border-b border-amber-100">
+        <td class="py-2 px-3 font-mono text-[#0B4F2C] font-black">${id}</td>
+        <td class="py-2 px-3">
+          <input type="text" data-edit-id="${id}" data-field="firstName" value="${student.firstName || ''}" 
+            class="w-full text-xs font-bold py-1 px-2 rounded-lg border border-amber-300 focus:border-[#0B4F2C] focus:outline-none bg-white">
+        </td>
+        <td class="py-2 px-3">
+          <input type="text" data-edit-id="${id}" data-field="lastName" value="${student.lastName || ''}" 
+            class="w-full text-xs font-bold py-1 px-2 rounded-lg border border-amber-300 focus:border-[#0B4F2C] focus:outline-none bg-white">
+        </td>
+        <td class="py-2 px-3 text-right">
+          <button data-delete="${id}" class="btn-delete-student px-2 py-1 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold text-[11px] transition">
             Delete
           </button>
-        </div>
-      </td>
-    </tr>
-  `).join('');
+        </td>
+      </tr>
+    `).join('');
+  } else {
+    tbody.innerHTML = filtered.map(([id, student]) => `
+      <tr class="hover:bg-slate-50 transition">
+        <td class="py-3 px-3 font-mono text-[#0B4F2C] font-black">${id}</td>
+        <td class="py-3 px-3 text-slate-800">${student.firstName || ''}</td>
+        <td class="py-3 px-3 text-slate-800">${student.lastName || ''}</td>
+        <td class="py-3 px-3 text-right">
+          <div class="flex items-center justify-end gap-1.5">
+            <button data-edit="${id}" class="btn-edit-student px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-[11px] transition">
+              Edit
+            </button>
+            <button data-delete="${id}" class="btn-delete-student px-2.5 py-1 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold text-[11px] transition">
+              Delete
+            </button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
 
-  // Attach Handlers
   attachRowHandlers();
 }
 
@@ -117,13 +195,13 @@ function attachRowHandlers() {
     btn.onclick = async (e) => {
       const id = e.currentTarget.getAttribute("data-delete");
       const student = rosterData[id];
-      if (id && confirm(`Delete ${student?.firstName} ${student?.lastName} (ID: ${id}) from the roster?`)) {
+      if (id && confirm(`Delete ${student?.firstName || ''} ${student?.lastName || ''} (ID: ${id}) from the roster?`)) {
         await remove(ref(db, `roster/${id}`));
       }
     };
   });
 
-  // Edit Button
+  // Single Edit Button (When not in Edit All mode)
   document.querySelectorAll(".btn-edit-student").forEach(btn => {
     btn.onclick = async (e) => {
       const id = e.currentTarget.getAttribute("data-edit");
@@ -142,6 +220,58 @@ function attachRowHandlers() {
       });
     };
   });
+}
+
+// Bulk Edit All Toggle & Save
+function setupEditAll() {
+  const btnEditAll = document.getElementById("btn-edit-all");
+  const btnCancel = document.getElementById("btn-cancel-edit");
+  if (!btnEditAll || !btnCancel) return;
+
+  btnEditAll.onclick = async () => {
+    if (!isEditAllMode) {
+      // Enter Edit All Mode
+      isEditAllMode = true;
+      btnEditAll.className = "bg-[#0B4F2C] hover:bg-[#07381e] text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm";
+      btnEditAll.innerHTML = `<i class="fa-solid fa-floppy-disk text-amber-300"></i> Save All`;
+      btnCancel.classList.remove("hidden");
+      renderRosterTable();
+    } else {
+      // Save All Mode Executed
+      const updates = {};
+      const inputs = document.querySelectorAll("input[data-edit-id]");
+      
+      inputs.forEach(input => {
+        const id = input.getAttribute("data-edit-id");
+        const field = input.getAttribute("data-field");
+        const val = input.value.trim();
+
+        if (!updates[`roster/${id}`]) {
+          updates[`roster/${id}`] = { ...rosterData[id] };
+        }
+        updates[`roster/${id}`][field] = val;
+      });
+
+      if (Object.keys(updates).length > 0) {
+        await update(ref(db), updates);
+      }
+
+      // Exit Edit All Mode
+      isEditAllMode = false;
+      btnEditAll.className = "bg-amber-100 hover:bg-amber-200 text-amber-900 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm";
+      btnEditAll.innerHTML = `<i class="fa-solid fa-pen-to-square"></i> Edit All`;
+      btnCancel.classList.add("hidden");
+      renderRosterTable();
+    }
+  };
+
+  btnCancel.onclick = () => {
+    isEditAllMode = false;
+    btnEditAll.className = "bg-amber-100 hover:bg-amber-200 text-amber-900 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm";
+    btnEditAll.innerHTML = `<i class="fa-solid fa-pen-to-square"></i> Edit All`;
+    btnCancel.classList.add("hidden");
+    renderRosterTable();
+  };
 }
 
 // Quick Add Student
@@ -238,7 +368,7 @@ function setupDragAndDrop() {
   };
 }
 
-// CSV Processing (Supports Merge & Replace Mode)
+// CSV Processing
 async function processCSV(csvContent) {
   const mode = document.querySelector('input[name="import-mode"]:checked')?.value || "merge";
   const lines = csvContent.split(/\r?\n/);
