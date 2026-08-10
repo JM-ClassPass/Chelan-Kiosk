@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Student Roster Management - Chelan High School</title>
   <style>
-    /* Base Resets */
+    /* =========================================================
+       1. BASE & RESET STYLES
+       ========================================================= */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -14,12 +16,15 @@
     }
 
     body {
-      background-color: #f1f5f9;
+      background-color: #f8fafc;
       color: #0f172a;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
 
     /* =========================================================
-       HEADER STYLES (Revision 9 - Updated Header)
+       2. HEADER STYLES (Revision 9)
        ========================================================= */
     .app-header {
       background-color: #0c4a27; /* Rich Forest Green */
@@ -30,6 +35,9 @@
       padding: 10px 28px;
       width: 100%;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
 
     /* Left Header Section */
@@ -83,7 +91,7 @@
 
     /* Center Navigation Pill Bar */
     .header-center-nav {
-      background-color: #052e16; /* Darker green pill container background */
+      background-color: #052e16; /* Darker green pill container */
       border-radius: 12px;
       padding: 4px 6px;
       display: flex;
@@ -102,19 +110,19 @@
       font-weight: 600;
       text-decoration: none;
       cursor: pointer;
-      transition: background-color 0.2s, border 0.2s;
+      transition: all 0.2s ease;
       border: 1px solid transparent;
       background: transparent;
     }
 
     .nav-item:hover {
-      background-color: rgba(255, 255, 255, 0.05);
+      background-color: rgba(255, 255, 255, 0.08);
     }
 
-    /* Active Nav Button - Manage Roster */
+    /* Active Nav Button */
     .nav-item.active {
       border: 1px solid #15803d;
-      background-color: rgba(255, 255, 255, 0.04);
+      background-color: rgba(255, 255, 255, 0.05);
       box-shadow: inset 0 0 0 1px rgba(134, 239, 172, 0.2);
     }
 
@@ -166,25 +174,161 @@
       margin-top: 3px;
     }
 
-    /* Page Content Container */
+    /* =========================================================
+       3. MAIN CONTAINER & ROSTER CARD GRID STYLES
+       ========================================================= */
     .content-container {
       max-width: 1400px;
-      margin: 24px auto;
-      padding: 0 24px;
+      width: 100%;
+      margin: 28px auto;
+      padding: 0 28px;
+      flex-grow: 1;
+    }
+
+    .section-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #1e293b;
     }
 
     .card-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
       gap: 20px;
     }
 
+    /* Roster Card Base */
     .student-card {
       background: #ffffff;
-      border-radius: 10px;
-      padding: 16px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      border-radius: 12px;
       border: 1px solid #e2e8f0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .student-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .student-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background-color: #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: #334155;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    .student-info {
+      flex-grow: 1;
+      overflow: hidden;
+    }
+
+    .student-name {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #0f172a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .student-meta {
+      font-size: 0.8rem;
+      color: #64748b;
+      margin-top: 2px;
+    }
+
+    /* Pass Status Badges */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      width: fit-content;
+      margin-bottom: 14px;
+    }
+
+    .status-badge.in-class {
+      background-color: #dcfce7;
+      color: #15803d;
+    }
+
+    .status-badge.hall-pass {
+      background-color: #fef3c7;
+      color: #b45309;
+    }
+
+    .status-badge.absent {
+      background-color: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      border-top: 1px solid #f1f5f9;
+      padding-top: 12px;
+    }
+
+    .btn-action {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      color: #334155;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-align: center;
+    }
+
+    .btn-action:hover {
+      background-color: #f8fafc;
+      border-color: #94a3b8;
+    }
+
+    .btn-primary {
+      background-color: #0c4a27;
+      color: #ffffff;
+      border-color: #0c4a27;
+    }
+
+    .btn-primary:hover {
+      background-color: #052e16;
+      border-color: #052e16;
     }
   </style>
 </head>
@@ -195,7 +339,6 @@
     
     <!-- Left Section: Logo, Title, Subtitle & Version Badge -->
     <div class="header-left">
-      <!-- Goat Mascot Icon (SVG) -->
       <svg class="goat-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
         <g fill="#ffffff">
           <path d="M50,10 C53,2 65,2 72,12 C77,18 78,28 72,36 C68,42 62,45 60,50 C58,55 58,62 55,68 C53,72 47,72 45,68 C42,62 42,55 40,50 C38,45 32,42 28,36 C22,28 23,18 28,12 C35,2 47,2 50,10 Z" fill="#ffffff"/>
@@ -218,8 +361,7 @@
 
     <!-- Center Section: Navigation Pills -->
     <nav class="header-center-nav">
-      <!-- Live Dashboard -->
-      <button class="nav-item">
+      <button class="nav-item" data-tab="dashboard">
         <svg class="nav-icon" viewBox="0 0 24 24">
           <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
@@ -227,8 +369,7 @@
         <span>Live Dashboard</span>
       </button>
 
-      <!-- Manage Roster (Active State) -->
-      <button class="nav-item active">
+      <button class="nav-item active" data-tab="roster">
         <svg class="nav-icon" viewBox="0 0 24 24">
           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
           <circle cx="9" cy="7" r="4"/>
@@ -238,8 +379,7 @@
         <span>Manage Roster</span>
       </button>
 
-      <!-- Kiosk View -->
-      <button class="nav-item">
+      <button class="nav-item" data-tab="kiosk">
         <svg class="nav-icon" viewBox="0 0 24 24">
           <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
         </svg>
@@ -262,33 +402,16 @@
 
   </header>
 
-  <!-- MAIN PAGE CONTAINER (Preserved Card Formatting Layout) -->
+  <!-- MAIN ROSTER CONTENT -->
   <main class="content-container">
-    <div class="card-grid" id="roster-grid">
-      <!-- Roster content renders here -->
+    <div class="section-toolbar">
+      <h1 class="section-title">Period 3 Roster (24 Students)</h1>
     </div>
+
+    <!-- Dynamic Roster Card Grid Container -->
+    <div class="card-grid" id="roster-grid"></div>
   </main>
 
-  <script>
-    // Dynamic Header Clock JS
-    function updateClock() {
-      const now = new Date();
-      let hours = now.getHours();
-      const minutes = now.getMinutes().toString().padStart(2, '0');
-      const ampm = hours >= 12 ? 'PM' : 'AM';
-      hours = hours % 12;
-      hours = hours ? hours : 12; 
-      
-      const timeString = `${hours}:${minutes} ${ampm}`;
-      const clockElement = document.getElementById('header-clock');
-      if (clockElement) {
-        clockElement.textContent = timeString;
-      }
-    }
-
-    // Initialize clock
-    updateClock();
-    setInterval(updateClock, 1000);
-  </script>
+  <script src="teacher.js"></script>
 </body>
 </html>
