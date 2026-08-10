@@ -74,7 +74,6 @@
             </h3>
 
             <form id="form-add-student" class="space-y-3">
-              <!-- Single Row layout for ID, First Name, Last Name -->
               <div class="grid grid-cols-3 gap-2">
                 <div>
                   <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">ID / Barcode</label>
@@ -169,15 +168,25 @@
 
             <div class="flex items-center gap-2 w-full sm:w-auto">
               <!-- Search Box -->
-              <div class="relative flex-1 sm:w-56">
+              <div class="relative flex-1 sm:w-48">
                 <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
                 <input 
                   type="text" 
                   id="search-input" 
                   placeholder="Search roster..." 
-                  class="w-full pl-9 pr-3.5 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:border-[#0B4F2C] focus:outline-none bg-slate-50"
+                  class="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:border-[#0B4F2C] focus:outline-none bg-slate-50"
                 />
               </div>
+
+              <!-- Edit All Mode Toggle -->
+              <button id="btn-edit-all" type="button" class="bg-amber-100 hover:bg-amber-200 text-amber-900 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+                <i class="fa-solid fa-pen-to-square"></i> Edit All
+              </button>
+
+              <!-- Cancel Bulk Edit Button (Hidden by default) -->
+              <button id="btn-cancel-edit" type="button" class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded-xl text-xs font-bold transition">
+                Cancel
+              </button>
 
               <!-- CSV Export Button -->
               <button id="btn-export-roster" type="button" class="bg-[#0B4F2C] hover:bg-[#07381e] text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
@@ -191,9 +200,15 @@
             <table class="w-full text-left border-collapse">
               <thead>
                 <tr class="border-b border-slate-200 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">
-                  <th class="py-3 px-3">ID Code</th>
-                  <th class="py-3 px-3">First Name</th>
-                  <th class="py-3 px-3">Last Name</th>
+                  <th data-sort="id" class="sort-header py-3 px-3 cursor-pointer select-none hover:text-[#0B4F2C]">
+                    ID Code <span id="sort-icon-id" class="ml-0.5 text-slate-400">↑↓</span>
+                  </th>
+                  <th data-sort="firstName" class="sort-header py-3 px-3 cursor-pointer select-none hover:text-[#0B4F2C]">
+                    First Name <span id="sort-icon-firstName" class="ml-0.5 text-slate-400">↑↓</span>
+                  </th>
+                  <th data-sort="lastName" class="sort-header py-3 px-3 cursor-pointer select-none hover:text-[#0B4F2C]">
+                    Last Name <span id="sort-icon-lastName" class="ml-0.5 text-[#0B4F2C]">↑</span>
+                  </th>
                   <th class="py-3 px-3 text-right">Actions</th>
                 </tr>
               </thead>
