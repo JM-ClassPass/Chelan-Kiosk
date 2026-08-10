@@ -1,6 +1,6 @@
 /**
  * config.js - Global Configuration & Settings for Chelan High Systems
- * Version: 1.004
+ * Version: 1.1.01
  * 
  * Loaded globally via standard <script src="config.js?v=1.004"></script>
  */
@@ -8,9 +8,9 @@
 window.APP_CONFIG = {
     // Application Metadata
     appName: "Chelan High Medical Sciences Kiosk",
-    version: "1.004",
+    version: "1.1.01",
     schoolName: "Chelan High School",
-    department: "Medical Sciences",
+    department: "Room 176",
 
     // Timeouts and Thresholds (In Minutes)
     settings: {
