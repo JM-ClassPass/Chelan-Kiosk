@@ -127,7 +127,7 @@
                     
                     <div class="max-h-[220px] overflow-y-auto custom-scrollbar pr-1">
                         <div id="slot-grid" class="grid grid-cols-4 sm:grid-cols-9 gap-2">
-                            <!-- JS Generated Grid Slots -->
+                            <!-- JS Generated Grid Slots (1 to 36) -->
                         </div>
                     </div>
                 </div>
@@ -154,10 +154,9 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getDatabase, ref, onValue, set, remove, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
         
-        // Import Versioning and Global Settings from config.js
+        // Import Versioning from config.js
         import { CONFIG } from './config.js';
 
-        // Apply Version Number to Badge
         if (CONFIG && CONFIG.version) {
             document.getElementById('app-version-badge').textContent = `v${CONFIG.version}`;
         }
@@ -175,13 +174,12 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // Firebase State
+        // State Management
         let roster = {};
         let activePhones = {};
         let activeBathroom = {};
         let activeHall = {};
         
-        // UI State
         let currentMode = 'phone'; 
         let failedAttempts = 0;
         let selectedSlot = 1;
@@ -215,7 +213,6 @@
         // Roster Search Helper
         function findStudentInRoster(inputId) {
             if (!roster || !inputId) return null;
-
             const cleanInput = String(inputId).trim();
 
             if (roster[cleanInput]) {
@@ -237,7 +234,6 @@
                     return { id: key, data: student };
                 }
             }
-
             return null;
         }
 
@@ -273,19 +269,16 @@
                 }
             });
 
-            // Card Style Update
             const card = document.getElementById('main-card');
             card.className = `bg-white max-w-3xl w-full rounded-2xl shadow-xl border-l-8 ${themes[mode].border} border-y border-r border-slate-200 p-6 md:p-8 relative overflow-hidden transition-all duration-300`;
 
             const btn = document.getElementById('submit-btn');
             btn.className = `w-full ${themes[mode].color} hover:opacity-90 text-white font-bold py-4 rounded-xl text-lg shadow-md transition-all flex justify-center items-center gap-2`;
 
-            // Text Updates
             document.getElementById('mode-badge').className = `${themes[mode].badge} text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider border`;
             document.getElementById('mode-badge').textContent = themes[mode].text;
             document.getElementById('mode-desc').textContent = themes[mode].desc;
 
-            // Toggle Grid
             const gridContainer = document.getElementById('phone-grid-container');
             if (mode === 'phone') {
                 gridContainer.classList.remove('hidden');
@@ -297,7 +290,7 @@
             resetForm();
         };
 
-        // Render Pocket Slot Grid
+        // Render Pocket Slot Grid (Slots 1 to 36)
         function renderGrid() {
             const usedSlots = Object.values(activePhones).map(p => parseInt(p.pocket));
             
@@ -375,7 +368,7 @@
             }, 50);
         }
 
-        // Visual Flash Overlay Helper
+        // Flash Confirmation Overlay
         function triggerFlashConfirmation(codeStr, msgStr, iconStr = '✅', durationMs = 1200) {
             const overlay = document.getElementById('flash-overlay');
             document.getElementById('flash-icon').textContent = iconStr;
@@ -392,7 +385,6 @@
             }, durationMs);
         }
 
-        // Helper to handle pass rejection
         function handlePassDenial(errorMsg) {
             document.getElementById('id-error').textContent = errorMsg;
             const input = document.getElementById('student-id');
@@ -402,7 +394,7 @@
             }
         }
 
-        // Form Submit Handler
+        // Main Submit Action
         document.getElementById('kiosk-form').addEventListener('submit', (e) => {
             e.preventDefault();
 
@@ -531,7 +523,7 @@
             }
         });
 
-        // Initialize default view
+        // Initial launch state
         switchMode('phone');
     </script>
 </body>
