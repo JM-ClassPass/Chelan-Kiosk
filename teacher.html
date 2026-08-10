@@ -35,7 +35,7 @@
         <div class="flex items-center gap-3">
             <img src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" alt="Logo" class="h-10">
             <h1 class="text-xl font-bold tracking-wide">Chelan High</h1>
-            <span class="bg-green-800/60 text-green-100 text-[10px] px-2 py-1 rounded-full border border-green-700/50 uppercase tracking-wide font-mono">Teacher Dashboard v1.001</span>
+            <span class="bg-green-800/60 text-green-100 text-[10px] px-2 py-1 rounded-full border border-green-700/50 uppercase tracking-wide font-mono">Teacher Dashboard v1.003</span>
         </div>
         <div class="flex items-center gap-6">
             <div class="text-right hidden sm:block">
@@ -174,20 +174,20 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getDatabase, ref, set, remove, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
         
-        const firebaseConfig = { 
-            apiKey: "AIzaSyDOqjLMzMydaR31WWUA35sr1FrNLfHPxuI", 
-            authDomain: "chelan-classroom-pass.firebaseapp.com", 
-            databaseURL: "https://chelan-classroom-pass-default-rtdb.firebaseio.com", 
-            projectId: "chelan-classroom-pass", 
-            storageBucket: "chelan-classroom-pass.appspot.com", 
-            messagingSenderId: "645480807479", 
-            appId: "1:645480807479:web:d280d4ef38e8754a9953b2" 
+        // Exact config provided directly from the web settings panel
+        const firebaseConfig = {
+            apiKey: "AIzaSyDOqjLMzMydaR31WWUA35sr1FrNLfHPxuI",
+            authDomain: "chelan-classroom-pass-a811e.firebaseapp.com",
+            databaseURL: "https://chelan-classroom-pass-a811e-default-rtdb.firebaseio.com",
+            projectId: "chelan-classroom-pass-a811e",
+            storageBucket: "chelan-classroom-pass-a811e.firebasestorage.app",
+            messagingSenderId: "645480807479",
+            appId: "1:645480807479:web:d280d4ef38e8754a9953b2"
         };
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // Explicit direct submit handler
         const form = document.getElementById('quick-add-form');
         if (form) {
             form.addEventListener('submit', (e) => {
