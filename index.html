@@ -14,7 +14,7 @@
         .text-chelan { color: #0d5235; }
         .border-chelan { border-color: #0d5235; }
         
-        /* Hide number input spinners if any */
+        /* Hide number input spinners */
         input[type=number]::-webkit-inner-spin-button, 
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         
@@ -48,7 +48,7 @@
             </div>
             <div class="text-right hidden md:block">
                 <span id="live-clock" class="text-lg font-mono font-bold block leading-none">--:-- --</span>
-                <span class="text-[10px] text-green-300 uppercase tracking-widest">ROOM 176</span>
+                <span class="text-[10px] text-green-300 uppercase tracking-widest">Medical Sciences</span>
             </div>
         </div>
     </header>
@@ -152,10 +152,10 @@
 
         function updateVersionBadge() {
             let ver = null;
-            if (typeof CONFIG !== 'undefined') ver = CONFIG.version || CONFIG.appVersion;
+            if (window.CONFIG && window.CONFIG.version) ver = window.CONFIG.version;
+            else if (typeof CONFIG !== 'undefined') ver = CONFIG.version || CONFIG.appVersion;
             else if (typeof config !== 'undefined') ver = config.version || config.appVersion;
             else if (typeof APP_VERSION !== 'undefined') ver = APP_VERSION;
-            else if (window.CONFIG && window.CONFIG.version) ver = window.CONFIG.version;
 
             const badge = document.getElementById('app-version-badge');
             if (badge && ver) {
@@ -164,10 +164,11 @@
         }
 
         window.addEventListener('load', updateVersionBadge);
+        document.addEventListener('DOMContentLoaded', updateVersionBadge);
         setTimeout(updateVersionBadge, 500);
     </script>
     
-    <!-- Firebase Module & Universal Lookup Logic -->
+    <!-- Firebase Module Logic -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getDatabase, ref, onValue, set, remove, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
@@ -196,6 +197,7 @@
         let selectedSlot = 1;
         let userManuallySelected = false;
         let isManualMode = false;
+        let pendingId = '';
 
         const themes = {
             phone: {
@@ -223,81 +225,6 @@
                 desc: 'For library, office, nurse, or errant tasks. Requires phone checked in.'
             }
         };
-
-        // Clean string helper
-        function cleanStr(val) {
-            if (val === null || val === undefined) return '';
-            return String(val).replace(/[^a-zA-Z0-9]/g, '').toLowerCase().trim();
-        }
-
-        // Deep Universal Student Roster Lookup
-        function findStudentInRoster(inputId) {
-            if (!roster || !inputId) return null;
-
-            const targetRaw = String(inputId).trim();
-            const targetClean = cleanStr(inputId);
-            const targetUnpadded = targetClean.replace(/^0+/, '');
-
-            if (!targetClean) return null;
-
-            for (const [key, student] of Object.entries(roster)) {
-                if (!student) continue;
-
-                // Case 1: Simple Key/Value Roster
-                if (typeof student !== 'object') {
-                    const cleanKey = cleanStr(key);
-                    if (cleanKey === targetClean || (targetUnpadded && cleanKey.replace(/^0+/, '') === targetUnpadded)) {
-                        return { id: key, data: { firstName: String(student), lastName: '' } };
-                    }
-                    continue;
-                }
-
-                // Case 2: Check standard Firebase Key
-                const cleanKey = cleanStr(key);
-                const unpaddedKey = cleanKey.replace(/^0+/, '');
-                if (cleanKey === targetClean || (targetUnpadded && unpaddedKey === targetUnpadded)) {
-                    return { id: key, data: student };
-                }
-
-                // Case 3: Scan ALL internal properties (student_id, barcode, ID, localId, etc.)
-                for (const propVal of Object.values(student)) {
-                    if (propVal === null || propVal === undefined) continue;
-                    if (typeof propVal === 'object') continue;
-
-                    const valStr = String(propVal).trim();
-                    const cleanVal = cleanStr(propVal);
-                    const unpaddedVal = cleanVal.replace(/^0+/, '');
-
-                    if (
-                        valStr === targetRaw ||
-                        (cleanVal && cleanVal === targetClean) ||
-                        (targetUnpadded && unpaddedVal && unpaddedVal === targetUnpadded)
-                    ) {
-                        return { id: key, data: student };
-                    }
-                }
-            }
-
-            return null;
-        }
-
-        // Name Formatter Helper
-        function getStudentFullName(data, fallbackId) {
-            if (!data) return fallbackId;
-            if (typeof data === 'string') return data;
-
-            const fname = data.firstName || data.first_name || data.FirstName || data.First_Name || data.fname || data.name || '';
-            const lname = data.lastName || data.last_name || data.LastName || data.Last_Name || data.lname || '';
-
-            const combined = `${fname} ${lname}`.trim();
-            if (combined) return combined;
-
-            if (data.displayName) return data.displayName;
-            if (data.fullName) return data.fullName;
-            if (data.studentName) return data.studentName;
-
-            return fallbackId;
-        }
 
         // Realtime Data Sync
         onValue(ref(db, 'classroom_roster'), s => {
@@ -355,6 +282,13 @@
             resetForm();
         };
 
+        // Pocket Selection Handler
+        window.selectSlot = (slot) => {
+            selectedSlot = slot;
+            userManuallySelected = true;
+            renderGrid();
+        };
+
         // Render Pocket Slot Grid
         function renderGrid() {
             const usedSlots = Object.values(activePhones).map(p => parseInt(p.pocket));
@@ -373,12 +307,12 @@
             }
 
             const slotDisplay = document.getElementById('selected-slot-display');
-            if(slotDisplay) {
+            if (slotDisplay) {
                 slotDisplay.textContent = `Chosen Slot: Pocket #${String(selectedSlot).padStart(2, '0')}`;
             }
 
             const grid = document.getElementById('slot-grid');
-            if(!grid) return;
+            if (!grid) return;
             grid.innerHTML = "";
 
             for (let i = 1; i <= 36; i++) {
@@ -393,201 +327,341 @@
                     btn.innerHTML = `<span class="font-bold text-sm line-through">${numStr}</span><span class="text-[8px] font-bold uppercase tracking-tighter text-slate-400">TAKEN</span>`;
                 } else if (isSelected) {
                     btn.className = "py-2 px-1 flex flex-col items-center justify-center rounded-xl bg-chelan text-white shadow-md ring-2 ring-green-300 ring-offset-1 cursor-pointer select-none transition-all";
-                    btn.innerHTML = `<span class="font-bold text-sm">${numStr}</span><span class="text-[8px] font-bold uppercase tracking-tighter text-green-200">SELECTED</span>`;
-                    btn.onclick = () => selectSlot(i);
+                    btn.innerHTML = `<span class="font-bold text-sm">${numStr}</span><span class="text-[8px] font-bold uppercase tracking-tighter text-green-100">CHOSEN</span>`;
                 } else {
-                    btn.className = "py-2 px-1 flex flex-col items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 hover:border-chelan hover:text-chelan cursor-pointer select-none transition-all shadow-sm";
-                    btn.innerHTML = `<span class="font-bold text-sm">${numStr}</span>`;
-                    btn.onclick = () => selectSlot(i);
+                    btn.className = "py-2 px-1 flex flex-col items-center justify-center rounded-xl border border-slate-200 bg-white hover:border-chelan text-slate-700 cursor-pointer select-none transition-all";
+                    btn.innerHTML = `<span class="font-bold text-sm">${numStr}</span><span class="text-[8px] font-bold uppercase tracking-tighter text-slate-400">OPEN</span>`;
+                    btn.onclick = () => window.selectSlot(i);
                 }
-
                 grid.appendChild(btn);
             }
         }
 
-        window.selectSlot = (slotNum) => {
-            selectedSlot = slotNum;
-            userManuallySelected = true;
-            renderGrid();
-        };
+        // Schema-Agnostic Roster Student Lookup
+        function findStudentInRoster(rawInput) {
+            if (!rawInput || !roster) return null;
+            const cleanInput = String(rawInput).trim();
+            if (!cleanInput) return null;
 
-        function resetForm() {
-            document.getElementById('kiosk-form').reset();
-            document.getElementById('id-error').textContent = "";
-            failedAttempts = 0;
-            isManualMode = false;
-            userManuallySelected = false;
+            const stripZeros = (str) => String(str || '').replace(/^0+/, '') || '0';
+            const inputStripped = stripZeros(cleanInput);
 
-            document.getElementById('standard-input-area').classList.remove('hidden');
-            document.getElementById('manual-input-area').classList.add('hidden');
-            document.getElementById('submit-btn').classList.remove('hidden');
-            document.getElementById('student-id').required = true;
+            const matches = (candidate) => {
+                if (candidate === null || candidate === undefined) return false;
+                const candStr = String(candidate).trim();
+                if (!candStr) return false;
+                return candStr === cleanInput || stripZeros(candStr) === inputStripped;
+            };
 
-            if (currentMode === 'phone') {
-                renderGrid();
+            const entries = Array.isArray(roster) ? roster : Object.entries(roster);
+
+            for (const entry of entries) {
+                let key, studentObj;
+                if (Array.isArray(roster)) {
+                    studentObj = entry;
+                    key = null;
+                } else {
+                    [key, studentObj] = entry;
+                }
+
+                if (!studentObj) continue;
+
+                if (typeof studentObj !== 'object') {
+                    if (key && matches(key)) {
+                        return { id: cleanInput, name: String(studentObj) };
+                    }
+                    continue;
+                }
+
+                let isMatch = key && matches(key);
+
+                const idFields = [
+                    'student_id', 'studentId', 'barcode', 'id', 'local_id',
+                    'student_number', 'studentNumber', 'sis_id', 'state_id',
+                    'user_id', 'card_id', 'badge_id', 'st_id', 'studentID'
+                ];
+
+                if (!isMatch) {
+                    for (const field of idFields) {
+                        if (studentObj[field] !== undefined && matches(studentObj[field])) {
+                            isMatch = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!isMatch) {
+                    for (const [propKey, propVal] of Object.entries(studentObj)) {
+                        if (typeof propVal === 'string' || typeof propVal === 'number') {
+                            if (matches(propVal)) {
+                                isMatch = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (isMatch) {
+                    const firstName = studentObj.first_name || studentObj.firstName || studentObj.first || '';
+                    const lastName = studentObj.last_name || studentObj.lastName || studentObj.last || '';
+                    
+                    let name = studentObj.name || studentObj.student_name || studentObj.studentName || studentObj.full_name || studentObj.fullName || '';
+                    if (!name && (firstName || lastName)) {
+                        name = `${firstName} ${lastName}`.trim();
+                    }
+                    if (!name) {
+                        name = `Student ${cleanInput}`;
+                    }
+
+                    const matchedId = studentObj.student_id || studentObj.studentId || studentObj.id || studentObj.barcode || cleanInput;
+
+                    return {
+                        ...studentObj,
+                        id: String(matchedId),
+                        name: name,
+                        firstName: firstName || name.split(' ')[0] || '',
+                        lastName: lastName || name.split(' ').slice(1).join(' ') || ''
+                    };
+                }
             }
 
-            setTimeout(() => {
-                const input = document.getElementById('student-id');
-                if(input) input.focus();
-            }, 50);
+            return null;
         }
 
-        function triggerFlashConfirmation(codeStr, msgStr, iconStr = '✅', durationMs = 1200) {
+        // Schema-Agnostic Active Group Lookup
+        function findActiveKey(activeGroup, student) {
+            if (!activeGroup || typeof activeGroup !== 'object') return null;
+            const strip = (s) => String(s || '').trim().replace(/^0+/, '') || '0';
+            const targetIdStripped = strip(student.id);
+
+            for (const [key, val] of Object.entries(activeGroup)) {
+                if (!val) continue;
+                if (strip(key) === targetIdStripped) return key;
+                if (val.id && strip(val.id) === targetIdStripped) return key;
+                if (val.student_id && strip(val.student_id) === targetIdStripped) return key;
+            }
+            return null;
+        }
+
+        // Helper UI Utilities
+        function showError(msg) {
+            const errEl = document.getElementById('id-error');
+            if (errEl) errEl.textContent = msg;
+        }
+
+        function clearError() {
+            const errEl = document.getElementById('id-error');
+            if (errEl) errEl.textContent = '';
+        }
+
+        function resetForm() {
+            const idInput = document.getElementById('student-id');
+            if (idInput) {
+                idInput.value = '';
+                idInput.focus();
+            }
+            clearError();
+            userManuallySelected = false;
+            if (currentMode === 'phone') renderGrid();
+        }
+
+        function showFlash(icon, code, msg, duration = 2200) {
             const overlay = document.getElementById('flash-overlay');
-            document.getElementById('flash-icon').textContent = iconStr;
-            document.getElementById('flash-code').textContent = codeStr;
-            document.getElementById('flash-msg').textContent = msgStr;
-            
+            const iconEl = document.getElementById('flash-icon');
+            const codeEl = document.getElementById('flash-code');
+            const msgEl = document.getElementById('flash-msg');
+
+            if (!overlay) return;
+
+            if (iconEl) iconEl.textContent = icon;
+            if (codeEl) codeEl.textContent = code;
+            if (msgEl) msgEl.textContent = msg;
+
             overlay.classList.remove('hidden');
             overlay.classList.add('flex');
 
             setTimeout(() => {
-                overlay.classList.add('hidden');
                 overlay.classList.remove('flex');
+                overlay.classList.add('hidden');
                 resetForm();
-            }, durationMs);
+            }, duration);
         }
 
-        function handlePassDenial(errorMsg) {
-            document.getElementById('id-error').textContent = errorMsg;
-            const input = document.getElementById('student-id');
-            if (input) {
-                input.value = "";
-                input.focus();
-            }
-        }
-
-        // Form Submission
+        // Form Submission Event
         document.getElementById('kiosk-form').addEventListener('submit', (e) => {
             e.preventDefault();
+            clearError();
 
-            let rawInput = document.getElementById('student-id').value.trim();
-            let studentId = rawInput;
-            let studentName = "";
-
+            // Handle Manual 3rd Attempt Registration
             if (isManualMode) {
                 const fname = document.getElementById('manual-fname').value.trim();
                 const lname = document.getElementById('manual-lname').value.trim();
+
                 if (!fname || !lname) {
-                    document.getElementById('id-error').textContent = "Please enter First and Last name.";
+                    showError('Please enter both First and Last Name.');
                     return;
                 }
-                studentName = `${fname} ${lname}`;
 
-                set(ref(db, `pending_roster_approvals/${studentId}`), {
-                    firstName: fname,
-                    lastName: lname,
-                    studentId: studentId,
-                    pocket: selectedSlot,
-                    timestamp: Date.now()
-                });
+                const fullName = `${fname} ${lname}`;
+                const newStudent = {
+                    id: pendingId,
+                    student_id: pendingId,
+                    first_name: fname,
+                    last_name: lname,
+                    name: fullName,
+                    registeredAt: Date.now()
+                };
 
-                triggerFlashConfirmation('PENDING', `Request sent for approval: ${studentName}`, '⏳', 1800);
+                set(ref(db, `classroom_roster/${pendingId}`), newStudent);
+                push(ref(db, 'registration_requests'), newStudent);
+                roster[pendingId] = newStudent;
+
+                showFlash('📩', 'REQUEST SENT', `Registration submitted for ${fullName}`, 2200);
+
+                setTimeout(() => {
+                    isManualMode = false;
+                    failedAttempts = 0;
+                    document.getElementById('manual-input-area').classList.add('hidden');
+                    document.getElementById('standard-input-area').classList.remove('hidden');
+                    document.getElementById('manual-fname').value = '';
+                    document.getElementById('manual-lname').value = '';
+                    resetForm();
+                }, 2000);
+
                 return;
-            } else {
-                const matchedStudent = findStudentInRoster(rawInput);
-                
-                if (matchedStudent) {
-                    studentId = matchedStudent.id;
-                    studentName = getStudentFullName(matchedStudent.data, studentId);
-                } else {
-                    failedAttempts++;
-                    if (failedAttempts >= 3) {
-                        isManualMode = true;
-                        document.getElementById('manual-id-display').textContent = rawInput;
-                        document.getElementById('standard-input-area').classList.add('hidden');
-                        document.getElementById('submit-btn').classList.add('hidden');
-                        document.getElementById('manual-input-area').classList.remove('hidden');
-                        document.getElementById('student-id').required = false;
-                        document.getElementById('manual-fname').focus();
-                    } else {
-                        document.getElementById('id-error').textContent = `ID not recognized (${failedAttempts}/3 attempts). Try again.`;
-                        document.getElementById('student-id').value = "";
-                        document.getElementById('student-id').focus();
-                    }
-                    return;
-                }
             }
 
-            if (currentMode === 'phone') {
-                if (activePhones[studentId]) {
-                    remove(ref(db, `active_phones_in_class/${studentId}`));
-                    remove(ref(db, `active_bathroom_passes/${studentId}`));
-                    remove(ref(db, `active_hall_passes/${studentId}`));
-                    
-                    push(ref(db, 'system_logs'), {
-                        studentId, name: studentName, code: 'COS', action: "Phone Check-Out", timestamp: Date.now()
-                    });
+            // Standard Lookup
+            const idInput = document.getElementById('student-id');
+            const rawId = idInput.value.trim();
 
-                    triggerFlashConfirmation('COS', `${studentName} - Phone Checked Out`, '📱');
+            if (!rawId) {
+                showError('Please scan or enter a student ID.');
+                return;
+            }
+
+            const student = findStudentInRoster(rawId);
+
+            if (!student) {
+                failedAttempts++;
+                if (failedAttempts >= 3) {
+                    pendingId = rawId;
+                    isManualMode = true;
+                    document.getElementById('standard-input-area').classList.add('hidden');
+                    document.getElementById('manual-input-area').classList.remove('hidden');
+                    document.getElementById('manual-id-display').textContent = rawId;
+                    document.getElementById('manual-fname').focus();
+                    showError('ID not found after 3 attempts. Register student below.');
                 } else {
-                    const slotFormatted = String(selectedSlot).padStart(2, '0');
-                    const codeStr = `CI-${slotFormatted}`;
+                    showError(`ID "${rawId}" not found in roster (Attempt ${failedAttempts}/3)`);
+                    idInput.value = '';
+                    idInput.focus();
+                }
+                return;
+            }
+
+            failedAttempts = 0;
+
+            // Execute Mode Logic
+            if (currentMode === 'phone') {
+                const activeKey = findActiveKey(activePhones, student);
+
+                if (activeKey) {
+                    const activeRecord = activePhones[activeKey];
+                    const pocketNum = String(activeRecord.pocket || selectedSlot).padStart(2, '0');
                     
-                    set(ref(db, `active_phones_in_class/${studentId}`), {
-                        studentName: studentName,
+                    remove(ref(db, `active_phones_in_class/${activeKey}`));
+                    showFlash('📱', 'CHECKED OUT', `${student.name} - Pocket #${pocketNum}`);
+                } else {
+                    const takenSlots = Object.values(activePhones).map(p => parseInt(p.pocket));
+                    if (takenSlots.includes(selectedSlot)) {
+                        let nextAvailable = 1;
+                        while (takenSlots.includes(nextAvailable) && nextAvailable <= 36) {
+                            nextAvailable++;
+                        }
+                        if (nextAvailable <= 36) {
+                            selectedSlot = nextAvailable;
+                        } else {
+                            showError('All pocket slots (1-36) are full!');
+                            return;
+                        }
+                    }
+
+                    const pocketNum = String(selectedSlot).padStart(2, '0');
+                    const phoneData = {
+                        id: student.id,
+                        name: student.name,
                         pocket: selectedSlot,
                         timestamp: Date.now()
-                    });
+                    };
 
-                    push(ref(db, 'system_logs'), {
-                        studentId, name: studentName, code: codeStr, action: `Phone Check-In (Pocket #${slotFormatted})`, timestamp: Date.now()
-                    });
-
-                    triggerFlashConfirmation(codeStr, `${studentName} - Checked In (Pocket #${slotFormatted})`, '📱');
+                    set(ref(db, `active_phones_in_class/${student.id}`), phoneData);
+                    showFlash('📱', 'CHECKED IN', `${student.name} - Pocket #${pocketNum}`);
                 }
             } else if (currentMode === 'bathroom') {
-                if (activeBathroom[studentId]) {
-                    remove(ref(db, `active_bathroom_passes/${studentId}`));
-                    push(ref(db, 'system_logs'), { studentId, name: studentName, code: 'BP-I', action: "Bathroom Return", timestamp: Date.now() });
-                    triggerFlashConfirmation('BP-I', `Welcome back, ${studentName}!`, '🚻');
+                const phoneKey = findActiveKey(activePhones, student);
+                if (!phoneKey) {
+                    showError(`⚠️ ${student.name} must check in phone before taking bathroom pass!`);
+                    idInput.value = '';
+                    idInput.focus();
+                    return;
+                }
+
+                const activeBathKey = findActiveKey(activeBathroom, student);
+
+                if (activeBathKey) {
+                    remove(ref(db, `active_bathroom_passes/${activeBathKey}`));
+                    showFlash('🚻', 'RETURNED', `${student.name} - Back from Bathroom`);
                 } else {
-                    if (!activePhones[studentId]) {
-                        handlePassDenial("⚠️ Phone must be checked in to take a pass!");
-                        return;
-                    }
-                    if (activeHall[studentId]) {
-                        handlePassDenial("⚠️ Cannot take Bathroom Pass while on Hall Pass!");
-                        return;
-                    }
-                    if (Object.keys(activeBathroom).length >= 1) {
-                        handlePassDenial("⚠️ Bathroom pass currently occupied (1 max limit)!");
+                    const count = Object.keys(activeBathroom).length;
+                    if (count >= 1) {
+                        showError('⛔ Bathroom pass limit reached (Max: 1 student). Please wait.');
+                        idInput.value = '';
+                        idInput.focus();
                         return;
                     }
 
-                    set(ref(db, `active_bathroom_passes/${studentId}`), {
-                        studentName: studentName, timestamp: Date.now()
-                    });
-                    push(ref(db, 'system_logs'), { studentId, name: studentName, code: 'BP-O', action: "Bathroom Out", timestamp: Date.now() });
-                    triggerFlashConfirmation('BP-O', `Bathroom Pass Issued: ${studentName}`, '🚻');
+                    const bathData = {
+                        id: student.id,
+                        name: student.name,
+                        timestamp: Date.now()
+                    };
+
+                    set(ref(db, `active_bathroom_passes/${student.id}`), bathData);
+                    showFlash('🚻', 'BATHROOM PASS', `${student.name} - Out to Bathroom`);
                 }
             } else if (currentMode === 'hall') {
-                if (activeHall[studentId]) {
-                    remove(ref(db, `active_hall_passes/${studentId}`));
-                    push(ref(db, 'system_logs'), { studentId, name: studentName, code: 'HP-I', action: "Hall Pass Return", timestamp: Date.now() });
-                    triggerFlashConfirmation('HP-I', `Welcome back, ${studentName}!`, '🎟️');
-                } else {
-                    if (!activePhones[studentId]) {
-                        handlePassDenial("⚠️ Phone must be checked in to take a pass!");
-                        return;
-                    }
-                    if (activeBathroom[studentId]) {
-                        handlePassDenial("⚠️ Cannot take Hall Pass while on Bathroom Pass!");
-                        return;
-                    }
+                const phoneKey = findActiveKey(activePhones, student);
+                if (!phoneKey) {
+                    showError(`⚠️ ${student.name} must check in phone before taking hall pass!`);
+                    idInput.value = '';
+                    idInput.focus();
+                    return;
+                }
 
-                    set(ref(db, `active_hall_passes/${studentId}`), {
-                        studentName: studentName, timestamp: Date.now()
-                    });
-                    push(ref(db, 'system_logs'), { studentId, name: studentName, code: 'HP-O', action: "Hall Pass Out", timestamp: Date.now() });
-                    triggerFlashConfirmation('HP-O', `Hall Pass Issued: ${studentName}`, '🎟️');
+                const activeHallKey = findActiveKey(activeHall, student);
+
+                if (activeHallKey) {
+                    remove(ref(db, `active_hall_passes/${activeHallKey}`));
+                    showFlash('🎟️', 'RETURNED', `${student.name} - Back from Hall Pass`);
+                } else {
+                    const hallData = {
+                        id: student.id,
+                        name: student.name,
+                        timestamp: Date.now()
+                    };
+
+                    set(ref(db, `active_hall_passes/${student.id}`), hallData);
+                    showFlash('🎟️', 'HALL PASS', `${student.name} - Out on Hall Pass`);
                 }
             }
+
+            resetForm();
         });
 
-        // Default view setup
-        switchMode('phone');
+        // Initialize default view
+        renderGrid();
+        if (typeof updateVersionBadge === 'function') updateVersionBadge();
     </script>
 </body>
 </html>
