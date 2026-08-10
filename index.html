@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Classroom Kiosk - Chelan High</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Config File Load for Versioning -->
+    <script src="config.js"></script>
     <style>
         .bg-chelan { background-color: #0d5235; }
         .text-chelan { color: #0d5235; }
@@ -141,29 +143,25 @@
         </div>
     </main>
 
-    <!-- Clock Script -->
+    <!-- Clock Script & Global Config Setup -->
     <script>
         setInterval(() => {
             const clock = document.getElementById('live-clock');
             if(clock) clock.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         }, 1000);
+
+        // Version fallback logic from loaded config.js
+        document.addEventListener("DOMContentLoaded", () => {
+            if (typeof CONFIG !== 'undefined' && CONFIG.version) {
+                document.getElementById('app-version-badge').textContent = `v${CONFIG.version}`;
+            }
+        });
     </script>
     
     <!-- Firebase Module & Application Logic -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getDatabase, ref, onValue, set, remove, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-        
-        // DYNAMIC IMPORT FIX: This prevents the app from breaking if config.js is not found during local testing.
-        import('./config.js')
-            .then(module => {
-                if (module.CONFIG && module.CONFIG.version) {
-                    document.getElementById('app-version-badge').textContent = `v${module.CONFIG.version}`;
-                }
-            })
-            .catch(() => {
-                console.warn("config.js not found. App will continue functioning with default version.");
-            });
 
         const firebaseConfig = {
             apiKey: "AIzaSyDOqjLMzMydaR31WWUA35sr1FrNLfHPxuI",
@@ -214,30 +212,42 @@
             }
         };
 
-        // Roster Search Helper
+        // Robust Roster Search Helper
         function findStudentInRoster(inputId) {
             if (!roster || !inputId) return null;
-            const cleanInput = String(inputId).trim();
+            
+            const rawClean = String(inputId).trim();
+            const unpaddedClean = rawClean.replace(/^0+/, '');
 
-            if (roster[cleanInput]) {
-                return { id: cleanInput, data: roster[cleanInput] };
-            }
+            // 1. Direct object key lookup
+            if (roster[rawClean]) return { id: rawClean, data: roster[rawClean] };
+            if (roster[unpaddedClean]) return { id: unpaddedClean, data: roster[unpaddedClean] };
 
+            // 2. Iterate keys and check sub-properties
             const keys = Object.keys(roster);
             for (let i = 0; i < keys.length; i++) {
-                const key = keys[i];
+                const key = String(keys[i]).trim();
                 const student = roster[key];
 
-                if (String(key).trim() === cleanInput) {
-                    return { id: key, data: student };
+                if (!student) continue;
+
+                const keyUnpadded = key.replace(/^0+/, '');
+                const subId = student.studentId ? String(student.studentId).trim() : '';
+                const subIdUnpadded = subId.replace(/^0+/, '');
+                const altId = student.id ? String(student.id).trim() : '';
+                const altIdUnpadded = altId.replace(/^0+/, '');
+
+                if (key === rawClean || keyUnpadded === unpaddedClean) {
+                    return { id: keys[i], data: student };
                 }
-                if (student.studentId && String(student.studentId).trim() === cleanInput) {
-                    return { id: key, data: student };
+                if (subId === rawClean || (subIdUnpadded && subIdUnpadded === unpaddedClean)) {
+                    return { id: keys[i], data: student };
                 }
-                if (String(key).replace(/^0+/, '') === cleanInput.replace(/^0+/, '')) {
-                    return { id: key, data: student };
+                if (altId === rawClean || (altIdUnpadded && altIdUnpadded === unpaddedClean)) {
+                    return { id: keys[i], data: student };
                 }
             }
+
             return null;
         }
 
@@ -260,7 +270,7 @@
             document.getElementById('count-hall').textContent = Object.keys(activeHall).length;
         });
 
-        // Tab Switching Logic (Attached to window so HTML buttons can trigger it)
+        // Tab Switching Logic
         window.switchMode = (mode) => {
             currentMode = mode;
             
@@ -431,7 +441,9 @@
                 if (matchedStudent) {
                     studentId = matchedStudent.id;
                     const data = matchedStudent.data;
-                    studentName = `${data.firstName || ''} ${data.lastName || ''}`.trim() || studentId;
+                    const fname = data.firstName || data.first_name || '';
+                    const lname = data.lastName || data.last_name || '';
+                    studentName = `${fname} ${lname}`.trim() || studentId;
                 } else {
                     failedAttempts++;
                     if (failedAttempts >= 3) {
