@@ -1,473 +1,386 @@
 /**
- * Chelan High School - Teacher Live Dashboard Logic (v1.1.10)
+ * Chelan High School - Live Teacher Control Center Engine (teacher.js)
  */
 
-import { APP_CONFIG, formatDuration, formatTime, formatDate } from './config.js';
+import { APP_CONFIG, formatTime } from './config.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
 import { 
-  getDatabase, ref, onValue, set, push, remove, get 
+  getDatabase, ref, onValue, remove, push, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 
 // Initialize Firebase
 const app = initializeApp(APP_CONFIG.firebaseConfig);
 const db = getDatabase(app);
 
-// State Variables
-let currentSortMode = 'first'; // 'first', 'last', 'pocket'
-let activeSessionData = { phones: {}, bathroom: {}, hallPass: {} };
-let logsData = {};
-let logSearchQuery = '';
+// State
+let checkedInPhones = {};
+let activePasses = {};
+let activityLogs = {};
+let currentSort = "pocket"; // 'pocket', 'first', 'last'
 
-// Authentication Logic
-const authModal = document.getElementById('auth-modal');
-const authForm = document.getElementById('auth-form');
-const authPasswordInput = document.getElementById('auth-password');
-const authError = document.getElementById('auth-error');
+document.addEventListener("DOMContentLoaded", () => {
+  initClock();
+  setupSorting();
+  setupBulkActions();
+  attachFirebaseListeners();
 
-function checkAuthentication() {
-  if (sessionStorage.getItem('teacherAuthenticated') === 'true') {
-    authModal.classList.add('hidden');
-    initDashboard();
-  } else {
-    authModal.classList.remove('hidden');
-    authPasswordInput.focus();
-  }
-}
-
-authForm.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const enteredPass = authPasswordInput.value.trim();
-  if (enteredPass === APP_CONFIG.security.teacherPassword) {
-    sessionStorage.setItem('teacherAuthenticated', 'true');
-    authError.classList.add('hidden');
-    authModal.classList.add('hidden');
-    initDashboard();
-  } else {
-    authError.classList.remove('hidden');
-    authPasswordInput.value = '';
-    authPasswordInput.focus();
-  }
+  // Refresh dynamic timers every second
+  setInterval(() => {
+    renderPhones();
+    renderPasses();
+  }, 1000);
 });
 
-// Initialize Dashboard Function
-function initDashboard() {
-  // Populate Metadata Header
-  document.getElementById('dash-version').textContent = APP_CONFIG.version;
-  document.getElementById('dash-room').textContent = APP_CONFIG.department;
+// Live Clock
+function initClock() {
+  const clockEl = document.getElementById("dashboard-clock");
+  if (!clockEl) return;
+  const update = () => {
+    clockEl.textContent = formatTime(new Date());
+  };
+  setInterval(update, 1000);
+  update();
+}
 
-  // Live Clock
-  function updateClock() {
-    document.getElementById('dash-clock').textContent = formatTime(new Date());
+// Listeners
+function attachFirebaseListeners() {
+  onValue(ref(db, "checkedInPhones"), (snapshot) => {
+    checkedInPhones = snapshot.exists() ? snapshot.val() : {};
+    renderPhones();
+    updateCounters();
+  });
+
+  onValue(ref(db, "activePasses"), (snapshot) => {
+    activePasses = snapshot.exists() ? snapshot.val() : {};
+    renderPasses();
+    updateCounters();
+  });
+
+  onValue(ref(db, "logs"), (snapshot) => {
+    activityLogs = snapshot.exists() ? snapshot.val() : {};
+    renderActivityLogs();
+    updateStats();
+  });
+}
+
+// Counters
+function updateCounters() {
+  const phoneCountEl = document.getElementById("dash-phone-count");
+  const bathCountEl = document.getElementById("dash-bathroom-count");
+  const hallCountEl = document.getElementById("dash-hall-count");
+
+  const phoneCount = Object.keys(checkedInPhones).length;
+  const bathLimit = APP_CONFIG?.passLimits?.bathroom || 1;
+  const bathCount = Object.values(activePasses).filter(p => p.type === "bathroom").length;
+  const hallCount = Object.values(activePasses).filter(p => p.type === "hall").length;
+
+  if (phoneCountEl) phoneCountEl.textContent = phoneCount;
+  if (bathCountEl) bathCountEl.textContent = `${bathCount}/${bathLimit}`;
+  if (hallCountEl) hallCountEl.textContent = hallCount;
+}
+
+// Sorting Controls
+function setupSorting() {
+  const btnPocket = document.getElementById("sort-pocket");
+  const btnFirst = document.getElementById("sort-first");
+  const btnLast = document.getElementById("sort-last");
+
+  const resetBtnStyles = () => {
+    [btnPocket, btnFirst, btnLast].forEach(btn => {
+      if (btn) btn.className = "px-2 py-1 rounded-lg text-slate-600 hover:text-slate-900";
+    });
+  };
+
+  if (btnPocket) {
+    btnPocket.onclick = () => {
+      resetBtnStyles();
+      btnPocket.className = "px-2 py-1 rounded-lg bg-white text-[#0B4F2C] shadow-xs font-bold";
+      currentSort = "pocket";
+      renderPhones();
+    };
   }
-  setInterval(updateClock, 1000);
-  updateClock();
 
-  // Attach Sorting Listeners
-  const sortFirstBtn = document.getElementById('sort-first-btn');
-  const sortLastBtn = document.getElementById('sort-last-btn');
-  const sortPocketBtn = document.getElementById('sort-pocket-btn');
+  if (btnFirst) {
+    btnFirst.onclick = () => {
+      resetBtnStyles();
+      btnFirst.className = "px-2 py-1 rounded-lg bg-white text-[#0B4F2C] shadow-xs font-bold";
+      currentSort = "first";
+      renderPhones();
+    };
+  }
 
-  sortFirstBtn.addEventListener('click', () => setSortMode('first'));
-  sortLastBtn.addEventListener('click', () => setSortMode('last'));
-  sortPocketBtn.addEventListener('click', () => setSortMode('pocket'));
-
-  // Attach Check Out All Button
-  document.getElementById('check-out-all-btn').addEventListener('click', handleCheckOutAll);
-
-  // Attach Quick Add Form
-  document.getElementById('quick-add-form').addEventListener('submit', handleQuickAddStudent);
-
-  // Attach Search Filter Input
-  document.getElementById('log-search-input').addEventListener('input', (e) => {
-    logSearchQuery = e.target.value.toLowerCase().trim();
-    renderLogsTable();
-  });
-
-  // Attach Clear Log Modal Actions
-  const clearModal = document.getElementById('clear-confirm-modal');
-  document.getElementById('clear-log-btn').addEventListener('click', () => clearModal.classList.remove('hidden'));
-  document.getElementById('clear-cancel-btn').addEventListener('click', () => clearModal.classList.add('hidden'));
-  document.getElementById('clear-confirm-btn').addEventListener('click', handleClearLogs);
-
-  // Attach Export CSV Button
-  document.getElementById('export-csv-btn').addEventListener('click', handleExportCSV);
-
-  // Firebase Realtime Listener: Active Session
-  onValue(ref(db, 'activeSession'), (snapshot) => {
-    activeSessionData = snapshot.exists() ? snapshot.val() : { phones: {}, bathroom: {}, hallPass: {} };
-    renderInRoomCards();
-    renderPassCards();
-  });
-
-  // Firebase Realtime Listener: Running Logs
-  onValue(ref(db, 'logs'), (snapshot) => {
-    logsData = snapshot.exists() ? snapshot.val() : {};
-    renderLogsTable();
-    updateMetrics();
-  });
-
-  // Live Timer Re-render Interval (Every 10s to update elapsed durations)
-  setInterval(() => {
-    renderInRoomCards();
-    renderPassCards();
-  }, 10000);
+  if (btnLast) {
+    btnLast.onclick = () => {
+      resetBtnStyles();
+      btnLast.className = "px-2 py-1 rounded-lg bg-white text-[#0B4F2C] shadow-xs font-bold";
+      currentSort = "last";
+      renderPhones();
+    };
+  }
 }
 
-// Set Card Sorting Mode
-function setSortMode(mode) {
-  currentSortMode = mode;
-  const btnFirst = document.getElementById('sort-first-btn');
-  const btnLast = document.getElementById('sort-last-btn');
-  const btnPocket = document.getElementById('sort-pocket-btn');
+// Render Checked-In Phones
+function renderPhones() {
+  const container = document.getElementById("phones-container");
+  if (!container) return;
 
-  const activeClass = "bg-slate-700 text-white font-semibold px-2.5 py-1 rounded-md border border-slate-600";
-  const inactiveClass = "bg-slate-800 text-slate-400 hover:text-white font-semibold px-2.5 py-1 rounded-md border border-slate-700";
+  const entries = Object.entries(checkedInPhones);
 
-  btnFirst.className = mode === 'first' ? activeClass : inactiveClass;
-  btnLast.className = mode === 'last' ? activeClass : inactiveClass;
-  btnPocket.className = mode === 'pocket' ? activeClass : inactiveClass;
-
-  renderInRoomCards();
-}
-
-// Render Left Column: Currently In Room
-function renderInRoomCards() {
-  const container = document.getElementById('student-cards-container');
-  const badge = document.getElementById('in-room-count-badge');
-  const phonesObj = activeSessionData.phones || {};
-  const bathroomObj = activeSessionData.bathroom || {};
-  const hallObj = activeSessionData.hallPass || {};
-
-  const phonesList = Object.keys(phonesObj).map(key => ({
-    key,
-    ...phonesObj[key]
-  }));
-
-  badge.textContent = `${phonesList.length} Students`;
-
-  if (phonesList.length === 0) {
-    container.innerHTML = `<p class="text-slate-500 text-sm italic text-center py-8">No students checked in.</p>`;
+  if (entries.length === 0) {
+    container.innerHTML = `
+      <div class="text-center py-12 text-slate-400">
+        <i class="fa-solid fa-mobile-screen-button text-3xl mb-2 opacity-50"></i>
+        <p class="text-xs font-bold">No phones currently checked in.</p>
+      </div>
+    `;
     return;
   }
 
-  // Sort Student List
-  phonesList.sort((a, b) => {
-    const nameA = a.name.split(' ');
-    const nameB = b.name.split(' ');
-    const firstA = nameA[0] || '';
-    const lastA = nameA.slice(1).join(' ') || '';
-    const firstB = nameB[0] || '';
-    const lastB = nameB.slice(1).join(' ') || '';
-
-    if (currentSortMode === 'first') return firstA.localeCompare(firstB);
-    if (currentSortMode === 'last') return lastA.localeCompare(lastB);
-    if (currentSortMode === 'pocket') return parseInt(a.pocket, 10) - parseInt(b.pocket, 10);
+  // Sort Array
+  entries.sort(([pNumA, a], [pNumB, b]) => {
+    if (currentSort === "pocket") return parseInt(pNumA) - parseInt(pNumB);
+    if (currentSort === "first") return (a.firstName || "").localeCompare(b.firstName || "");
+    if (currentSort === "last") return (a.lastName || "").localeCompare(b.lastName || "");
     return 0;
   });
 
-  // Render Top-Down Cards
-  container.innerHTML = phonesList.map(item => {
-    const isBathroomOut = Object.values(bathroomObj).some(b => b.id === item.id);
-    const isHallOut = Object.values(hallObj).some(h => h.id === item.id);
+  const now = Date.now();
 
-    let borderStyle = "border-emerald-500/40 bg-emerald-950/20";
-    let badgeText = `<span class="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-1.5 py-0.5 rounded">In Room</span>`;
-
-    if (isBathroomOut) {
-      borderStyle = "border-rose-500 bg-rose-950/30";
-      badgeText = `<span class="bg-rose-500/20 text-rose-300 text-[10px] font-bold px-1.5 py-0.5 rounded">Bathroom</span>`;
-    } else if (isHallOut) {
-      borderStyle = "border-purple-500 bg-purple-950/30";
-      badgeText = `<span class="bg-purple-500/20 text-purple-300 text-[10px] font-bold px-1.5 py-0.5 rounded">Hall Pass</span>`;
-    }
-
-    const elapsedMins = Math.floor((Date.now() - item.timestamp) / 60000);
+  container.innerHTML = entries.map(([pocket, data]) => {
+    const elapsedSecs = data.timestamp ? Math.floor((now - data.timestamp) / 1000) : 0;
+    const elapsedFormatted = formatDuration(elapsedSecs);
 
     return `
-      <div class="student-card-item bg-slate-800 border ${borderStyle} rounded-xl p-3 shadow flex justify-between items-center gap-2">
-        <div>
-          <div class="flex items-center gap-2 mb-1">
-            <span class="text-amber-400 font-mono font-bold text-xs bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700">#${item.pocket}</span>
-            <span class="font-bold text-white text-sm">${item.name}</span>
-          </div>
-          <div class="flex items-center gap-2 text-[10px] text-slate-400">
-            ${badgeText}
-            <span>${item.checkInTime} (${elapsedMins}m ago)</span>
+      <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3 flex items-center justify-between hover:border-emerald-500/50 transition">
+        <div class="flex items-center gap-3">
+          <span class="w-9 h-9 rounded-xl bg-[#0B4F2C] text-white font-mono font-black text-xs flex items-center justify-center shadow-xs">
+            #${pocket.padStart(2, '0')}
+          </span>
+          <div>
+            <p class="text-xs font-bold text-slate-800 leading-tight">${data.firstName || ''} ${data.lastName || ''}</p>
+            <p class="text-[10px] text-slate-400 font-mono">ID: ${data.id || 'N/A'}</p>
           </div>
         </div>
-        <button onclick="window.checkoutSinglePhone('${item.key}')" class="text-slate-400 hover:text-rose-400 text-sm font-bold p-1 transition" title="Check Out Phone">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
+
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] font-mono font-bold bg-emerald-100 text-[#0B4F2C] px-2 py-0.5 rounded-full border border-emerald-200">
+            ${elapsedFormatted}
+          </span>
+          <button data-checkout="${pocket}" class="btn-checkout-single p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition">
+            <i class="fa-solid fa-right-from-bracket text-xs"></i>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Attach single checkout event listeners
+  document.querySelectorAll(".btn-checkout-single").forEach(btn => {
+    btn.onclick = async (e) => {
+      const pocket = e.currentTarget.getAttribute("data-checkout");
+      const phoneData = checkedInPhones[pocket];
+      if (pocket && phoneData) {
+        await remove(ref(db, `checkedInPhones/${pocket}`));
+        await push(ref(db, "logs"), {
+          timestamp: serverTimestamp(),
+          studentId: phoneData.id,
+          studentName: `${phoneData.firstName} ${phoneData.lastName}`,
+          action: "PHONE_CHECKOUT",
+          details: `Manual teacher check-out from Pocket #${pocket}`
+        });
+      }
+    };
+  });
+}
+
+// Render Passes
+function renderPasses() {
+  const bathContainer = document.getElementById("bathroom-pass-container");
+  const hallContainer = document.getElementById("hall-pass-container");
+
+  const passes = Object.entries(activePasses);
+  const bathPasses = passes.filter(([_, p]) => p.type === "bathroom");
+  const hallPasses = passes.filter(([_, p]) => p.type === "hall");
+
+  const now = Date.now();
+
+  // Render Bathroom
+  if (bathContainer) {
+    if (bathPasses.length === 0) {
+      bathContainer.innerHTML = `<p class="text-xs text-slate-400 py-2 italic text-center">No students out for bathroom</p>`;
+    } else {
+      bathContainer.innerHTML = bathPasses.map(([key, data]) => {
+        const elapsed = data.startTime ? Math.floor((now - data.startTime) / 1000) : 0;
+        return `
+          <div class="bg-rose-50 border border-rose-200 rounded-2xl p-3 flex items-center justify-between">
+            <div>
+              <p class="text-xs font-bold text-rose-950">${data.studentName}</p>
+              <p class="text-[10px] font-mono text-rose-700">Out: ${formatDuration(elapsed)}</p>
+            </div>
+            <button data-return="${key}" class="btn-return-pass text-xs font-bold bg-rose-700 text-white px-3 py-1.5 rounded-xl hover:bg-rose-800 transition">
+              Return
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  // Render Hall
+  if (hallContainer) {
+    if (hallPasses.length === 0) {
+      hallContainer.innerHTML = `<p class="text-xs text-slate-400 py-2 italic text-center">No active hall passes</p>`;
+    } else {
+      hallContainer.innerHTML = hallPasses.map(([key, data]) => {
+        const elapsed = data.startTime ? Math.floor((now - data.startTime) / 1000) : 0;
+        return `
+          <div class="bg-indigo-50 border border-indigo-200 rounded-2xl p-3 flex items-center justify-between">
+            <div>
+              <p class="text-xs font-bold text-indigo-950">${data.studentName}</p>
+              <p class="text-[10px] font-mono text-indigo-700">Out: ${formatDuration(elapsed)}</p>
+            </div>
+            <button data-return="${key}" class="btn-return-pass text-xs font-bold bg-indigo-700 text-white px-3 py-1.5 rounded-xl hover:bg-indigo-800 transition">
+              Return
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  // Pass Return Listeners
+  document.querySelectorAll(".btn-return-pass").forEach(btn => {
+    btn.onclick = async (e) => {
+      const key = e.currentTarget.getAttribute("data-return");
+      const pass = activePasses[key];
+      if (key && pass) {
+        await remove(ref(db, `activePasses/${key}`));
+        await push(ref(db, "logs"), {
+          timestamp: serverTimestamp(),
+          studentId: pass.studentId,
+          studentName: pass.studentName,
+          action: "PASS_RETURN",
+          details: `Manual return of ${pass.type.toUpperCase()} pass`
+        });
+      }
+    };
+  });
+}
+
+// Render Logs Feed
+function renderActivityLogs() {
+  const container = document.getElementById("activity-log-container");
+  if (!container) return;
+
+  const logs = Object.values(activityLogs);
+  if (logs.length === 0) {
+    container.innerHTML = `<p class="text-xs text-slate-400 py-10 text-center">No activity recorded today.</p>`;
+    return;
+  }
+
+  logs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+  container.innerHTML = logs.map(log => {
+    const timeStr = log.timestamp ? formatTime(new Date(log.timestamp)) : 'Just Now';
+    let badgeClass = "bg-slate-100 text-slate-700";
+
+    if (log.action?.includes("CHECKIN")) badgeClass = "bg-emerald-100 text-[#0B4F2C]";
+    if (log.action?.includes("CHECKOUT")) badgeClass = "bg-amber-100 text-amber-800";
+    if (log.action?.includes("BATHROOM")) badgeClass = "bg-rose-100 text-rose-800";
+    if (log.action?.includes("HALL")) badgeClass = "bg-indigo-100 text-indigo-800";
+
+    return `
+      <div class="bg-slate-50 border border-slate-100 rounded-2xl p-2.5 flex items-start gap-2.5">
+        <span class="text-[10px] font-mono text-slate-400 font-bold whitespace-nowrap pt-0.5">${timeStr}</span>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between gap-1">
+            <p class="text-xs font-bold text-slate-800 truncate">${log.studentName || 'Student'}</p>
+            <span class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${badgeClass}">
+              ${log.action || 'LOG'}
+            </span>
+          </div>
+          <p class="text-[11px] text-slate-500 truncate mt-0.5">${log.details || ''}</p>
+        </div>
       </div>
     `;
   }).join('');
 }
 
-// Single Phone Checkout Global Handler
-window.checkoutSinglePhone = async function(key) {
-  const record = (activeSessionData.phones || {})[key];
-  if (!record) return;
+// Update Daily Stats Block
+function updateStats() {
+  const checkinsEl = document.getElementById("stat-checkins");
+  const tripsEl = document.getElementById("stat-trips");
 
-  const durationSecs = Math.round((Date.now() - record.timestamp) / 1000);
-  const durationStr = formatDuration(durationSecs);
+  const logs = Object.values(activityLogs);
+  const checkinCount = logs.filter(l => l.action === "PHONE_CHECKIN").length;
+  const tripCount = logs.filter(l => l.action?.startsWith("PASS_") && l.action !== "PASS_RETURN").length;
 
-  await remove(ref(db, `activeSession/phones/${key}`));
-  await push(ref(db, 'logs'), {
-    date: formatDate(),
-    time: formatTime(),
-    id: record.id,
-    name: record.name,
-    type: 'Phone',
-    duration: durationStr,
-    details: 'COS'
-  });
-};
-
-// Check Out All Phones Handler
-async function handleCheckOutAll() {
-  const phonesObj = activeSessionData.phones || {};
-  const keys = Object.keys(phonesObj);
-  if (keys.length === 0) return;
-
-  if (!confirm(`Are you sure you want to check out all ${keys.length} phones?`)) return;
-
-  for (const key of keys) {
-    const record = phonesObj[key];
-    const durationSecs = Math.round((Date.now() - record.timestamp) / 1000);
-    const durationStr = formatDuration(durationSecs);
-
-    await push(ref(db, 'logs'), {
-      date: formatDate(),
-      time: formatTime(),
-      id: record.id,
-      name: record.name,
-      type: 'Phone',
-      duration: durationStr,
-      details: 'COA'
-    });
-  }
-
-  await remove(ref(db, 'activeSession/phones'));
+  if (checkinsEl) checkinsEl.textContent = checkinCount;
+  if (tripsEl) tripsEl.textContent = tripCount;
 }
 
-// Render Middle Column: Bathroom & Hall Pass Cards
-function renderPassCards() {
-  const bathroomObj = activeSessionData.bathroom || {};
-  const hallObj = activeSessionData.hallPass || {};
+// Bulk Actions & CSV Export
+function setupBulkActions() {
+  const btnCheckoutAll = document.getElementById("btn-checkout-all");
+  const btnExport = document.getElementById("btn-export-csv");
+  const btnClear = document.getElementById("btn-clear-logs");
 
-  // Bathroom Card
-  const bathBadge = document.getElementById('bathroom-count-badge');
-  const bathList = document.getElementById('bathroom-active-list');
-  const bathKeys = Object.keys(bathroomObj);
+  if (btnCheckoutAll) {
+    btnCheckoutAll.onclick = async () => {
+      const entries = Object.entries(checkedInPhones);
+      if (entries.length === 0) return;
 
-  bathBadge.textContent = `${bathKeys.length}/${APP_CONFIG.maxBathroomPasses} Out`;
-
-  if (bathKeys.length === 0) {
-    bathList.innerHTML = `<p class="text-xs text-slate-500 italic">No students out on bathroom pass.</p>`;
-  } else {
-    bathList.innerHTML = bathKeys.map(k => {
-      const item = bathroomObj[k];
-      const elapsedMins = Math.floor((Date.now() - item.timestamp) / 60000);
-      return `
-        <div class="bg-rose-950/30 border border-rose-500/40 rounded-xl p-2.5 flex justify-between items-center text-xs">
-          <div>
-            <div class="font-bold text-white">${item.name}</div>
-            <div class="text-[10px] text-rose-300">Out at ${item.outTime} (${elapsedMins}m ago)</div>
-          </div>
-          <button onclick="window.returnPass('bathroom', '${k}')" class="bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-bold px-2 py-1 rounded transition">Return</button>
-        </div>
-      `;
-    }).join('');
+      if (confirm(`Are you sure you want to check out all ${entries.length} phones?`)) {
+        for (const [pocket, data] of entries) {
+          await remove(ref(db, `checkedInPhones/${pocket}`));
+          await push(ref(db, "logs"), {
+            timestamp: serverTimestamp(),
+            studentId: data.id,
+            studentName: `${data.firstName} ${data.lastName}`,
+            action: "PHONE_CHECKOUT",
+            details: `Bulk check-out from Pocket #${pocket}`
+          });
+        }
+      }
+    };
   }
 
-  // Hall Pass Card
-  const hallBadge = document.getElementById('hall-count-badge');
-  const hallList = document.getElementById('hall-active-list');
-  const hallKeys = Object.keys(hallObj);
+  if (btnExport) {
+    btnExport.onclick = () => {
+      const logs = Object.values(activityLogs);
+      if (logs.length === 0) {
+        alert("No log data available to export.");
+        return;
+      }
 
-  hallBadge.textContent = `${hallKeys.length}/${APP_CONFIG.maxHallPasses} Out`;
+      let csv = "Timestamp,Student ID,Student Name,Action,Details\n";
+      logs.forEach(l => {
+        const time = l.timestamp ? new Date(l.timestamp).toLocaleString() : "";
+        csv += `"${time}","${l.studentId || ''}","${l.studentName || ''}","${l.action || ''}","${l.details || ''}"\n`;
+      });
 
-  if (hallKeys.length === 0) {
-    hallList.innerHTML = `<p class="text-xs text-slate-500 italic">No students out on hall pass.</p>`;
-  } else {
-    hallList.innerHTML = hallKeys.map(k => {
-      const item = hallObj[k];
-      const elapsedMins = Math.floor((Date.now() - item.timestamp) / 60000);
-      return `
-        <div class="bg-purple-950/30 border border-purple-500/40 rounded-xl p-2.5 flex justify-between items-center text-xs">
-          <div>
-            <div class="font-bold text-white">${item.name}</div>
-            <div class="text-[10px] text-purple-300">Out at ${item.outTime} (${elapsedMins}m ago)</div>
-          </div>
-          <button onclick="window.returnPass('hallPass', '${k}')" class="bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-bold px-2 py-1 rounded transition">Return</button>
-        </div>
-      `;
-    }).join('');
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Chelan_Pass_Log_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+    };
+  }
+
+  if (btnClear) {
+    btnClear.onclick = async () => {
+      if (confirm("Are you sure you want to clear today's activity log? This cannot be undone.")) {
+        await remove(ref(db, "logs"));
+      }
+    };
   }
 }
 
-// Return Pass Handler
-window.returnPass = async function(type, key) {
-  const item = (activeSessionData[type] || {})[key];
-  if (!item) return;
-
-  const durationSecs = Math.round((Date.now() - item.timestamp) / 1000);
-  const durationStr = formatDuration(durationSecs);
-  const detailsCode = type === 'bathroom' ? 'BP-I' : 'HP-I';
-  const typeLabel = type === 'bathroom' ? 'Bathroom' : 'Hall Pass';
-
-  await remove(ref(db, `activeSession/${type}/${key}`));
-  await push(ref(db, 'logs'), {
-    date: formatDate(),
-    time: formatTime(),
-    id: item.id,
-    name: item.name,
-    type: typeLabel,
-    duration: durationStr,
-    details: detailsCode
-  });
-};
-
-// Handle Quick Add Student
-async function handleQuickAddStudent() {
-  const id = document.getElementById('qa-id').value.trim();
-  const firstName = document.getElementById('qa-first').value.trim();
-  const lastName = document.getElementById('qa-last').value.trim();
-
-  if (!id || !firstName || !lastName) return;
-
-  await set(ref(db, `roster/${id}`), {
-    id,
-    firstName,
-    lastName
-  });
-
-  document.getElementById('qa-id').value = '';
-  document.getElementById('qa-first').value = '';
-  document.getElementById('qa-last').value = '';
-
-  alert(`Added ${firstName} ${lastName} (ID: ${id}) to roster!`);
+// Helper: Duration Formatter
+function formatDuration(seconds) {
+  if (seconds < 60) return `${seconds}s`;
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}m ${secs}s`;
 }
-
-// Render Right Column: 5-Column Running Log Table
-function renderLogsTable() {
-  const tbody = document.getElementById('running-log-tbody');
-  const logsList = Object.values(logsData).reverse(); // Most recent first
-
-  const filteredLogs = logsList.filter(log => {
-    if (!logSearchQuery) return true;
-    const matchName = (log.name || '').toLowerCase().includes(logSearchQuery);
-    const matchId = (log.id || '').toLowerCase().includes(logSearchQuery);
-    const matchDetails = (log.details || '').toLowerCase().includes(logSearchQuery);
-    const matchType = (log.type || '').toLowerCase().includes(logSearchQuery);
-    return matchName || matchId || matchDetails || matchType;
-  });
-
-  if (filteredLogs.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-500 italic">No matching log entries.</td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = filteredLogs.map(log => {
-    let actionBadge = `<span class="bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded text-[10px] font-bold">Phone</span>`;
-    if (log.type === 'Bathroom') {
-      actionBadge = `<span class="bg-rose-500/20 text-rose-400 px-1.5 py-0.5 rounded text-[10px] font-bold">Bathroom</span>`;
-    } else if (log.type === 'Hall Pass') {
-      actionBadge = `<span class="bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded text-[10px] font-bold">Hall Pass</span>`;
-    }
-
-    return `
-      <tr class="hover:bg-slate-800/50 transition">
-        <td class="py-2 px-3 text-slate-400">${log.time}</td>
-        <td class="py-2 px-3 font-semibold text-white">${log.name}</td>
-        <td class="py-2 px-3">${actionBadge}</td>
-        <td class="py-2 px-3 text-slate-300">${log.duration || '--'}</td>
-        <td class="py-2 px-3 text-amber-400 font-bold">${log.details}</td>
-      </tr>
-    `;
-  }).join('');
-}
-
-// Calculate & Update Daily Metrics
-function updateMetrics() {
-  const logsList = Object.values(logsData);
-  const checkInsCount = logsList.filter(l => l.details && l.details.startsWith('CI-')).length;
-  const passTripsCount = logsList.filter(l => l.details === 'BP-O' || l.details === 'HP-O').length;
-
-  // Peak Hour Calculation
-  const hourCounts = {};
-  logsList.forEach(l => {
-    if (l.time) {
-      const hourStr = l.time.split(':')[0] + ' ' + (l.time.includes('AM') ? 'AM' : 'PM');
-      hourCounts[hourStr] = (hourCounts[hourStr] || 0) + 1;
-    }
-  });
-
-  let peakHour = '--';
-  let maxCount = 0;
-  Object.keys(hourCounts).forEach(h => {
-    if (hourCounts[h] > maxCount) {
-      maxCount = hourCounts[h];
-      peakHour = h;
-    }
-  });
-
-  document.getElementById('metric-checkins').textContent = checkInsCount;
-  document.getElementById('metric-trips').textContent = passTripsCount;
-  document.getElementById('metric-peak').textContent = peakHour;
-}
-
-// Clear Logs Handler
-async function handleClearLogs() {
-  await remove(ref(db, 'logs'));
-  document.getElementById('clear-confirm-modal').classList.add('hidden');
-}
-
-// CSV Export Handler with Code Key Legend
-function handleExportCSV() {
-  const logsList = Object.values(logsData);
-  if (logsList.length === 0) {
-    alert("No log data available to export.");
-    return;
-  }
-
-  let csvContent = "data:text/csv;charset=utf-8,";
-  csvContent += "Date,Time,ID,Name,Type,Duration,Details\n";
-
-  logsList.forEach(l => {
-    const row = [
-      `"${l.date || ''}"`,
-      `"${l.time || ''}"`,
-      `"${l.id || ''}"`,
-      `"${l.name || ''}"`,
-      `"${l.type || ''}"`,
-      `"${l.duration || '--'}"`,
-      `"${l.details || ''}"`
-    ].join(",");
-    csvContent += row + "\n";
-  });
-
-  // Append Legend Code Key
-  csvContent += "\n";
-  csvContent += "Code Key Legend\n";
-  csvContent += "Code,Description\n";
-  csvContent += "CI-XX,Check In (Pocket XX)\n";
-  csvContent += "COS,Check Out Standard\n";
-  csvContent += "COA,Check Out All\n";
-  csvContent += "COED,Check Out End of Day\n";
-  csvContent += "BP-O,Bathroom Pass Out\n";
-  csvContent += "BP-I,Bathroom Pass In\n";
-  csvContent += "HP-O,Hall Pass Out\n";
-  csvContent += "HP-I,Hall Pass In\n";
-
-  const encodedUri = encodeURI(csvContent);
-  const link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
-  link.setAttribute("download", `Chelan_Pass_Log_${formatDate().replace(/\//g, '-')}.csv`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-}
-
-// Execute Authentication Check on Load
-checkAuthentication();
