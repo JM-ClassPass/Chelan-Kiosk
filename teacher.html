@@ -3,273 +3,182 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chelan High - Live Dashboard</title>
+  <title>Chelan High School - Live Teacher Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <style>
-    /* Top-Down 2-Column Fill Container */
-    .student-grid-topdown {
-      columns: 2;
-      column-gap: 0.75rem;
-    }
-    .student-card-item {
-      break-inside: avoid;
-      margin-bottom: 0.75rem;
-    }
-  </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans overflow-x-hidden">
+<body class="bg-[#f0f4f8] min-h-screen flex flex-col font-sans text-slate-800 antialiased select-none">
 
-  <!-- Password Access Authentication Modal -->
-  <div id="auth-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-6">
-    <div class="bg-slate-800 border border-slate-700 rounded-3xl p-8 max-w-md w-full shadow-2xl text-center">
-      <div class="text-amber-400 text-5xl mb-3"><i class="fa-solid fa-lock"></i></div>
-      <h2 class="text-2xl font-extrabold text-white mb-1">Teacher Authentication</h2>
-      <p class="text-sm text-slate-400 mb-6">Enter password to access Live Dashboard</p>
-
-      <form id="auth-form" onsubmit="return false;">
-        <input 
-          type="password" 
-          id="auth-password" 
-          class="w-full bg-slate-900 border border-slate-600 text-white text-xl text-center py-3 rounded-xl mb-4 focus:outline-none focus:border-emerald-500 font-mono tracking-widest"
-          placeholder="••••••••••••"
-          autofocus 
-        />
-        <button type="submit" id="auth-submit-btn" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl shadow-lg transition">
-          Unlock Dashboard
-        </button>
-      </form>
-      <p id="auth-error" class="text-rose-400 text-xs mt-3 hidden font-semibold">Incorrect Password. Please try again.</p>
-    </div>
-  </div>
-
-  <!-- Header Navigation Bar -->
-  <header class="bg-slate-800 border-b border-slate-700 px-6 py-3 shadow-lg flex justify-between items-center sticky top-0 z-30">
-    <!-- Branding & Versioning -->
-    <div class="flex items-center gap-4">
-      <div class="bg-amber-500 text-slate-900 font-extrabold px-3 py-1.5 rounded-lg text-xl flex items-center gap-2">
-        <i class="fa-solid fa-paw"></i>
-        <span>CHELAN</span>
-      </div>
+  <!-- Dark Forest Green Header Bar -->
+  <header class="bg-[#0B4F2C] text-white px-6 py-3 shadow-md flex justify-between items-center z-30">
+    <!-- Left: Logo, Title, Subtitle & Version -->
+    <div class="flex items-center gap-3">
+      <img 
+        src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" 
+        alt="Chelan High School Logo" 
+        class="h-10 w-auto object-contain"
+      />
       <div>
-        <h1 class="text-xl font-bold text-white leading-tight">Chelan High School</h1>
-        <div class="flex items-center gap-2 mt-0.5">
-          <span id="dash-version" class="bg-slate-700 text-amber-400 text-xs font-semibold px-2 py-0.5 rounded-full border border-slate-600">v1.1.10</span>
-          <span id="dash-room" class="text-xs text-slate-400 font-medium">ROOM 176</span>
-        </div>
+        <h1 class="text-base font-extrabold tracking-wide uppercase leading-none">CHELAN HIGH SCHOOL</h1>
+        <p class="text-xs text-emerald-200 font-medium mt-0.5">Live Teacher Control Center</p>
+        <p class="text-[10px] text-amber-300 font-mono font-bold leading-tight mt-0.5">v1.1.10</p>
       </div>
     </div>
 
-    <!-- Navigation Tab Buttons -->
-    <nav class="flex items-center gap-2 bg-slate-900 p-1.5 rounded-xl border border-slate-700">
-      <a href="teacher.html" class="bg-slate-700 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center gap-2">
-        <i class="fa-solid fa-gauge-high text-emerald-400"></i> Live Dashboard
+    <!-- Center Navigation Tabs -->
+    <nav class="hidden md:flex items-center gap-1 bg-[#07381e] p-1.5 rounded-xl border border-emerald-600/30">
+      <a href="teacher.html" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-[#0B4F2C] text-white shadow-sm border border-emerald-500/30 flex items-center gap-1.5">
+        <i class="fa-solid fa-gauge text-emerald-300"></i> Live Dashboard
       </a>
-      <a href="roster.html" class="text-slate-400 hover:text-white px-4 py-2 rounded-lg font-bold text-sm transition flex items-center gap-2">
-        <i class="fa-solid fa-users"></i> Manage Roster
+      <a href="roster.html" class="px-3.5 py-1.5 rounded-lg text-xs font-bold text-emerald-100 hover:text-white hover:bg-emerald-800/50 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-users text-emerald-300"></i> Manage Roster
       </a>
-      <a href="index.html" class="text-slate-400 hover:text-white px-4 py-2 rounded-lg font-bold text-sm transition flex items-center gap-2">
-        <i class="fa-solid fa-desktop"></i> Kiosk View
+      <a href="index.html" target="_blank" class="px-3.5 py-1.5 rounded-lg text-xs font-bold text-emerald-100 hover:text-white hover:bg-emerald-800/50 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-expand text-emerald-300"></i> Kiosk View <i class="fa-solid fa-arrow-up-right-from-square text-[10px] opacity-70"></i>
       </a>
     </nav>
 
-    <!-- Live Clock & Status -->
-    <div class="text-right">
-      <div id="dash-clock" class="text-2xl font-mono font-bold text-emerald-400">00:00:00 AM</div>
-      <div class="text-xs text-slate-400 font-medium uppercase tracking-wider">Teacher Station</div>
+    <!-- Right: Room & Clock -->
+    <div class="flex items-center gap-3">
+      <div class="text-right pl-3 border-l border-emerald-700/60 flex flex-col justify-center">
+        <div id="dashboard-clock" class="text-base font-mono font-bold tracking-tight">00:00:00 PM</div>
+        <div id="dashboard-room" class="text-[10px] text-emerald-200 font-bold uppercase tracking-wider">TEACHER STATION &bull; ROOM 176</div>
+      </div>
     </div>
   </header>
 
-  <!-- Dashboard Workspace Layout (3 Main Columns) -->
-  <main class="flex-1 max-w-[1800px] w-full mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+  <!-- Dashboard Grid Canvas -->
+  <main class="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-    <!-- LEFT COLUMN: Currently In Room (4 Cols) -->
-    <section class="lg:col-span-4 bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 flex flex-col shadow-xl">
-      <!-- Section Header Controls -->
-      <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-700">
-        <div class="flex items-center gap-2">
-          <h2 class="text-lg font-bold text-white flex items-center gap-2">
-            <i class="fa-solid fa-user-check text-emerald-400"></i> Currently In Room
-          </h2>
-          <span id="in-room-count-badge" class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-bold px-2 py-0.5 rounded-full">0 Students</span>
-        </div>
-        <button id="check-out-all-btn" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5">
-          <i class="fa-solid fa-right-from-bracket"></i> Check Out All
-        </button>
-      </div>
+      <!-- ================= COLUMN 1: PHONES IN ROOM (4 cols) ================= -->
+      <section class="lg:col-span-4 flex flex-col gap-4">
+        <div class="bg-white rounded-3xl p-5 shadow-sm border border-slate-200 flex flex-col h-full">
+          
+          <!-- Column Header -->
+          <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-xl bg-emerald-100 text-[#0B4F2C] flex items-center justify-center font-bold text-lg">
+                <i class="fa-solid fa-mobile-screen"></i>
+              </div>
+              <div>
+                <h2 class="text-base font-extrabold text-slate-800 leading-tight">Checked-In Phones</h2>
+                <p class="text-xs text-slate-400 font-medium">In Storage Rack: <span id="dash-phone-count" class="font-bold text-[#0B4F2C]">0</span></p>
+              </div>
+            </div>
 
-      <!-- Sorting Controls -->
-      <div class="flex items-center gap-2 mb-4 text-xs">
-        <span class="text-slate-400 font-medium">Sort:</span>
-        <button id="sort-first-btn" class="bg-slate-700 text-white font-semibold px-2.5 py-1 rounded-md border border-slate-600">First</button>
-        <button id="sort-last-btn" class="bg-slate-800 text-slate-400 hover:text-white font-semibold px-2.5 py-1 rounded-md border border-slate-700">Last</button>
-        <button id="sort-pocket-btn" class="bg-slate-800 text-slate-400 hover:text-white font-semibold px-2.5 py-1 rounded-md border border-slate-700">Pocket #</button>
-      </div>
-
-      <!-- Top-Down 2-Column Card Container Grid -->
-      <div id="student-cards-container" class="student-grid-topdown flex-1 overflow-y-auto min-h-[400px] max-h-[700px] pr-1">
-        <!-- Student cards will be dynamically rendered here via teacher.js -->
-        <p class="text-slate-500 text-sm italic text-center py-8">No students checked in.</p>
-      </div>
-    </section>
-
-    <!-- MIDDLE COLUMN: Active Passes, Metrics & Quick Add (3 Cols) -->
-    <section class="lg:col-span-3 flex flex-col gap-5">
-
-      <!-- Bathroom Pass Card -->
-      <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 shadow-xl border-l-4 border-l-rose-500">
-        <div class="flex justify-between items-center mb-3">
-          <h3 class="text-md font-bold text-white flex items-center gap-2">
-            <i class="fa-solid fa-restroom text-rose-500"></i> Bathroom Pass
-          </h3>
-          <span id="bathroom-count-badge" class="bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-bold px-2 py-0.5 rounded-full">0/1 Out</span>
-        </div>
-        <div id="bathroom-active-list" class="space-y-2">
-          <p class="text-xs text-slate-500 italic">No students out on bathroom pass.</p>
-        </div>
-      </div>
-
-      <!-- Hall Pass Card -->
-      <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 shadow-xl border-l-4 border-l-purple-500">
-        <div class="flex justify-between items-center mb-3">
-          <h3 class="text-md font-bold text-white flex items-center gap-2">
-            <i class="fa-solid fa-ticket text-purple-400"></i> Hall Pass
-          </h3>
-          <span id="hall-count-badge" class="bg-purple-500/20 text-purple-400 border border-purple-500/30 text-xs font-bold px-2 py-0.5 rounded-full">0 Out</span>
-        </div>
-        <div id="hall-active-list" class="space-y-2">
-          <p class="text-xs text-slate-500 italic">No students out on hall pass.</p>
-        </div>
-      </div>
-
-      <!-- Daily Metrics Card -->
-      <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 shadow-xl">
-        <h3 class="text-sm font-bold text-slate-300 uppercase tracking-wider mb-3 flex items-center gap-2">
-          <i class="fa-solid fa-chart-simple text-amber-400"></i> Daily Stats
-        </h3>
-        <div class="grid grid-cols-3 gap-2 text-center">
-          <div class="bg-slate-900/60 p-2.5 rounded-xl border border-slate-700">
-            <div id="metric-checkins" class="text-xl font-bold text-emerald-400">0</div>
-            <div class="text-[10px] text-slate-400 font-semibold uppercase">Check-Ins</div>
+            <!-- Sort Bar -->
+            <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-[11px] font-bold">
+              <button id="sort-pocket" class="px-2 py-1 rounded-lg bg-white text-[#0B4F2C] shadow-xs">Slot</button>
+              <button id="sort-first" class="px-2 py-1 rounded-lg text-slate-600 hover:text-slate-900">First</button>
+              <button id="sort-last" class="px-2 py-1 rounded-lg text-slate-600 hover:text-slate-900">Last</button>
+            </div>
           </div>
-          <div class="bg-slate-900/60 p-2.5 rounded-xl border border-slate-700">
-            <div id="metric-trips" class="text-xl font-bold text-purple-400">0</div>
-            <div class="text-[10px] text-slate-400 font-semibold uppercase">Pass Trips</div>
+
+          <!-- Phone Rack List Container -->
+          <div id="phones-container" class="flex-1 space-y-2.5 overflow-y-auto max-h-[620px] pr-1">
+            <!-- Dynamically populated by teacher.js -->
           </div>
-          <div class="bg-slate-900/60 p-2.5 rounded-xl border border-slate-700">
-            <div id="metric-peak" class="text-xl font-bold text-amber-400">--</div>
-            <div class="text-[10px] text-slate-400 font-semibold uppercase">Peak Time</div>
+
+          <!-- Bottom Action: Return All -->
+          <div class="pt-4 border-t border-slate-100 mt-4">
+            <button id="btn-checkout-all" type="button" class="w-full bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-700 font-bold py-2.5 rounded-xl border border-slate-200 hover:border-rose-300 text-xs transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-arrow-right-from-bracket"></i> Check Out All Phones
+            </button>
+          </div>
+
+        </div>
+      </section>
+
+
+      <!-- ================= COLUMN 2: PASSES & QUICK TOOLS (4 cols) ================= -->
+      <section class="lg:col-span-4 flex flex-col gap-6">
+
+        <!-- Bathroom Pass Card (Rose Accent) -->
+        <div class="bg-white rounded-3xl p-5 shadow-sm border-l-8 border-l-rose-700 border-y border-r border-slate-200">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-restroom text-rose-700 text-lg"></i>
+              <h3 class="text-sm font-extrabold text-slate-800">Bathroom Passes Out</h3>
+            </div>
+            <span id="dash-bathroom-count" class="bg-rose-100 text-rose-800 text-xs font-bold px-2.5 py-0.5 rounded-full border border-rose-200">0/1</span>
+          </div>
+
+          <div id="bathroom-pass-container" class="space-y-2">
+            <!-- Dynamically populated -->
           </div>
         </div>
-      </div>
 
-      <!-- Quick Add Student Card (Single Horizontal Row) -->
-      <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 shadow-xl">
-        <h3 class="text-sm font-bold text-slate-300 uppercase tracking-wider mb-3 flex items-center gap-2">
-          <i class="fa-solid fa-user-plus text-emerald-400"></i> Quick Add Student
-        </h3>
-        <form id="quick-add-form" onsubmit="return false;" class="flex gap-2 items-center">
-          <input 
-            type="text" 
-            id="qa-id" 
-            placeholder="ID" 
-            class="w-20 bg-slate-900 border border-slate-700 text-amber-400 font-mono text-xs p-2 rounded-lg focus:outline-none focus:border-emerald-500" 
-            required 
-          />
-          <input 
-            type="text" 
-            id="qa-first" 
-            placeholder="First" 
-            class="flex-1 bg-slate-900 border border-slate-700 text-white text-xs p-2 rounded-lg focus:outline-none focus:border-emerald-500" 
-            required 
-          />
-          <input 
-            type="text" 
-            id="qa-last" 
-            placeholder="Last" 
-            class="flex-1 bg-slate-900 border border-slate-700 text-white text-xs p-2 rounded-lg focus:outline-none focus:border-emerald-500" 
-            required 
-          />
-          <button type="submit" id="qa-submit-btn" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-2 rounded-lg transition shadow">
-            <i class="fa-solid fa-plus"></i>
-          </button>
-        </form>
-      </div>
+        <!-- Hall Pass Card (Indigo Accent) -->
+        <div class="bg-white rounded-3xl p-5 shadow-sm border-l-8 border-l-indigo-700 border-y border-r border-slate-200">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-ticket text-indigo-700 text-lg"></i>
+              <h3 class="text-sm font-extrabold text-slate-800">Hall Passes Out</h3>
+            </div>
+            <span id="dash-hall-count" class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2.5 py-0.5 rounded-full border border-indigo-200">0</span>
+          </div>
 
-    </section>
-
-    <!-- RIGHT COLUMN: Running Log (5 Cols) -->
-    <section class="lg:col-span-5 bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 flex flex-col shadow-xl">
-      <!-- Running Log Header & Action Buttons -->
-      <div class="flex justify-between items-center mb-3">
-        <h2 class="text-lg font-bold text-white flex items-center gap-2">
-          <i class="fa-solid fa-clock-rotate-left text-amber-400"></i> Running Log
-        </h2>
-        <div class="flex gap-2">
-          <button id="export-csv-btn" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5">
-            <i class="fa-solid fa-file-csv"></i> CSV Export
-          </button>
-          <button id="clear-log-btn" class="bg-rose-900/50 hover:bg-rose-800/70 text-rose-300 border border-rose-700/60 text-xs font-bold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5">
-            <i class="fa-solid fa-trash-can"></i> Clear
-          </button>
+          <div id="hall-pass-container" class="space-y-2">
+            <!-- Dynamically populated -->
+          </div>
         </div>
-      </div>
 
-      <!-- Real-Time Filter Search Input -->
-      <div class="mb-3">
-        <div class="relative">
-          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
-          <input 
-            type="text" 
-            id="log-search-input" 
-            placeholder="Search logs by student or action..." 
-            class="w-full bg-slate-900 border border-slate-700 text-xs text-white pl-8 pr-3 py-2 rounded-xl focus:outline-none focus:border-emerald-500" 
-          />
+        <!-- Class Quick Stats -->
+        <div class="bg-white rounded-3xl p-5 shadow-sm border border-slate-200 flex-1 flex flex-col justify-between">
+          <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-wider mb-3">Today's Class Summary</h3>
+          
+          <div class="grid grid-cols-2 gap-3">
+            <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+              <span class="text-[10px] font-bold text-slate-400 block uppercase">Total Check-Ins</span>
+              <span id="stat-checkins" class="text-xl font-extrabold text-[#0B4F2C]">0</span>
+            </div>
+            <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+              <span class="text-[10px] font-bold text-slate-400 block uppercase">Pass Trips Taken</span>
+              <span id="stat-trips" class="text-xl font-extrabold text-indigo-700">0</span>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <!-- 5-Column Running Log Table -->
-      <div class="flex-1 overflow-x-auto max-h-[600px] border border-slate-700 rounded-xl">
-        <table class="w-full text-left text-xs text-slate-300">
-          <thead class="bg-slate-900 text-slate-400 uppercase font-semibold text-[10px] sticky top-0 border-b border-slate-700">
-            <tr>
-              <th class="py-2.5 px-3">Time</th>
-              <th class="py-2.5 px-3">Student</th>
-              <th class="py-2.5 px-3">Action</th>
-              <th class="py-2.5 px-3">Duration</th>
-              <th class="py-2.5 px-3">Details</th>
-            </tr>
-          </thead>
-          <tbody id="running-log-tbody" class="divide-y divide-slate-700/60 font-mono">
-            <!-- Log entries will render here dynamically -->
-            <tr>
-              <td colspan="5" class="py-8 text-center text-slate-500 italic">No log entries recorded today.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
+      </section>
 
+
+      <!-- ================= COLUMN 3: RUNNING ACTIVITY LOG (4 cols) ================= -->
+      <section class="lg:col-span-4 flex flex-col">
+        <div class="bg-white rounded-3xl p-5 shadow-sm border border-slate-200 flex flex-col h-full">
+          
+          <!-- Header & Actions -->
+          <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-clock-rotate-left text-[#0B4F2C] text-base"></i>
+              <h2 class="text-base font-extrabold text-slate-800">Live Activity Feed</h2>
+            </div>
+            
+            <div class="flex items-center gap-1.5">
+              <button id="btn-export-csv" type="button" title="Export Activity to CSV" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition">
+                <i class="fa-solid fa-download"></i>
+              </button>
+              <button id="btn-clear-logs" type="button" title="Clear Logs" class="p-2 rounded-xl bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-700 text-xs font-bold transition">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Log List -->
+          <div id="activity-log-container" class="flex-1 space-y-2.5 overflow-y-auto max-h-[620px] pr-1">
+            <!-- Dynamically populated -->
+          </div>
+
+        </div>
+      </section>
+
+    </div>
   </main>
 
-  <!-- Clear Log Pop-Up Confirmation Modal -->
-  <div id="clear-confirm-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md hidden flex items-center justify-center p-6 z-50">
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl">
-      <div class="text-rose-500 text-4xl mb-3"><i class="fa-solid fa-triangle-exclamation"></i></div>
-      <h3 class="text-xl font-bold text-white mb-2">Clear Running Log?</h3>
-      <p class="text-xs text-slate-300 mb-6">Are you sure you want to permanently clear all log history? This action cannot be undone.</p>
-      <div class="flex gap-3">
-        <button id="clear-cancel-btn" class="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 py-2 rounded-xl font-bold text-xs">Cancel</button>
-        <button id="clear-confirm-btn" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white py-2 rounded-xl font-bold text-xs">Yes, Clear All</button>
-      </div>
-    </div>
-  </div>
-
-  <footer class="text-center py-3 text-xs text-slate-500">
-    Chelan High School Classroom Pass System &bull; Live Teacher Dashboard
+  <footer class="text-center py-3 text-xs text-slate-400 font-medium">
+    Chelan High School Classroom Pass System &bull; Powered by Firebase
   </footer>
 
-  <!-- Script Module Import -->
   <script type="module" src="teacher.js"></script>
 </body>
 </html>
