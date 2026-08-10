@@ -212,18 +212,16 @@
             }
         };
 
-        // Roster Search Helper (Fixes string vs integer ID mismatch issues)
+        // Roster Search Helper
         function findStudentInRoster(inputId) {
             if (!roster || !inputId) return null;
 
             const cleanInput = String(inputId).trim();
 
-            // 1. Direct Object Key match
             if (roster[cleanInput]) {
                 return { id: cleanInput, data: roster[cleanInput] };
             }
 
-            // 2. Iterate keys to catch type casting or nested studentId field mismatches
             const keys = Object.keys(roster);
             for (let i = 0; i < keys.length; i++) {
                 const key = keys[i];
@@ -235,7 +233,6 @@
                 if (student.studentId && String(student.studentId).trim() === cleanInput) {
                     return { id: key, data: student };
                 }
-                // Check without leading zeros if barcodes contain padded zeros
                 if (String(key).replace(/^0+/, '') === cleanInput.replace(/^0+/, '')) {
                     return { id: key, data: student };
                 }
@@ -395,7 +392,7 @@
             }, durationMs);
         }
 
-        // Helper to handle pass rejection: clear ID input & set error message
+        // Helper to handle pass rejection
         function handlePassDenial(errorMsg) {
             document.getElementById('id-error').textContent = errorMsg;
             const input = document.getElementById('student-id');
@@ -422,7 +419,6 @@
                 }
                 studentName = `${fname} ${lname}`;
 
-                // Send for teacher approval using pending roster node
                 set(ref(db, `pending_roster_approvals/${studentId}`), {
                     firstName: fname,
                     lastName: lname,
@@ -459,10 +455,8 @@
                 }
             }
 
-            // Mode Execution with Standard Descriptive Actions and Nomenclature Codes
             if (currentMode === 'phone') {
                 if (activePhones[studentId]) {
-                    // CHECKOUT PHONE (COS)
                     remove(ref(db, `active_phones_in_class/${studentId}`));
                     remove(ref(db, `active_bathroom_passes/${studentId}`));
                     remove(ref(db, `active_hall_passes/${studentId}`));
@@ -473,7 +467,6 @@
 
                     triggerFlashConfirmation('COS', `${studentName} - Phone Checked Out`, '📱');
                 } else {
-                    // CHECKIN PHONE (CI-XX)
                     const slotFormatted = String(selectedSlot).padStart(2, '0');
                     const codeStr = `CI-${slotFormatted}`;
                     
@@ -491,12 +484,10 @@
                 }
             } else if (currentMode === 'bathroom') {
                 if (activeBathroom[studentId]) {
-                    // Return Bathroom Pass (BP-I)
                     remove(ref(db, `active_bathroom_passes/${studentId}`));
                     push(ref(db, 'system_logs'), { studentId, name: studentName, code: 'BP-I', action: "Bathroom Pass Return", timestamp: Date.now() });
                     triggerFlashConfirmation('BP-I', `Welcome back, ${studentName}!`, '🚻');
                 } else {
-                    // Pass Validation Rules
                     if (!activePhones[studentId]) {
                         handlePassDenial("⚠️ Phone must be checked in to take a pass!");
                         return;
@@ -510,7 +501,6 @@
                         return;
                     }
 
-                    // Issue Bathroom Pass (BP-O)
                     set(ref(db, `active_bathroom_passes/${studentId}`), {
                         studentName: studentName, timestamp: Date.now()
                     });
@@ -519,12 +509,10 @@
                 }
             } else if (currentMode === 'hall') {
                 if (activeHall[studentId]) {
-                    // Return Hall Pass (HP-I)
                     remove(ref(db, `active_hall_passes/${studentId}`));
                     push(ref(db, 'system_logs'), { studentId, name: studentName, code: 'HP-I', action: "Hall Pass Return", timestamp: Date.now() });
                     triggerFlashConfirmation('HP-I', `Welcome back, ${studentName}!`, '🎟️');
                 } else {
-                    // Pass Validation Rules
                     if (!activePhones[studentId]) {
                         handlePassDenial("⚠️ Phone must be checked in to take a pass!");
                         return;
@@ -534,7 +522,6 @@
                         return;
                     }
 
-                    // Issue Hall Pass (HP-O)
                     set(ref(db, `active_hall_passes/${studentId}`), {
                         studentName: studentName, timestamp: Date.now()
                     });
