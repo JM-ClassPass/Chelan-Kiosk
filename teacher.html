@@ -107,7 +107,7 @@
                     </div>
                 </div>
 
-                <!-- Tools / Quick Add Form -->
+                <!-- Quick Add Form -->
                 <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between min-h-[160px]">
                     <h3 class="font-bold text-sm flex items-center gap-2 text-slate-700 mb-1"><span>🛠️</span> Quick Add Student</h3>
                     <form id="quick-add-form" class="flex flex-col gap-1.5">
@@ -187,8 +187,8 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // Bind quick add form listener directly
-        document.getElementById('quick-add-form').addEventListener('submit', async (e) => {
+        // Robust submit handling
+        document.getElementById('quick-add-form').addEventListener('submit', (e) => {
             e.preventDefault();
             const btn = document.getElementById('add-btn');
             const id = document.getElementById('add-student-id').value.trim();
@@ -200,16 +200,29 @@
             btn.disabled = true;
             btn.textContent = "Saving...";
 
-            try {
-                await set(ref(db, `classroom_roster/${id}`), { firstName: f, lastName: l });
+            // Timeout safety net
+            const timeout = setTimeout(() => {
+                btn.disabled = false;
+                btn.textContent = "+ Add to Roster";
+            }, 3000);
+
+            set(ref(db, 'classroom_roster/' + id), {
+                firstName: f,
+                lastName: l
+            }).then(() => {
+                clearTimeout(timeout);
                 document.getElementById('quick-add-form').reset();
-                btn.textContent = "✓ Added!";
-                setTimeout(() => { btn.textContent = "+ Add to Roster"; btn.disabled = false; }, 1500);
-            } catch (err) {
-                alert("Error saving student: " + err.message);
+                btn.textContent = "✓ Saved!";
+                setTimeout(() => {
+                    btn.textContent = "+ Add to Roster";
+                    btn.disabled = false;
+                }, 1200);
+            }).catch((err) => {
+                clearTimeout(timeout);
+                alert("Database Error: " + err.message);
                 btn.textContent = "+ Add to Roster";
                 btn.disabled = false;
-            }
+            });
         });
 
         onValue(ref(db, 'active_phones_in_class'), s => renderPhones(s.val() || {}));
