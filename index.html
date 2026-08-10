@@ -6,497 +6,129 @@
   <title>Chelan High - Student Kiosk</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <style>
-    .keypad-btn {
-      @apply bg-slate-700 hover:bg-slate-600 active:bg-slate-500 text-white font-bold text-2xl py-4 rounded-xl transition duration-150 shadow-md border border-slate-600 select-none;
-    }
-    .action-mode-btn {
-      @apply flex-1 py-4 px-3 rounded-xl font-bold text-lg transition duration-200 shadow-md border flex items-center justify-center gap-2 select-none cursor-pointer;
-    }
-  </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between font-sans overflow-x-hidden">
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col font-sans overflow-x-hidden select-none">
 
-  <!-- Header Bar -->
-  <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 shadow-lg flex justify-between items-center">
+  <!-- Header Navigation Bar -->
+  <header class="bg-white border-b border-slate-200 px-6 py-3 shadow-sm flex justify-between items-center sticky top-0 z-30">
+    <!-- Official Chelan High Logo & Room Info -->
     <div class="flex items-center gap-4">
-      <div class="bg-amber-500 text-slate-900 font-extrabold px-3 py-1.5 rounded-lg text-xl flex items-center gap-2">
-        <i class="fa-solid fa-paw"></i>
-        <span>CHELAN</span>
-      </div>
-      <div>
-        <h1 class="text-xl font-bold text-white leading-tight">Chelan High School</h1>
+      <img 
+        src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" 
+        alt="Chelan High School" 
+        class="h-10 w-auto object-contain"
+      />
+      <div class="border-l border-slate-200 pl-4 hidden sm:block">
+        <h1 class="text-base font-bold text-slate-900 leading-tight">Student Pass & Phone Kiosk</h1>
         <div class="flex items-center gap-2 mt-0.5">
-          <span id="kiosk-version" class="bg-slate-700 text-amber-400 text-xs font-semibold px-2 py-0.5 rounded-full border border-slate-600">v1.1.10</span>
-          <span id="kiosk-room" class="text-xs text-slate-400 font-medium">ROOM 176</span>
+          <span id="kiosk-version" class="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-300">v1.1.10</span>
+          <span id="kiosk-room" class="text-xs text-slate-500 font-semibold">ROOM 176</span>
         </div>
       </div>
     </div>
 
-    <div class="flex items-center gap-6">
+    <!-- Live Clock & Teacher Access Button -->
+    <div class="flex items-center gap-4">
       <div class="text-right">
-        <div id="kiosk-clock" class="text-2xl font-mono font-bold text-emerald-400">00:00:00 AM</div>
-        <div class="text-xs text-slate-400 font-medium uppercase tracking-wider">Kiosk Station Active</div>
+        <div id="kiosk-clock" class="text-xl font-mono font-extrabold text-emerald-600">00:00:00 AM</div>
+        <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Kiosk Active</div>
       </div>
-      <!-- PIN Admin Lock Icon -->
-      <button id="admin-lock-btn" class="bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white p-3 rounded-xl border border-slate-600 transition shadow" title="Teacher Setup / Exit Kiosk">
-        <i class="fa-solid fa-lock text-xl"></i>
-      </button>
+      <!-- Teacher Portal Shortcut -->
+      <a href="teacher.html" class="p-2.5 rounded-xl bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200 transition border border-slate-200" title="Teacher Access">
+        <i class="fa-solid fa-lock text-sm"></i>
+      </a>
     </div>
   </header>
 
-  <!-- Main Kiosk Workspace -->
-  <main class="flex-1 max-w-4xl w-full mx-auto p-6 flex flex-col justify-center items-center gap-6">
-    
-    <!-- Action Mode Selection Tabs -->
-    <div class="w-full max-w-xl flex gap-3">
-      <button id="mode-phone" class="action-mode-btn bg-emerald-600 border-emerald-500 text-white shadow-emerald-900/50">
-        <i class="fa-solid fa-mobile-screen"></i> Phone Check-In / Out
-      </button>
-      <button id="mode-bathroom" class="action-mode-btn bg-slate-800 border-slate-700 text-slate-400 hover:text-white">
-        <i class="fa-solid fa-restroom"></i> Bathroom Pass
-      </button>
-      <button id="mode-hall" class="action-mode-btn bg-slate-800 border-slate-700 text-slate-400 hover:text-white">
-        <i class="fa-solid fa-ticket"></i> Hall Pass
-      </button>
-    </div>
+  <!-- Main Kiosk Workspace (Side-by-Side Layout) -->
+  <main class="flex-1 max-w-[1600px] w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-    <!-- Entry Card -->
-    <div class="w-full max-w-xl bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-2xl">
-      <div class="text-center mb-4">
-        <label id="input-label" for="id-input" class="text-slate-300 text-lg font-semibold block mb-1">
-          Scan Barcode or Enter Student ID
-        </label>
-        <p class="text-xs text-slate-400">Position barcode under reader or tap numbers below</p>
+    <!-- LEFT PANEL: Action Tabs, Student ID Display & Keypad (5 Cols) -->
+    <section class="lg:col-span-5 bg-white border border-slate-200 rounded-3xl p-6 shadow-lg flex flex-col gap-5">
+      
+      <!-- 1. Mode Action Tabs -->
+      <div>
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">1. Select Action</label>
+        <div class="grid grid-cols-3 gap-2">
+          <button id="tab-phone" class="px-3 py-2.5 rounded-xl font-bold text-xs transition border border-emerald-500 bg-emerald-500 text-white shadow-md flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-mobile-screen"></i> Phone
+          </button>
+          <button id="tab-bathroom" class="px-3 py-2.5 rounded-xl font-bold text-xs transition border border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200 flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-restroom"></i> Bathroom
+          </button>
+          <button id="tab-hall" class="px-3 py-2.5 rounded-xl font-bold text-xs transition border border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200 flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-id-badge"></i> Hall Pass
+          </button>
+        </div>
       </div>
 
-      <!-- Secure Input Field (Privacy Enforcement) -->
-      <form id="kiosk-form" onsubmit="return false;" class="mb-6">
-        <div class="relative">
-          <input 
-            type="password" 
-            id="id-input" 
-            class="w-full bg-slate-900 border-2 border-emerald-500 text-amber-400 text-3xl font-mono font-bold tracking-widest text-center py-3 rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/30 transition shadow-inner"
-            placeholder="••••••"
-            autocomplete="off" 
-            autocorrect="off" 
-            spellcheck="false" 
-            autocapitalize="off" 
-            autofocus 
-          />
-          <button type="button" id="toggle-visibility" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+      <!-- 2. Student ID Input Display Box -->
+      <div>
+        <div class="flex justify-between items-center mb-1.5">
+          <label class="text-xs font-bold uppercase tracking-wider text-slate-400">2. Scan or Enter Student ID</label>
+          <button id="toggle-mask-btn" class="text-xs text-slate-400 hover:text-slate-600 transition" title="Toggle ID Masking">
             <i class="fa-solid fa-eye"></i>
           </button>
         </div>
-      </form>
-
-      <!-- On-Screen Keypad -->
-      <div class="grid grid-cols-3 gap-3">
-        <button class="keypad-btn" data-key="1">1</button>
-        <button class="keypad-btn" data-key="2">2</button>
-        <button class="keypad-btn" data-key="3">3</button>
-        <button class="keypad-btn" data-key="4">4</button>
-        <button class="keypad-btn" data-key="5">5</button>
-        <button class="keypad-btn" data-key="6">6</button>
-        <button class="keypad-btn" data-key="7">7</button>
-        <button class="keypad-btn" data-key="8">8</button>
-        <button class="keypad-btn" data-key="9">9</button>
-        <button id="key-clear" class="keypad-btn bg-rose-900/40 hover:bg-rose-800/60 text-rose-300 border-rose-800">Clear</button>
-        <button class="keypad-btn" data-key="0">0</button>
-        <button id="key-submit" class="keypad-btn bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500">Submit</button>
+        <div class="bg-slate-50 border-2 border-slate-300 rounded-2xl p-4 text-center shadow-inner flex items-center justify-center min-h-[64px]">
+          <span id="id-display" class="text-2xl font-mono tracking-widest text-slate-400 select-none">• • • • • •</span>
+        </div>
       </div>
-    </div>
+
+      <!-- 3. Keypad Number Buttons -->
+      <div class="grid grid-cols-3 gap-3">
+        <button id="btn-1" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-2xl font-bold py-3.5 rounded-2xl border border-slate-200 shadow-sm active:scale-95 transition">1</button>
+        <button id="btn-2" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-2xl font-bold py-3.5 rounded-2xl border border-slate-200 shadow-sm active:scale-95 transition">2</button>
+        <button id="btn-3" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-2xl font-bold py-3.5 rounded-2xl border border-slate-200 shadow-sm active:scale-95 transition">3</button>
+
+        <button id="btn-4" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-2xl font-bold py-3.5 rounded-2xl border border-slate-200 shadow-sm active:scale-95 transition">4</button>
+        <button id="btn-5" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-2xl font-bold py-3.5 rounded-2xl border border-slate-200 shadow-sm active:scale-95 transition">5</button>
+        <button id="btn-6" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-2xl font-bold py-3.5 rounded-2xl border border-slate-200 shadow-sm active:scale-95 transition">6</button>
+
+        <button id="btn-7" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-2xl font-bold py-3.5 rounded-2xl border border-slate-200 shadow-sm active:scale-95 transition">7</button>
+        <button id="btn-8" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-2xl font-bold py-3.5 rounded-2xl border border-slate-200 shadow-sm active:scale-95 transition">8</button>
+        <button id="btn-9" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-2xl font-bold py-3.5 rounded-2xl border border-slate-200 shadow-sm active:scale-95 transition">9</button>
+
+        <button id="btn-clear" class="bg-rose-100 hover:bg-rose-200 text-rose-700 text-sm font-bold py-3.5 rounded-2xl border border-rose-200 shadow-sm active:scale-95 transition">Clear</button>
+        <button id="btn-0" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-2xl font-bold py-3.5 rounded-2xl border border-slate-200 shadow-sm active:scale-95 transition">0</button>
+        <button id="btn-submit" class="bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-extrabold py-3.5 rounded-2xl shadow-md active:scale-95 transition flex items-center justify-center gap-1">
+          Submit <i class="fa-solid fa-arrow-right text-xs"></i>
+        </button>
+      </div>
+
+    </section>
+
+    <!-- RIGHT PANEL: Pocket Selector Grid (7 Cols) -->
+    <section class="lg:col-span-7 bg-white border border-slate-200 rounded-3xl p-6 shadow-lg flex flex-col">
+      <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
+        <div>
+          <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            <i class="fa-solid fa-border-all text-emerald-600"></i> Phone Pocket Grid (1–36)
+          </h2>
+          <p class="text-xs text-slate-500">Tap an open pocket to select it for phone check-in.</p>
+        </div>
+        <div class="flex items-center gap-3 text-xs font-semibold">
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span> Open</span>
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-slate-300 inline-block"></span> In Use</span>
+        </div>
+      </div>
+
+      <!-- Pocket Grid Container (Rendered by app.js) -->
+      <div id="pocket-grid" class="grid grid-cols-6 gap-2.5 sm:gap-3 flex-1">
+        <!-- Buttons 1-36 render here -->
+      </div>
+    </section>
+
   </main>
 
-  <!-- Confirmation Feedback Modal Overlay -->
-  <div id="feedback-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md hidden flex items-center justify-center p-6 z-50">
-    <div id="feedback-card" class="bg-slate-800 border-2 border-emerald-500 rounded-3xl p-8 max-w-md w-full text-center shadow-2xl transform scale-100 transition duration-200">
-      <div id="feedback-icon" class="text-6xl text-emerald-400 mb-4">
-        <i class="fa-solid fa-circle-check"></i>
-      </div>
-      <h2 id="feedback-title" class="text-3xl font-extrabold text-white mb-2">Success!</h2>
-      <p id="feedback-message" class="text-slate-300 text-xl font-medium mb-4">Jason Morin — Pocket #05 Assigned</p>
-      <div class="w-full bg-slate-700 h-2 rounded-full overflow-hidden">
-        <div id="feedback-progress" class="bg-emerald-400 h-full w-full transition-all duration-[3000ms] ease-linear"></div>
-      </div>
-    </div>
-  </div>
+  <!-- Toast Notification Overlay -->
+  <div id="kiosk-toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 px-6 py-3 rounded-2xl shadow-2xl font-bold text-sm border border-white/20 backdrop-blur-md transition-all duration-300 z-50 hidden opacity-0"></div>
 
-  <!-- Admin Security PIN Modal -->
-  <div id="pin-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md hidden flex items-center justify-center p-6 z-50">
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl">
-      <div class="text-amber-400 text-4xl mb-2"><i class="fa-solid fa-shield-halved"></i></div>
-      <h3 class="text-xl font-bold text-white mb-1">Teacher Access PIN Required</h3>
-      <p class="text-xs text-slate-400 mb-4">Enter 6-digit PIN to exit kiosk or access teacher settings</p>
-
-      <input 
-        type="password" 
-        id="pin-input" 
-        maxlength="6"
-        class="w-full bg-slate-900 border border-slate-600 text-amber-400 text-2xl font-mono text-center py-2 rounded-xl mb-4 focus:outline-none focus:border-amber-400"
-        placeholder="••••••"
-      />
-
-      <div class="flex gap-2">
-        <button id="pin-cancel-btn" class="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 py-2.5 rounded-xl font-bold">Cancel</button>
-        <button id="pin-submit-btn" class="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-900 py-2.5 rounded-xl font-bold">Unlock</button>
-      </div>
-
-      <div id="admin-nav-options" class="hidden mt-4 pt-4 border-t border-slate-700 flex flex-col gap-2">
-        <a href="teacher.html" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl block"><i class="fa-solid fa-gauge-high"></i> Go to Live Dashboard</a>
-        <a href="roster.html" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl block"><i class="fa-solid fa-users"></i> Go to Manage Roster</a>
-      </div>
-    </div>
-  </div>
-
-  <footer class="text-center py-3 text-xs text-slate-500">
-    Chelan High School Classroom Pass System &bull; Powered by Firebase Realtime DB
+  <footer class="text-center py-3 text-xs text-slate-400 font-medium">
+    Chelan High School Classroom Pass System &bull; Powered by Firebase
   </footer>
 
-  <!-- Firebase Logic Script -->
-  <script type="module">
-    import { APP_CONFIG, formatDuration, formatTime, formatDate } from './config.js';
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
-    import { 
-      getDatabase, ref, get, set, push, remove 
-    } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
-
-    // Initialize Firebase
-    const app = initializeApp(APP_CONFIG.firebaseConfig);
-    const db = getDatabase(app);
-
-    // Dynamic Header Info
-    document.getElementById('kiosk-version').textContent = APP_CONFIG.version;
-    document.getElementById('kiosk-room').textContent = APP_CONFIG.department;
-
-    // Live Clock
-    function updateClock() {
-      document.getElementById('kiosk-clock').textContent = formatTime(new Date());
-    }
-    setInterval(updateClock, 1000);
-    updateClock();
-
-    // Mode Selection Handling
-    let activeMode = 'phone'; // 'phone', 'bathroom', 'hall'
-    const btnPhone = document.getElementById('mode-phone');
-    const btnBathroom = document.getElementById('mode-bathroom');
-    const btnHall = document.getElementById('mode-hall');
-    const idInput = document.getElementById('id-input');
-
-    function setMode(mode) {
-      activeMode = mode;
-      btnPhone.className = mode === 'phone' ? 'action-mode-btn bg-emerald-600 border-emerald-500 text-white shadow-emerald-900/50' : 'action-mode-btn bg-slate-800 border-slate-700 text-slate-400 hover:text-white';
-      btnBathroom.className = mode === 'bathroom' ? 'action-mode-btn bg-rose-600 border-rose-500 text-white shadow-rose-900/50' : 'action-mode-btn bg-slate-800 border-slate-700 text-slate-400 hover:text-white';
-      btnHall.className = mode === 'hall' ? 'action-mode-btn bg-purple-600 border-purple-500 text-white shadow-purple-900/50' : 'action-mode-btn bg-slate-800 border-slate-700 text-slate-400 hover:text-white';
-      idInput.focus();
-    }
-
-    btnPhone.addEventListener('click', () => setMode('phone'));
-    btnBathroom.addEventListener('click', () => setMode('bathroom'));
-    btnHall.addEventListener('click', () => setMode('hall'));
-
-    // On-screen keypad clicks
-    document.querySelectorAll('.keypad-btn[data-key]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        idInput.value += btn.getAttribute('data-key');
-        idInput.focus();
-      });
-    });
-
-    document.getElementById('key-clear').addEventListener('click', () => {
-      idInput.value = '';
-      idInput.focus();
-    });
-
-    document.getElementById('toggle-visibility').addEventListener('click', function() {
-      idInput.type = idInput.type === 'password' ? 'text' : 'password';
-      this.querySelector('i').className = idInput.type === 'password' ? 'fa-solid fa-eye' : 'fa-solid fa-eye-slash';
-      idInput.focus();
-    });
-
-    document.getElementById('key-submit').addEventListener('click', () => processStudentEntry());
-    idInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') processStudentEntry();
-    });
-
-    // Student Transaction Processing
-    async function processStudentEntry() {
-      const studentId = idInput.value.trim();
-      idInput.value = '';
-      if (!studentId) return;
-
-      try {
-        // 1. Look up student in Firebase Roster
-        const rosterSnap = await get(ref(db, `roster/${studentId}`));
-        if (!rosterSnap.exists()) {
-          showFeedback('error', 'ID Not Found', `Student ID ${studentId} is not in the class roster.`);
-          return;
-        }
-
-        const student = rosterSnap.val();
-        const studentName = `${student.firstName} ${student.lastName}`;
-        const activeSnap = await get(ref(db, 'activeSession'));
-        const activeSession = activeSnap.exists() ? activeSnap.val() : { phones: {}, bathroom: {}, hallPass: {} };
-
-        if (activeMode === 'phone') {
-          await handlePhoneTransaction(studentId, studentName, activeSession.phones || {});
-        } else if (activeMode === 'bathroom') {
-          await handleBathroomTransaction(studentId, studentName, activeSession.bathroom || {});
-        } else if (activeMode === 'hall') {
-          await handleHallPassTransaction(studentId, studentName, activeSession.hallPass || {});
-        }
-
-        setMode('phone'); // Reset default mode to phone
-      } catch (err) {
-        console.error(err);
-        showFeedback('error', 'System Error', 'Unable to process transaction. Please try again.');
-      }
-    }
-
-    // Phone Handler
-    async function handlePhoneTransaction(studentId, studentName, activePhones) {
-      const existingKey = Object.keys(activePhones).find(k => activePhones[k].id === studentId);
-
-      if (existingKey) {
-        // CHECK-OUT (COS)
-        const record = activePhones[existingKey];
-        const durationSecs = Math.round((Date.now() - record.timestamp) / 1000);
-        const durationStr = formatDuration(durationSecs);
-
-        await remove(ref(db, `activeSession/phones/${existingKey}`));
-        await push(ref(db, 'logs'), {
-          date: formatDate(),
-          time: formatTime(),
-          id: studentId,
-          name: studentName,
-          type: 'Phone',
-          duration: durationStr,
-          details: 'COS'
-        });
-
-        showFeedback('success', 'Phone Checked Out', `${studentName} — Duration: ${durationStr}`);
-      } else {
-        // CHECK-IN (CI-XX)
-        const usedPockets = Object.values(activePhones).map(p => parseInt(p.pocket, 10));
-        let openPocket = null;
-        for (let i = 1; i <= APP_CONFIG.pocketsAvailable; i++) {
-          if (!usedPockets.includes(i)) {
-            openPocket = i < 10 ? `0${i}` : `${i}`;
-            break;
-          }
-        }
-
-        if (!openPocket) {
-          showFeedback('error', 'Pockets Full', 'All phone storage pockets are currently full!');
-          return;
-        }
-
-        const now = new Date();
-        await push(ref(db, 'activeSession/phones'), {
-          id: studentId,
-          name: studentName,
-          pocket: openPocket,
-          checkInTime: formatTime(now),
-          timestamp: now.getTime()
-        });
-
-        await push(ref(db, 'logs'), {
-          date: formatDate(),
-          time: formatTime(),
-          id: studentId,
-          name: studentName,
-          type: 'Phone',
-          duration: '--',
-          details: `CI-${openPocket}`
-        });
-
-        showFeedback('success', 'Phone Checked In', `${studentName} — Pocket #${openPocket} Assigned`);
-      }
-    }
-
-    // Bathroom Pass Handler
-    async function handleBathroomTransaction(studentId, studentName, activeBathroom) {
-      const existingKey = Object.keys(activeBathroom).find(k => activeBathroom[k].id === studentId);
-
-      if (existingKey) {
-        // RETURN (BP-I)
-        const record = activeBathroom[existingKey];
-        const durationSecs = Math.round((Date.now() - record.timestamp) / 1000);
-        const durationStr = formatDuration(durationSecs);
-
-        await remove(ref(db, `activeSession/bathroom/${existingKey}`));
-        await push(ref(db, 'logs'), {
-          date: formatDate(),
-          time: formatTime(),
-          id: studentId,
-          name: studentName,
-          type: 'Bathroom',
-          duration: durationStr,
-          details: 'BP-I'
-        });
-
-        showFeedback('success', 'Bathroom Return', `${studentName} — Returned (${durationStr})`);
-      } else {
-        // DEPARTURE (BP-O)
-        if (Object.keys(activeBathroom).length >= APP_CONFIG.maxBathroomPasses) {
-          showFeedback('error', 'Pass Limit Reached', `Max bathroom passes out (${APP_CONFIG.maxBathroomPasses}/${APP_CONFIG.maxBathroomPasses}).`);
-          return;
-        }
-
-        const now = new Date();
-        await push(ref(db, 'activeSession/bathroom'), {
-          id: studentId,
-          name: studentName,
-          outTime: formatTime(now),
-          timestamp: now.getTime()
-        });
-
-        await push(ref(db, 'logs'), {
-          date: formatDate(),
-          time: formatTime(),
-          id: studentId,
-          name: studentName,
-          type: 'Bathroom',
-          duration: 'Active',
-          details: 'BP-O'
-        });
-
-        showFeedback('bathroom', 'Bathroom Pass Active', `${studentName} — Out at ${formatTime(now)}`);
-      }
-    }
-
-    // Hall Pass Handler
-    async function handleHallPassTransaction(studentId, studentName, activeHall) {
-      const existingKey = Object.keys(activeHall).find(k => activeHall[k].id === studentId);
-
-      if (existingKey) {
-        // RETURN (HP-I)
-        const record = activeHall[existingKey];
-        const durationSecs = Math.round((Date.now() - record.timestamp) / 1000);
-        const durationStr = formatDuration(durationSecs);
-
-        await remove(ref(db, `activeSession/hallPass/${existingKey}`));
-        await push(ref(db, 'logs'), {
-          date: formatDate(),
-          time: formatTime(),
-          id: studentId,
-          name: studentName,
-          type: 'Hall Pass',
-          duration: durationStr,
-          details: 'HP-I'
-        });
-
-        showFeedback('success', 'Hall Pass Return', `${studentName} — Returned (${durationStr})`);
-      } else {
-        // DEPARTURE (HP-O)
-        if (Object.keys(activeHall).length >= APP_CONFIG.maxHallPasses) {
-          showFeedback('error', 'Pass Limit Reached', `Max hall passes out (${APP_CONFIG.maxHallPasses}/${APP_CONFIG.maxHallPasses}).`);
-          return;
-        }
-
-        const now = new Date();
-        await push(ref(db, 'activeSession/hallPass'), {
-          id: studentId,
-          name: studentName,
-          outTime: formatTime(now),
-          timestamp: now.getTime()
-        });
-
-        await push(ref(db, 'logs'), {
-          date: formatDate(),
-          time: formatTime(),
-          id: studentId,
-          name: studentName,
-          type: 'Hall Pass',
-          duration: 'Active',
-          details: 'HP-O'
-        });
-
-        showFeedback('hall', 'Hall Pass Active', `${studentName} — Out at ${formatTime(now)}`);
-      }
-    }
-
-    // Feedback Overlay Controller
-    let feedbackTimer = null;
-    function showFeedback(type, title, message) {
-      const modal = document.getElementById('feedback-modal');
-      const card = document.getElementById('feedback-card');
-      const icon = document.getElementById('feedback-icon');
-      const titleEl = document.getElementById('feedback-title');
-      const msgEl = document.getElementById('feedback-message');
-      const progress = document.getElementById('feedback-progress');
-
-      titleEl.textContent = title;
-      msgEl.textContent = message;
-
-      if (type === 'success') {
-        card.className = "bg-slate-800 border-2 border-emerald-500 rounded-3xl p-8 max-w-md w-full text-center shadow-2xl";
-        icon.className = "text-6xl text-emerald-400 mb-4";
-        icon.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
-        progress.className = "bg-emerald-400 h-full w-full transition-all duration-[3000ms] ease-linear";
-      } else if (type === 'bathroom') {
-        card.className = "bg-slate-800 border-2 border-rose-500 rounded-3xl p-8 max-w-md w-full text-center shadow-2xl";
-        icon.className = "text-6xl text-rose-500 mb-4";
-        icon.innerHTML = '<i class="fa-solid fa-restroom"></i>';
-        progress.className = "bg-rose-500 h-full w-full transition-all duration-[3000ms] ease-linear";
-      } else if (type === 'hall') {
-        card.className = "bg-slate-800 border-2 border-purple-500 rounded-3xl p-8 max-w-md w-full text-center shadow-2xl";
-        icon.className = "text-6xl text-purple-400 mb-4";
-        icon.innerHTML = '<i class="fa-solid fa-ticket"></i>';
-        progress.className = "bg-purple-400 h-full w-full transition-all duration-[3000ms] ease-linear";
-      } else {
-        card.className = "bg-slate-800 border-2 border-amber-500 rounded-3xl p-8 max-w-md w-full text-center shadow-2xl";
-        icon.className = "text-6xl text-amber-400 mb-4";
-        icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
-        progress.className = "bg-amber-400 h-full w-full transition-all duration-[3000ms] ease-linear";
-      }
-
-      progress.style.width = '100%';
-      modal.classList.remove('hidden');
-
-      setTimeout(() => { progress.style.width = '0%'; }, 50);
-
-      if (feedbackTimer) clearTimeout(feedbackTimer);
-      feedbackTimer = setTimeout(() => {
-        modal.classList.add('hidden');
-        idInput.focus();
-      }, 3000);
-    }
-
-    // Admin PIN Modal Controller
-    const adminBtn = document.getElementById('admin-lock-btn');
-    const pinModal = document.getElementById('pin-modal');
-    const pinInput = document.getElementById('pin-input');
-    const pinCancel = document.getElementById('pin-cancel-btn');
-    const pinSubmit = document.getElementById('pin-submit-btn');
-    const adminNavOptions = document.getElementById('admin-nav-options');
-
-    adminBtn.addEventListener('click', () => {
-      pinInput.value = '';
-      adminNavOptions.classList.add('hidden');
-      pinModal.classList.remove('hidden');
-      pinInput.focus();
-    });
-
-    pinCancel.addEventListener('click', () => {
-      pinModal.classList.add('hidden');
-      idInput.focus();
-    });
-
-    pinSubmit.addEventListener('click', verifyPIN);
-    pinInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') verifyPIN();
-    });
-
-    function verifyPIN() {
-      if (pinInput.value.trim() === APP_CONFIG.security.kioskPin) {
-        adminNavOptions.classList.remove('hidden');
-      } else {
-        alert('Incorrect Security PIN!');
-        pinInput.value = '';
-        pinInput.focus();
-      }
-    }
-  </script>
+  <!-- Script Module Import -->
+  <script type="module" src="app.js"></script>
 </body>
 </html>
