@@ -3,93 +3,140 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Kiosk - Chelan High</title>
+    <title>Classroom Kiosk - Chelan High</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .bg-chelan { background-color: #0d5235; }
         .text-chelan { color: #0d5235; }
         .border-chelan { border-color: #0d5235; }
+        
         /* Hide number input spinners */
         input[type=number]::-webkit-inner-spin-button, 
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        
+        /* Custom scrollbar for grid */
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col items-center justify-center p-4">
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
 
-    <!-- Header / Version -->
-    <div class="absolute top-4 left-4 flex items-center gap-3">
-        <img src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" alt="Logo" class="h-10">
-        <span class="bg-green-800/20 text-green-800 text-[10px] px-2 py-1 rounded-full border border-green-700/30 uppercase tracking-wide font-bold">Kiosk v1.005</span>
-    </div>
-
-    <!-- Main Kiosk Container -->
-    <div class="max-w-2xl w-full bg-white p-8 rounded-3xl shadow-xl border border-slate-200 text-center relative overflow-hidden min-h-[400px] flex flex-col justify-center">
-        
-        <!-- STEP 1: ID Entry -->
-        <div id="step-id-entry" class="space-y-6 transition-all duration-300">
-            <h1 class="text-3xl font-black text-slate-800 tracking-tight">Student Check-In</h1>
-            <p class="text-slate-500">Scan your barcode or enter your Student ID.</p>
-            
-            <form id="id-form" class="max-w-xs mx-auto space-y-4">
-                <input type="number" id="student-id-input" placeholder="Enter ID" autofocus autocomplete="off" required
-                    class="w-full text-center text-3xl font-bold tracking-widest px-4 py-3 bg-slate-50 border-2 border-slate-300 rounded-2xl focus:outline-none focus:border-chelan transition-colors shadow-inner">
-                <button type="submit" class="w-full bg-chelan hover:bg-green-800 text-white font-bold py-4 rounded-2xl text-lg shadow-md transition-all">Continue &rarr;</button>
-            </form>
-            <p id="id-error-msg" class="text-red-500 font-bold h-6 text-sm"></p>
-        </div>
-
-        <!-- STEP 2: Unknown ID (Manual Entry) -->
-        <div id="step-manual-entry" class="hidden space-y-6 transition-all duration-300">
-            <div class="bg-orange-50 text-orange-800 p-4 rounded-xl border border-orange-200 mb-4">
-                <p class="font-bold">ID Not Found (Attempt 3/3)</p>
-                <p class="text-sm">Please register your name for this session.</p>
-            </div>
-            <form id="manual-form" class="max-w-sm mx-auto space-y-4">
-                <div class="flex gap-3">
-                    <input type="text" id="manual-fname" placeholder="First Name" required class="w-1/2 px-4 py-3 bg-slate-50 border-2 border-slate-300 rounded-xl focus:outline-none focus:border-chelan">
-                    <input type="text" id="manual-lname" placeholder="Last Name" required class="w-1/2 px-4 py-3 bg-slate-50 border-2 border-slate-300 rounded-xl focus:outline-none focus:border-chelan">
-                </div>
-                <button type="submit" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-4 rounded-xl text-lg shadow-md transition-all">Register & Continue</button>
-                <button type="button" onclick="resetKiosk()" class="w-full text-slate-500 hover:text-slate-700 text-sm font-bold">Cancel</button>
-            </form>
-        </div>
-
-        <!-- STEP 3: Action Selection -->
-        <div id="step-actions" class="hidden space-y-6 transition-all duration-300">
-            <h2 class="text-2xl font-black text-slate-800">Welcome, <span id="display-name" class="text-chelan">Student</span>!</h2>
-            <p class="text-slate-500 text-sm pb-2 border-b border-slate-100">What do you need to do?</p>
-            
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto" id="action-buttons">
-                <!-- Dynamically populated based on active status -->
-            </div>
-            
-            <button onclick="resetKiosk()" class="mt-6 text-slate-400 hover:text-slate-600 text-sm font-bold underline">Cancel / Go Back</button>
-        </div>
-
-        <!-- STEP 4: Phone Pocket Selection -->
-        <div id="step-phone-slot" class="hidden space-y-4 transition-all duration-300 flex flex-col h-full justify-between">
+    <!-- Header -->
+    <header class="bg-chelan text-white shadow-md py-3 px-6 flex justify-between items-center z-10">
+        <div class="flex items-center gap-3">
+            <img src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" alt="Logo" class="h-10">
             <div>
-                <h2 class="text-xl font-black text-slate-800">Select a Phone Slot</h2>
-                <p class="text-slate-500 text-sm mb-4">Choose an available pocket for your device.</p>
-                <div id="slot-grid" class="grid grid-cols-6 gap-2 max-w-md mx-auto mb-4">
-                    <!-- Populated via JS -->
+                <h1 class="text-xl font-bold tracking-wide leading-tight uppercase">Chelan High School</h1>
+                <p class="text-[11px] text-green-200">Classroom Phone & Pass Kiosk <span class="ml-2 font-mono bg-green-900 px-1.5 py-0.5 rounded text-[9px]">v1.005</span></p>
+            </div>
+        </div>
+        <div class="flex items-center gap-6">
+            <div class="flex gap-3 text-xs font-bold">
+                <div class="bg-green-900/60 px-3 py-1.5 rounded-full border border-green-700 flex items-center gap-2">
+                    <span>📱</span> Rack: <span id="count-rack">0</span>
+                </div>
+                <div class="bg-red-900/60 px-3 py-1.5 rounded-full border border-red-700 flex items-center gap-2">
+                    <span>🚻</span> Bathroom: <span id="count-bath">0</span>/1
+                </div>
+                <div class="bg-indigo-900/60 px-3 py-1.5 rounded-full border border-indigo-700 flex items-center gap-2">
+                    <span>🎟️</span> Hall Pass: <span id="count-hall">0</span>
                 </div>
             </div>
-            <div class="flex gap-3 max-w-md mx-auto w-full pt-4 border-t border-slate-100">
-                <button onclick="showStep('actions')" class="w-1/3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 rounded-xl transition-all">Back</button>
-                <button id="confirm-phone-btn" class="w-2/3 bg-chelan hover:bg-green-800 text-white font-bold py-3 rounded-xl shadow-md transition-all">Check In Phone</button>
+            <div class="text-right hidden sm:block">
+                <span id="live-clock" class="text-lg font-mono font-bold block leading-none">--:-- --</span>
+                <span class="text-[10px] text-green-300 uppercase tracking-widest">Medical Sciences</span>
             </div>
         </div>
+    </header>
 
-        <!-- Success Screen -->
-        <div id="step-success" class="hidden flex flex-col items-center justify-center space-y-4 py-8">
-            <div class="text-6xl mb-2">✅</div>
-            <h2 class="text-3xl font-black text-green-700">Success!</h2>
-            <p id="success-msg" class="text-slate-600 text-lg">Action recorded.</p>
+    <!-- Main Container -->
+    <main class="flex-grow flex items-center justify-center p-4">
+        
+        <!-- Interactive Card -->
+        <div id="main-card" class="bg-white max-w-3xl w-full rounded-2xl shadow-xl border-l-8 border-l-chelan border-y border-r border-slate-200 p-8 transition-colors duration-300 relative overflow-hidden">
+            
+            <!-- Success Overlay -->
+            <div id="success-overlay" class="absolute inset-0 bg-white/95 backdrop-blur-sm z-50 hidden flex-col items-center justify-center transition-all">
+                <div class="text-7xl mb-4" id="success-icon">✅</div>
+                <h2 id="success-title" class="text-3xl font-black text-slate-800 mb-2">Success</h2>
+                <p id="success-msg" class="text-slate-500 font-medium text-lg">Action recorded.</p>
+            </div>
+
+            <!-- Headers -->
+            <div class="text-center mb-6">
+                <span id="mode-badge" class="bg-green-50 text-green-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider border border-green-200">Phone Check-In / Out</span>
+                <h2 id="mode-title" class="text-4xl font-black text-slate-800 mt-4 mb-2 tracking-tight">Scan/Enter Student Barcode or ID</h2>
+                <p id="mode-desc" class="text-slate-500 text-sm">Scan student ID card or manually enter ID, then select a chosen pocket slot.</p>
+            </div>
+
+            <!-- Tab Selection -->
+            <div class="bg-slate-50 p-1.5 rounded-xl flex gap-1 mb-8 border border-slate-200 max-w-2xl mx-auto">
+                <button onclick="switchMode('phone')" id="tab-phone" class="flex-1 py-2.5 rounded-lg text-sm font-bold bg-chelan text-white shadow-sm transition-all flex justify-center items-center gap-2">
+                    <span>📱</span> Phone Mode
+                </button>
+                <button onclick="switchMode('bathroom')" id="tab-bathroom" class="flex-1 py-2.5 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all flex justify-center items-center gap-2">
+                    <span>🚻</span> Bathroom (1 Max)
+                </button>
+                <button onclick="switchMode('hall')" id="tab-hall" class="flex-1 py-2.5 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all flex justify-center items-center gap-2">
+                    <span>🎟️</span> Hall Pass
+                </button>
+            </div>
+
+            <!-- Form Area -->
+            <form id="kiosk-form" class="max-w-2xl mx-auto space-y-6">
+                
+                <!-- Input Area (Swaps on 3 strikes) -->
+                <div id="input-container" class="transition-all">
+                    <!-- Standard ID Input -->
+                    <div id="standard-input-area" class="w-full">
+                        <input type="number" id="student-id" placeholder="Scan or Enter ID Here..." autofocus autocomplete="off" required
+                            class="w-full text-center text-3xl font-bold tracking-widest px-4 py-4 bg-white border-2 border-slate-200 rounded-xl focus:outline-none focus:border-chelan shadow-inner placeholder:text-slate-300 placeholder:font-normal placeholder:tracking-normal transition-colors">
+                        <p id="id-error" class="text-red-500 text-center text-sm font-bold mt-2 h-5"></p>
+                    </div>
+
+                    <!-- Manual Entry Input (Hidden by default) -->
+                    <div id="manual-input-area" class="w-full hidden bg-orange-50 p-4 rounded-xl border border-orange-200">
+                        <p class="text-orange-800 font-bold text-center mb-3 text-sm flex items-center justify-center gap-2">
+                            <span>⚠️</span> ID not found. Please register manually for this session.
+                        </p>
+                        <div class="flex gap-3">
+                            <input type="text" id="manual-fname" placeholder="First Name" class="w-1/2 px-4 py-3 bg-white border-2 border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 text-center font-bold text-lg">
+                            <input type="text" id="manual-lname" placeholder="Last Name" class="w-1/2 px-4 py-3 bg-white border-2 border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 text-center font-bold text-lg">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Phone Slot Grid (Only visible in Phone Mode) -->
+                <div id="phone-grid-container" class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2"><span>📱</span> Tap Your Chosen Pocket Slot</h3>
+                        <span id="selected-slot-display" class="bg-green-100 text-green-800 text-xs font-bold px-3 py-1 rounded-full border border-green-200">Chosen Slot: None</span>
+                    </div>
+                    
+                    <div class="h-[220px] overflow-y-auto custom-scrollbar pr-2">
+                        <div id="slot-grid" class="grid grid-cols-5 sm:grid-cols-9 gap-2">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" id="submit-btn" class="w-full bg-chelan hover:bg-green-800 text-white font-bold py-4 rounded-xl text-lg shadow-md transition-colors flex justify-center items-center gap-2">
+                    <span>⚡</span> Submit Scan / Entry
+                </button>
+
+            </form>
         </div>
+    </main>
 
-    </div>
-
+    <!-- Scripts -->
+    <script>
+        // Live Clock
+        setInterval(() => {
+            const clock = document.getElementById('live-clock');
+            if(clock) clock.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }, 1000);
+    </script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getDatabase, ref, onValue, set, remove, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
@@ -113,157 +160,79 @@
         let activeBathroom = {};
         let activeHall = {};
         
-        let currentStudentId = null;
-        let currentStudentName = "";
+        let currentMode = 'phone'; // phone, bathroom, hall
         let failedAttempts = 0;
         let selectedSlot = null;
+        let isManualMode = false;
 
-        // DB Listeners
+        // Theme Definitions
+        const themes = {
+            phone: { color: 'bg-chelan', border: 'border-l-chelan', badge: 'bg-green-50 text-green-700 border-green-200', text: 'Phone Check-In / Out', desc: 'Scan student ID card or manually enter ID, then select a chosen pocket slot.' },
+            bathroom: { color: 'bg-red-700', border: 'border-l-red-700', badge: 'bg-red-50 text-red-700 border-red-200', text: 'Bathroom Pass (Strict Limit: 1 Student)', desc: 'Only 1 student permitted out at a time. Requires phone checked in.' },
+            hall: { color: 'bg-indigo-600', border: 'border-l-indigo-600', badge: 'bg-indigo-50 text-indigo-700 border-indigo-200', text: 'Hall Pass / Activity Out', desc: 'For library, office, nurse, or errant tasks. Requires phone checked in.' }
+        };
+
+        // Listeners
         onValue(ref(db, 'classroom_roster'), s => roster = s.val() || {});
-        onValue(ref(db, 'active_phones_in_class'), s => activePhones = s.val() || {});
-        onValue(ref(db, 'active_bathroom_passes'), s => activeBathroom = s.val() || {});
-        onValue(ref(db, 'active_hall_passes'), s => activeHall = s.val() || {});
+        onValue(ref(db, 'active_phones_in_class'), s => {
+            activePhones = s.val() || {};
+            document.getElementById('count-rack').textContent = Object.keys(activePhones).length;
+            if(currentMode === 'phone') renderGrid(); // Update grid live
+        });
+        onValue(ref(db, 'active_bathroom_passes'), s => {
+            activeBathroom = s.val() || {};
+            document.getElementById('count-bath').textContent = Object.keys(activeBathroom).length;
+        });
+        onValue(ref(db, 'active_hall_passes'), s => {
+            activeHall = s.val() || {};
+            document.getElementById('count-hall').textContent = Object.keys(activeHall).length;
+        });
 
-        // Utility: Logging
-        function logSystemAction(actionStr) {
-            push(ref(db, 'system_logs'), {
-                studentId: currentStudentId,
-                name: currentStudentName,
-                action: actionStr,
-                timestamp: Date.now()
-            });
+        function logSystemAction(id, name, actionStr) {
+            push(ref(db, 'system_logs'), { studentId: id, name: name, action: actionStr, timestamp: Date.now() });
         }
 
-        // Navigation
-        window.showStep = (step) => {
-            ['id-entry', 'manual-entry', 'actions', 'phone-slot', 'success'].forEach(s => {
-                document.getElementById(`step-${s}`).classList.add('hidden');
-            });
-            document.getElementById(`step-${step}`).classList.remove('hidden');
-            if (step === 'id-entry') document.getElementById('student-id-input').focus();
-        };
-
-        window.resetKiosk = () => {
-            currentStudentId = null;
-            currentStudentName = "";
-            failedAttempts = 0;
-            document.getElementById('id-form').reset();
-            document.getElementById('manual-form').reset();
-            document.getElementById('id-error-msg').textContent = "";
-            showStep('id-entry');
-        };
-
-        // Step 1: ID Submission Logic
-        document.getElementById('id-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const id = document.getElementById('student-id-input').value.trim();
-            const errorMsg = document.getElementById('id-error-msg');
+        // Mode Switching UI
+        window.switchMode = (mode) => {
+            currentMode = mode;
             
-            if (roster[id]) {
-                // Found Student
-                currentStudentId = id;
-                currentStudentName = `${roster[id].firstName} ${roster[id].lastName}`;
-                failedAttempts = 0;
-                errorMsg.textContent = "";
-                prepareActionScreen();
-            } else {
-                // Not Found - 3 strikes logic
-                failedAttempts++;
-                if (failedAttempts >= 3) {
-                    currentStudentId = id; // Keep the typed ID
-                    showStep('manual-entry');
-                    document.getElementById('manual-fname').focus();
+            // Update Active Tab Styling
+            ['phone', 'bathroom', 'hall'].forEach(m => {
+                const tab = document.getElementById(`tab-${m}`);
+                if (m === mode) {
+                    tab.className = `flex-1 py-2.5 rounded-lg text-sm font-bold ${themes[m].color} text-white shadow-sm transition-all flex justify-center items-center gap-2`;
                 } else {
-                    errorMsg.textContent = `ID not found. Please try again. (${failedAttempts}/3 attempts)`;
-                    document.getElementById('student-id-input').value = "";
+                    tab.className = `flex-1 py-2.5 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all flex justify-center items-center gap-2`;
                 }
-            }
-        });
-
-        // Step 2: Manual Registration Submission
-        document.getElementById('manual-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const fname = document.getElementById('manual-fname').value.trim();
-            const lname = document.getElementById('manual-lname').value.trim();
-            
-            // Temporarily add to roster for this session (Teacher can see/approve later)
-            set(ref(db, `classroom_roster/${currentStudentId}`), { firstName: fname, lastName: lname });
-            
-            currentStudentName = `${fname} ${lname}`;
-            prepareActionScreen();
-        });
-
-        // Step 3: Prepare Actions based on status
-        function prepareActionScreen() {
-            document.getElementById('display-name').textContent = currentStudentName;
-            const container = document.getElementById('action-buttons');
-            container.innerHTML = ""; // Clear existing
-
-            const hasPhone = !!activePhones[currentStudentId];
-            const hasBath = !!activeBathroom[currentStudentId];
-            const hasHall = !!activeHall[currentStudentId];
-
-            if (hasPhone) {
-                container.innerHTML += `<button onclick="handlePhoneCheckout()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-4 rounded-xl shadow border-b-4 border-slate-950 flex flex-col items-center justify-center gap-1 transition">
-                    <span class="text-2xl">📱</span><span>Check OUT Phone</span>
-                </button>`;
-            } else {
-                container.innerHTML += `<button onclick="preparePhoneCheckin()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl shadow border-b-4 border-green-800 flex flex-col items-center justify-center gap-1 transition">
-                    <span class="text-2xl">📱</span><span>Check IN Phone</span>
-                </button>`;
-            }
-
-            if (hasBath) {
-                container.innerHTML += `<button onclick="handleReturn('bathroom')" class="bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-xl shadow border-b-4 border-red-800 flex flex-col items-center justify-center gap-1 transition">
-                    <span class="text-2xl">🚻</span><span>Return from Bathroom</span>
-                </button>`;
-            } else {
-                container.innerHTML += `<button onclick="handlePass('bathroom')" class="bg-red-100 hover:bg-red-200 text-red-800 font-bold py-4 rounded-xl shadow border-b-4 border-red-300 flex flex-col items-center justify-center gap-1 transition">
-                    <span class="text-2xl">🚻</span><span>Bathroom Pass</span>
-                </button>`;
-            }
-
-            if (hasHall) {
-                container.innerHTML += `<button onclick="handleReturn('hall')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow border-b-4 border-indigo-800 flex flex-col items-center justify-center gap-1 transition">
-                    <span class="text-2xl">🎟️</span><span>Return from Hall</span>
-                </button>`;
-            } else {
-                container.innerHTML += `<button onclick="handlePass('hall')" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-800 font-bold py-4 rounded-xl shadow border-b-4 border-indigo-300 flex flex-col items-center justify-center gap-1 transition">
-                    <span class="text-2xl">🎟️</span><span>Hall Pass</span>
-                </button>`;
-            }
-
-            showStep('actions');
-        }
-
-        // Action Handlers
-        window.handlePhoneCheckout = () => {
-            // Requirement: If a phone is checked out, all hall passes and bathroom passes for that student close out.
-            remove(ref(db, `active_phones_in_class/${currentStudentId}`));
-            remove(ref(db, `active_bathroom_passes/${currentStudentId}`));
-            remove(ref(db, `active_hall_passes/${currentStudentId}`));
-            
-            logSystemAction("Phone Checkout (Passes auto-cleared)");
-            showSuccess("Phone checked out successfully.");
-        };
-
-        window.handlePass = (type) => {
-            set(ref(db, `active_${type}_passes/${currentStudentId}`), {
-                studentName: currentStudentName,
-                timestamp: Date.now()
             });
-            logSystemAction(`${type === 'bathroom' ? 'Bathroom' : 'Hall'} Pass Assigned`);
-            showSuccess(`${type === 'bathroom' ? 'Bathroom' : 'Hall'} pass assigned.`);
+
+            // Update Card Borders & Button
+            const card = document.getElementById('main-card');
+            card.className = `bg-white max-w-3xl w-full rounded-2xl shadow-xl border-l-8 ${themes[mode].border} border-y border-r border-slate-200 p-8 transition-colors duration-300 relative overflow-hidden`;
+            
+            const btn = document.getElementById('submit-btn');
+            btn.className = `w-full ${themes[mode].color} hover:opacity-90 text-white font-bold py-4 rounded-xl text-lg shadow-md transition-colors flex justify-center items-center gap-2`;
+
+            // Update Text
+            document.getElementById('mode-badge').className = `${themes[mode].badge} text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider border`;
+            document.getElementById('mode-badge').textContent = themes[mode].text;
+            document.getElementById('mode-desc').textContent = themes[mode].desc;
+
+            // Toggle Phone Grid
+            const gridContainer = document.getElementById('phone-grid-container');
+            if (mode === 'phone') {
+                gridContainer.classList.remove('hidden');
+                renderGrid();
+            } else {
+                gridContainer.classList.add('hidden');
+            }
+
+            // Reset Inputs & focus
+            resetForm();
         };
 
-        window.handleReturn = (type) => {
-            remove(ref(db, `active_${type}_passes/${currentStudentId}`));
-            logSystemAction(`${type === 'bathroom' ? 'Bathroom' : 'Hall'} Pass Returned`);
-            showSuccess(`Welcome back!`);
-        };
-
-        // Phone Check-In Slot Logic
-        window.preparePhoneCheckin = () => {
+        // Phone Grid Render Logic
+        function renderGrid() {
             const usedSlots = Object.values(activePhones).map(p => parseInt(p.pocket));
             
             // Requirement: Auto choose lowest available slot
@@ -274,7 +243,14 @@
                     break;
                 }
             }
-            selectedSlot = lowestAvailable;
+            
+            // If the currently selected slot is taken (by someone else just now), reset to lowest
+            if (usedSlots.includes(selectedSlot) || !selectedSlot) {
+                selectedSlot = lowestAvailable;
+            }
+
+            // Update Badge
+            document.getElementById('selected-slot-display').textContent = `Chosen Slot: Pocket ${String(selectedSlot).padStart(2, '0')}`;
 
             const grid = document.getElementById('slot-grid');
             grid.innerHTML = "";
@@ -282,51 +258,108 @@
             for (let i = 1; i <= 36; i++) {
                 const isUsed = usedSlots.includes(i);
                 const isSelected = i === selectedSlot && !isUsed;
+                const numStr = String(i).padStart(2, '0');
                 
-                // Requirement: Gray out used slots, remove # symbol
-                const btn = document.createElement('button');
-                btn.textContent = i; // Just the number
-                btn.className = `py-2 rounded-lg font-bold text-sm transition-all shadow-sm ${
-                    isUsed ? 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300' :
-                    isSelected ? 'bg-chelan text-white ring-2 ring-green-400 ring-offset-2' :
-                    'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'
-                }`;
+                const btn = document.createElement('div');
                 
-                if (!isUsed) {
-                    btn.onclick = () => {
-                        selectedSlot = i;
-                        preparePhoneCheckin(); // Re-render to show selection
-                    };
+                if (isUsed) {
+                    // Requirement: Gray out taken slots without #
+                    btn.className = "aspect-square flex flex-col items-center justify-center rounded-xl border border-slate-200 bg-slate-100 text-slate-300 opacity-60 cursor-not-allowed";
+                    btn.innerHTML = `<span class="font-bold text-lg">${numStr}</span><span class="text-[8px] font-bold tracking-widest uppercase">Taken</span>`;
+                } else if (isSelected) {
+                    btn.className = "aspect-square flex flex-col items-center justify-center rounded-xl bg-chelan text-white shadow-md ring-2 ring-green-200 ring-offset-2 cursor-pointer transition-all";
+                    btn.innerHTML = `<span class="font-bold text-lg">${numStr}</span><span class="text-[8px] font-bold tracking-widest uppercase text-green-200">Selected</span>`;
+                    btn.onclick = () => selectSlot(i);
+                } else {
+                    btn.className = "aspect-square flex flex-col items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:border-chelan hover:text-chelan cursor-pointer transition-all shadow-sm";
+                    btn.innerHTML = `<span class="font-bold text-lg">${numStr}</span>`;
+                    btn.onclick = () => selectSlot(i);
                 }
                 grid.appendChild(btn);
             }
-            showStep('phone-slot');
+        }
+
+        window.selectSlot = (num) => {
+            selectedSlot = num;
+            renderGrid();
         };
 
-        // Final Confirm Phone Check-In
-        document.getElementById('confirm-phone-btn').addEventListener('click', () => {
-            // Double check it wasn't taken in the last split second
-            const usedSlots = Object.values(activePhones).map(p => parseInt(p.pocket));
-            if (usedSlots.includes(selectedSlot)) {
-                alert("That slot was just taken! Please select another.");
-                preparePhoneCheckin();
-                return;
-            }
-
-            set(ref(db, `active_phones_in_class/${currentStudentId}`), {
-                studentName: currentStudentName,
-                pocket: selectedSlot,
-                timestamp: Date.now()
-            });
-            logSystemAction(`Phone Check-In (Slot ${selectedSlot})`);
-            showSuccess(`Phone assigned to slot ${selectedSlot}.`);
-        });
-
-        function showSuccess(msg) {
-            document.getElementById('success-msg').textContent = msg;
-            showStep('success');
-            setTimeout(resetKiosk, 2500); // Auto reset after 2.5 seconds
+        function resetForm() {
+            document.getElementById('kiosk-form').reset();
+            document.getElementById('id-error').textContent = "";
+            failedAttempts = 0;
+            isManualMode = false;
+            
+            document.getElementById('standard-input-area').classList.remove('hidden');
+            document.getElementById('manual-input-area').classList.add('hidden');
+            
+            // Focus ID input
+            setTimeout(() => document.getElementById('student-id').focus(), 50);
         }
-    </script>
-</body>
-</html>
+
+        // Form Submission Logic
+        document.getElementById('kiosk-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            let studentId = document.getElementById('student-id').value.trim();
+            let studentName = "";
+            
+            if (isManualMode) {
+                const fname = document.getElementById('manual-fname').value.trim();
+                const lname = document.getElementById('manual-lname').value.trim();
+                if (!fname || !lname) {
+                    alert("Please enter First and Last Name.");
+                    return;
+                }
+                studentName = `${fname} ${lname}`;
+                // Temp add to roster for this session
+                set(ref(db, `classroom_roster/${studentId}`), { firstName: fname, lastName: lname });
+            } else {
+                const errorMsg = document.getElementById('id-error');
+                if (roster[studentId]) {
+                    studentName = `${roster[studentId].firstName} ${roster[studentId].lastName}`;
+                    errorMsg.textContent = "";
+                } else {
+                    failedAttempts++;
+                    if (failedAttempts >= 3) {
+                        // Activate Manual Mode Requirement
+                        isManualMode = true;
+                        document.getElementById('standard-input-area').classList.add('hidden');
+                        document.getElementById('manual-input-area').classList.remove('hidden');
+                        
+                        // Copy the failed ID into the hidden box for tracking
+                        document.getElementById('student-id').value = studentId;
+                        document.getElementById('student-id').required = false; 
+                        document.getElementById('manual-fname').required = true;
+                        document.getElementById('manual-lname').required = true;
+                        document.getElementById('manual-fname').focus();
+                    } else {
+                        errorMsg.textContent = `ID not found. Please try again. (${failedAttempts}/3 attempts)`;
+                        document.getElementById('student-id').value = "";
+                        document.getElementById('student-id').focus();
+                    }
+I can clearly see the difference between the current setup and your goal. The interface in `kiosk format issue.jpg` forces a multi-step process, whereas your preferred configurations beautifully consolidate the workflow into a single, efficient screen. This is a massive improvement for a kiosk environment where speed and reducing clicks/taps are essential.
+
+Based on the preferred screenshots (`Prefered Config Kiosk Bathroom Pass_2.jpg`, `Prefered Config Kiosk Hall Pass_2.jpg`, and `Prefered Config Kiosk Phone_2.jpg`), here is the structural revision plan to transition your code to the new format:
+
+### UI/UX Revision Plan
+
+*   **Global Header Addition:** 
+    *   Implement the top navigation bar featuring the school logo/branding ("Chelan High School") on the left.
+    *   Add the real-time status indicators on the right (Rack count, Bathroom count, Hall Pass count) alongside the live clock and department label.
+*   **Unified Single-Page Layout (Tabbed Navigation):** 
+    *   Replace the "Continue" multi-step logic with a dynamic, tabbed interface.
+    *   Add a horizontal toggle group inside the main card with three distinct modes: **Phone Mode**, **Bathroom (1 Max)**, and **Hall Pass**.
+*   **Dynamic Context & Color Theming:** 
+    *   The UI needs state-based color theming that updates instantly when a mode is selected:
+        *   **Phone Mode:** Forest Green accents (left border, submit button, active tab).
+        *   **Bathroom Pass:** Crimson Red accents.
+        *   **Hall Pass:** Purple/Indigo accents.
+    *   The main title, subtitle, and submit button text must update dynamically based on the active tab.
+*   **Conditional Elements (The Pocket Grid):** 
+    *   Integrate the pocket slot selection grid (numbered 01, 02, etc.) so that it conditionally renders *only* when "Phone Mode" is active. 
+    *   Ensure the grid supports state changes (e.g., greying out "Taken" slots and highlighting the "Selected" slot).
+
+This single-page approach will make the kiosk much more intuitive for the students. 
+
+Whenever you are ready, please upload your new file and the checklist so we can start applying these revisions to the code! Which framework or language is the current kiosk built in (e.g., React, plain HTML/JS, Vue)?
