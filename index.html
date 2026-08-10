@@ -27,7 +27,7 @@
             <img src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" alt="Logo" class="h-10">
             <div>
                 <h1 class="text-xl font-bold tracking-wide uppercase leading-tight">Chelan High School</h1>
-                <p class="text-[11px] text-green-200">Classroom Phone & Pass Kiosk <span class="ml-2 font-mono bg-green-900/80 px-1.5 py-0.5 rounded text-[9px]">v1.006</span></p>
+                <p class="text-[11px] text-green-200">Classroom Phone & Pass Kiosk <span class="ml-2 font-mono bg-green-900/80 px-1.5 py-0.5 rounded text-[9px]">v1.007</span></p>
             </div>
         </div>
         <div class="flex items-center gap-6">
@@ -413,7 +413,7 @@
                 }
             }
 
-            // Mode Execution with Standard Abbreviated Codes
+            // Mode Execution with Standard Descriptive Actions and Nomenclature Codes
             if (currentMode === 'phone') {
                 if (activePhones[studentId]) {
                     // CHECKOUT PHONE (COS)
@@ -422,7 +422,7 @@
                     remove(ref(db, `active_hall_passes/${studentId}`));
                     
                     push(ref(db, 'system_logs'), {
-                        studentId, name: studentName, code: 'COS', action: 'COS', timestamp: Date.now()
+                        studentId, name: studentName, code: 'COS', action: "Phone Check-Out (Student Kiosk)", timestamp: Date.now()
                     });
 
                     triggerFlashConfirmation('COS', `${studentName} - Phone Checked Out`, '📱');
@@ -438,7 +438,7 @@
                     });
 
                     push(ref(db, 'system_logs'), {
-                        studentId, name: studentName, code: codeStr, action: codeStr, timestamp: Date.now()
+                        studentId, name: studentName, code: codeStr, action: `Phone Check-In (Pocket #${slotFormatted})`, timestamp: Date.now()
                     });
 
                     triggerFlashConfirmation(codeStr, `${studentName} - Checked In (Pocket ${slotFormatted})`, '📱');
@@ -447,7 +447,7 @@
                 if (activeBathroom[studentId]) {
                     // Return Bathroom Pass (BP-I)
                     remove(ref(db, `active_bathroom_passes/${studentId}`));
-                    push(ref(db, 'system_logs'), { studentId, name: studentName, code: 'BP-I', action: 'BP-I', timestamp: Date.now() });
+                    push(ref(db, 'system_logs'), { studentId, name: studentName, code: 'BP-I', action: "Bathroom Pass Return", timestamp: Date.now() });
                     triggerFlashConfirmation('BP-I', `Welcome back, ${studentName}!`, '🚻');
                 } else {
                     // Pass Validation Rules
@@ -468,14 +468,14 @@
                     set(ref(db, `active_bathroom_passes/${studentId}`), {
                         studentName: studentName, timestamp: Date.now()
                     });
-                    push(ref(db, 'system_logs'), { studentId, name: studentName, code: 'BP-O', action: 'BP-O', timestamp: Date.now() });
+                    push(ref(db, 'system_logs'), { studentId, name: studentName, code: 'BP-O', action: "Bathroom Pass Out", timestamp: Date.now() });
                     triggerFlashConfirmation('BP-O', `Bathroom Pass Issued: ${studentName}`, '🚻');
                 }
             } else if (currentMode === 'hall') {
                 if (activeHall[studentId]) {
                     // Return Hall Pass (HP-I)
                     remove(ref(db, `active_hall_passes/${studentId}`));
-                    push(ref(db, 'system_logs'), { studentId, name: studentName, code: 'HP-I', action: 'HP-I', timestamp: Date.now() });
+                    push(ref(db, 'system_logs'), { studentId, name: studentName, code: 'HP-I', action: "Hall Pass Return", timestamp: Date.now() });
                     triggerFlashConfirmation('HP-I', `Welcome back, ${studentName}!`, '🎟️');
                 } else {
                     // Pass Validation Rules
@@ -492,7 +492,7 @@
                     set(ref(db, `active_hall_passes/${studentId}`), {
                         studentName: studentName, timestamp: Date.now()
                     });
-                    push(ref(db, 'system_logs'), { studentId, name: studentName, code: 'HP-O', action: 'HP-O', timestamp: Date.now() });
+                    push(ref(db, 'system_logs'), { studentId, name: studentName, code: 'HP-O', action: "Hall Pass Out", timestamp: Date.now() });
                     triggerFlashConfirmation('HP-O', `Hall Pass Issued: ${studentName}`, '🎟️');
                 }
             }
