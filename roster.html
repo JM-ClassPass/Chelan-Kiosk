@@ -495,6 +495,20 @@
         // Search Filter
         document.getElementById('search-roster').addEventListener('input', renderRosterTable);
 
+        // Quick Add Form Handler
+        document.getElementById('quick-add-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const id = document.getElementById('add-id').value.trim();
+            const firstName = document.getElementById('add-fname').value.trim();
+            const lastName = document.getElementById('add-lname').value.trim();
+
+            if (!id || !firstName || !lastName) return;
+
+            set(ref(db, `classroom_roster/${id}`), { firstName, lastName }).then(() => {
+                document.getElementById('quick-add-form').reset();
+            });
+        });
+
         // Drag & Drop File Handling
         const dropZone = document.getElementById('drop-zone');
         const fileBrowseInput = document.getElementById('file-browse-input');
@@ -546,7 +560,6 @@
         });
 
         function parseAndCheckConflicts(csvText, mode) {
-            // Remove Windows \r carriage returns cleanly before splitting
             const cleanText = csvText.replace(/\r/g, '');
             const lines = cleanText.split('\n');
             pendingImportRoster = {};
@@ -557,7 +570,7 @@
                 const parts = line.split(',').map(p => p.trim());
                 if (parts.length >= 3 && parts[0] && parts[1] && parts[2]) {
                     if (index === 0 && (parts[0].toLowerCase().includes('id') || parts[1].toLowerCase().includes('first'))) {
-                        return; // Header skip
+                        return; // Skip header row
                     }
                     const id = String(parts[0]).trim();
                     const firstName = String(parts[1]).trim();
@@ -595,15 +608,27 @@
 
             conflictItems.forEach(c => {
                 const item = document.createElement('div');
-                item.className = "p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs";
+                item.className = "bg-slate-50 p-3 rounded-lg border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2";
                 item.innerHTML = `
-                    <div class="font-mono font-bold text-slate-700">ID: ${c.id}</div>
-                    <div class="text-slate-600">Original: <span class="font-bold text-slate-800">${c.existing.firstName} ${c.existing.lastName}</span></div>
-                    <div class="text-emerald-700">Import: <span class="font-bold">${c.imported.firstName} ${c.imported.lastName}</span></div>
-                    <select onchange="setIndividualConflictResolution('${escapeAttr(c.id)}', this.value)" class="bg-white border border-slate-300 rounded px-2 py-1 font-bold text-xs focus:outline-none">
-                        <option value="keep_import" ${conflictResolutions[c.id] === 'keep_import' ? 'selected' : ''}>Keep Import</option>
-                        <option value="keep_original" ${conflictResolutions[c.id] === 'keep_original' ? 'selected' : ''}>Keep Original</option>
-                    </select>
+                    <div class="text-xs">
+                        <span class="font-mono font-bold text-slate-800">ID: ${c.id}</span>
+                        <div class="text-slate-500 mt-0.5">
+                            Current: <span class="font-semibold text-slate-700">${c.existing.firstName} ${c.existing.lastName}</span>
+                        </div>
+                        <div class="text-amber-700 mt-0.5">
+                            Import: <span class="font-semibold">${c.imported.firstName} ${c.imported.lastName}</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label class="text-xs font-semibold text-slate-600 flex items-center gap-1 cursor-pointer">
+                            <input type="radio" name="conflict-${c.id}" value="keep_original" onchange="setConflictResolution('${c.id}', 'keep_original')">
+                            Keep Current
+                        </label>
+                        <label class="text-xs font-semibold text-amber-800 flex items-center gap-1 cursor-pointer">
+                            <input type="radio" name="conflict-${c.id}" value="keep_import" checked onchange="setConflictResolution('${c.id}', 'keep_import')">
+                            Use Import
+                        </label>
+                    </div>
                 `;
                 listEl.appendChild(item);
             });
@@ -611,73 +636,75 @@
             modal.classList.remove('hidden');
         }
 
-        window.setIndividualConflictResolution = (id, choice) => {
+        window.setConflictResolution = (id, choice) => {
             conflictResolutions[id] = choice;
         };
 
         window.resolveAllConflicts = (choice) => {
-            conflictItems.forEach(c => conflictResolutions[c.id] = choice);
-            showConflictModal();
+            conflictItems.forEach(c => {
+                conflictResolutions[c.id] = choice;
+                const radio = document.querySelector(`input[name="conflict-${c.id}"][value="${choice}"]`);
+                if (radio) radio.checked = true;
+            });
         };
 
         window.finalizeImportWithResolutions = () => {
-            const mode = document.querySelector('input[name="import-mode"]:checked').value;
-            document.getElementById('conflict-modal').classList.add('hidden');
-            executeFinalImport(mode);
-        };
-
-        function executeFinalImport(mode) {
-            let finalRoster = mode === 'replace' ? {} : { ...activeRoster };
-
-            Object.keys(pendingImportRoster).forEach(id => {
-                if (conflictResolutions[id] === 'keep_original' && activeRoster[id]) {
-                    finalRoster[id] = activeRoster[id];
-                } else {
-                    finalRoster[id] = pendingImportRoster[id];
+            conflictItems.forEach(c => {
+                if (conflictResolutions[c.id] === 'keep_original') {
+                    pendingImportRoster[c.id] = c.existing;
                 }
             });
 
-            set(ref(db, 'classroom_roster'), finalRoster).then(() => {
-                alert(`Successfully processed import (${Object.keys(pendingImportRoster).length} records)!`);
-                selectedFile = null;
-                fileNameDisplay.classList.add('hidden');
-                document.getElementById('file-browse-input').value = '';
-                document.getElementById('csv-url-input').value = '';
-            });
+            document.getElementById('conflict-modal').classList.add('hidden');
+            executeFinalImport('merge');
+        };
+
+        function executeFinalImport(mode) {
+            if (mode === 'replace') {
+                set(ref(db, 'classroom_roster'), pendingImportRoster).then(() => {
+                    alert('Roster completely replaced successfully.');
+                    resetImportForm();
+                });
+            } else {
+                const merged = { ...activeRoster, ...pendingImportRoster };
+                set(ref(db, 'classroom_roster'), merged).then(() => {
+                    alert('Roster merged successfully.');
+                    resetImportForm();
+                });
+            }
         }
 
-        // Quick Add Form
-        document.getElementById('quick-add-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const id = document.getElementById('add-id').value.trim();
-            const firstName = document.getElementById('add-fname').value.trim();
-            const lastName = document.getElementById('add-lname').value.trim();
+        function resetImportForm() {
+            selectedFile = null;
+            document.getElementById('file-browse-input').value = '';
+            document.getElementById('csv-url-input').value = '';
+            fileNameDisplay.textContent = '';
+            fileNameDisplay.classList.add('hidden');
+        }
 
-            if (id && firstName && lastName) {
-                set(ref(db, `classroom_roster/${id}`), { firstName, lastName });
-                document.getElementById('quick-add-form').reset();
-            }
-        });
-
-        // Export CSV Button
+        // CSV Export Feature
         document.getElementById('export-csv-btn').addEventListener('click', () => {
             const keys = Object.keys(activeRoster);
-            if (keys.length === 0) return alert("Roster is currently empty.");
+            if (keys.length === 0) {
+                alert("No students in roster to export.");
+                return;
+            }
 
-            let csvContent = "data:text/csv;charset=utf-8,ID,First Name,Last Name\n";
+            let csvContent = "data:text/csv;charset=utf-8,ID Code,First Name,Last Name\n";
             keys.forEach(id => {
                 const s = activeRoster[id];
-                csvContent += `${id},${s.firstName},${s.lastName}\n`;
+                csvContent += `"${id}","${s.firstName || ''}","${s.lastName || ''}"\n`;
             });
 
             const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
             link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `Chelan_Class_Roster_${new Date().toISOString().slice(0,10)}.csv`);
+            link.setAttribute("download", `Chelan_Roster_Export_${new Date().toISOString().slice(0,10)}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
         });
+
     </script>
 </body>
 </html>
