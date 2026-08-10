@@ -1,14 +1,14 @@
 /**
  * config.js - Global Configuration & Settings for Chelan High Systems
- * Version: 1.1.02
+ * Version: 1.1.10
  * 
  * Loaded globally via standard <script src="config.js?v=1.004"></script>
  */
 
 window.APP_CONFIG = {
     // Application Metadata
-    appName: "Chelan High Medical Sciences Kiosk",
-    version: "1.1.02",
+    appName: "Chelan High School Phone & Pass Kiosk",
+    version: "1.1.10",
     schoolName: "Chelan High School",
     department: "ROOM 176",
 
