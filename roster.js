@@ -15,13 +15,14 @@ const db = getDatabase(app);
 // State
 let rosterData = {};
 let searchQuery = "";
+let selectedFile = null;
 
 document.addEventListener("DOMContentLoaded", () => {
   initClock();
   setupAddForm();
-  setupCSVImport();
+  setupDragAndDrop();
   setupSearch();
-  setupBulkActions();
+  setupExport();
   attachFirebaseListeners();
 });
 
@@ -36,7 +37,7 @@ function initClock() {
   update();
 }
 
-// Realtime Listener
+// Realtime Firebase Listener
 function attachFirebaseListeners() {
   onValue(ref(db, "roster"), (snapshot) => {
     rosterData = snapshot.exists() ? snapshot.val() : {};
@@ -44,7 +45,7 @@ function attachFirebaseListeners() {
   });
 }
 
-// Render Roster Table
+// Render Table
 function renderRosterTable() {
   const tbody = document.getElementById("roster-table-body");
   const countEl = document.getElementById("roster-count");
@@ -57,14 +58,14 @@ function renderRosterTable() {
     tbody.innerHTML = `
       <tr>
         <td colspan="4" class="text-center py-12 text-slate-400 italic">
-          No students currently in the roster. Add one or upload a CSV file.
+          No students currently in roster. Add one using Roster Tools on the left.
         </td>
       </tr>
     `;
     return;
   }
 
-  // Filter entries
+  // Filter Search
   const filtered = entries.filter(([id, student]) => {
     const q = searchQuery.toLowerCase();
     const studentId = id.toString().toLowerCase();
@@ -85,34 +86,65 @@ function renderRosterTable() {
     return;
   }
 
-  // Sort alphabetically by last name
+  // Sort by Last Name
   filtered.sort(([_, a], [__, b]) => (a.lastName || "").localeCompare(b.lastName || ""));
 
   tbody.innerHTML = filtered.map(([id, student]) => `
     <tr class="hover:bg-slate-50 transition">
-      <td class="py-3 px-3 font-mono text-[#0B4F2C]">${id}</td>
-      <td class="py-3 px-3 text-slate-900">${student.firstName || ''}</td>
-      <td class="py-3 px-3 text-slate-900">${student.lastName || ''}</td>
+      <td class="py-3 px-3 font-mono text-[#0B4F2C] font-black">${id}</td>
+      <td class="py-3 px-3 text-slate-800">${student.firstName || ''}</td>
+      <td class="py-3 px-3 text-slate-800">${student.lastName || ''}</td>
       <td class="py-3 px-3 text-right">
-        <button data-delete="${id}" class="btn-delete-student p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition">
-          <i class="fa-solid fa-trash-can text-xs"></i>
-        </button>
+        <div class="flex items-center justify-end gap-1.5">
+          <button data-edit="${id}" class="btn-edit-student px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-[11px] transition">
+            Edit
+          </button>
+          <button data-delete="${id}" class="btn-delete-student px-2.5 py-1 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold text-[11px] transition">
+            Delete
+          </button>
+        </div>
       </td>
     </tr>
   `).join('');
 
-  // Attach delete buttons
+  // Attach Handlers
+  attachRowHandlers();
+}
+
+function attachRowHandlers() {
+  // Delete Button
   document.querySelectorAll(".btn-delete-student").forEach(btn => {
     btn.onclick = async (e) => {
       const id = e.currentTarget.getAttribute("data-delete");
-      if (id && confirm(`Remove student ID ${id} (${rosterData[id]?.firstName} ${rosterData[id]?.lastName})?`)) {
+      const student = rosterData[id];
+      if (id && confirm(`Delete ${student?.firstName} ${student?.lastName} (ID: ${id}) from the roster?`)) {
         await remove(ref(db, `roster/${id}`));
       }
     };
   });
+
+  // Edit Button
+  document.querySelectorAll(".btn-edit-student").forEach(btn => {
+    btn.onclick = async (e) => {
+      const id = e.currentTarget.getAttribute("data-edit");
+      const student = rosterData[id];
+      if (!id || !student) return;
+
+      const newFirst = prompt("Edit First Name:", student.firstName);
+      if (newFirst === null) return;
+
+      const newLast = prompt("Edit Last Name:", student.lastName);
+      if (newLast === null) return;
+
+      await set(ref(db, `roster/${id}`), {
+        firstName: newFirst.trim() || student.firstName,
+        lastName: newLast.trim() || student.lastName
+      });
+    };
+  });
 }
 
-// Add Single Student
+// Quick Add Student
 function setupAddForm() {
   const form = document.getElementById("form-add-student");
   if (!form) return;
@@ -142,37 +174,88 @@ function setupAddForm() {
   };
 }
 
-// CSV Bulk Import Setup
-function setupCSVImport() {
-  const triggerBtn = document.getElementById("btn-trigger-upload");
+// Drag & Drop CSV Uploader
+function setupDragAndDrop() {
+  const dropZone = document.getElementById("drop-zone");
   const fileInput = document.getElementById("csv-file-input");
+  const browseBtn = document.getElementById("btn-browse-file");
+  const processBtn = document.getElementById("btn-process-import");
+  const dropText = document.getElementById("drop-zone-text");
 
-  if (triggerBtn && fileInput) {
-    triggerBtn.onclick = () => fileInput.click();
+  if (!dropZone || !fileInput) return;
 
-    fileInput.onchange = (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
+  browseBtn.onclick = (e) => {
+    e.stopPropagation();
+    fileInput.click();
+  };
 
-      const reader = new FileReader();
-      reader.onload = async (evt) => {
-        const text = evt.target.result;
-        await parseAndImportCSV(text);
-        fileInput.value = "";
-      };
-      reader.readAsText(file);
+  dropZone.onclick = () => fileInput.click();
+
+  fileInput.onchange = (e) => {
+    if (e.target.files.length > 0) {
+      selectedFile = e.target.files[0];
+      dropText.textContent = `Selected: ${selectedFile.name}`;
+      dropZone.classList.add("bg-emerald-100/50", "border-emerald-600");
+    }
+  };
+
+  dropZone.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    dropZone.classList.add("bg-emerald-100/60", "border-emerald-600");
+  });
+
+  dropZone.addEventListener("dragleave", () => {
+    if (!selectedFile) {
+      dropZone.classList.remove("bg-emerald-100/60", "border-emerald-600");
+    }
+  });
+
+  dropZone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    if (e.dataTransfer.files.length > 0) {
+      selectedFile = e.dataTransfer.files[0];
+      fileInput.files = e.dataTransfer.files;
+      dropText.textContent = `Selected: ${selectedFile.name}`;
+      dropZone.classList.add("bg-emerald-100/50", "border-emerald-600");
+    }
+  });
+
+  processBtn.onclick = () => {
+    if (!selectedFile) {
+      alert("Please select or drop a CSV file first.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      await processCSV(evt.target.result);
+      selectedFile = null;
+      fileInput.value = "";
+      dropText.textContent = "Drag & Drop CSV File Here";
+      dropZone.classList.remove("bg-emerald-100/50", "border-emerald-600");
     };
-  }
+    reader.readAsText(selectedFile);
+  };
 }
 
-async function parseAndImportCSV(csvText) {
-  const lines = csvText.split(/\r?\n/);
+// CSV Processing (Supports Merge & Replace Mode)
+async function processCSV(csvContent) {
+  const mode = document.querySelector('input[name="import-mode"]:checked')?.value || "merge";
+  const lines = csvContent.split(/\r?\n/);
+
   if (lines.length < 2) {
-    alert("CSV file appears to be empty or missing data lines.");
+    alert("CSV file is empty or missing data.");
     return;
   }
 
-  let importedCount = 0;
+  if (mode === "replace") {
+    if (!confirm("Warning: REPLACE ENTIRE ROSTER will erase all current roster entries. Continue?")) {
+      return;
+    }
+    await remove(ref(db, "roster"));
+  }
+
+  let count = 0;
 
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
@@ -186,12 +269,12 @@ async function parseAndImportCSV(csvText) {
           firstName: firstName || "Student",
           lastName: lastName || ""
         });
-        importedCount++;
+        count++;
       }
     }
   }
 
-  alert(`Successfully imported ${importedCount} student records into the roster!`);
+  alert(`Imported ${count} student records into the roster!`);
 }
 
 // Search Filter
@@ -205,38 +288,28 @@ function setupSearch() {
   };
 }
 
-// Export & Clear Bulk Actions
-function setupBulkActions() {
+// Export CSV
+function setupExport() {
   const btnExport = document.getElementById("btn-export-roster");
-  const btnClear = document.getElementById("btn-clear-roster");
+  if (!btnExport) return;
 
-  if (btnExport) {
-    btnExport.onclick = () => {
-      const entries = Object.entries(rosterData);
-      if (entries.length === 0) {
-        alert("No roster data available to export.");
-        return;
-      }
+  btnExport.onclick = () => {
+    const entries = Object.entries(rosterData);
+    if (entries.length === 0) {
+      alert("No roster entries to export.");
+      return;
+    }
 
-      let csv = "ID,FirstName,LastName\n";
-      entries.forEach(([id, s]) => {
-        csv += `"${id}","${s.firstName || ''}","${s.lastName || ''}"\n`;
-      });
+    let csv = "ID Code,First Name,Last Name\n";
+    entries.forEach(([id, s]) => {
+      csv += `"${id}","${s.firstName || ''}","${s.lastName || ''}"\n`;
+    });
 
-      const blob = new Blob([csv], { type: "text/csv" });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `Chelan_Roster_${new Date().toISOString().slice(0,10)}.csv`;
-      a.click();
-    };
-  }
-
-  if (btnClear) {
-    btnClear.onclick = async () => {
-      if (confirm("Are you sure you want to CLEAR THE ENTIRE ROSTER? This cannot be undone.")) {
-        await remove(ref(db, "roster"));
-      }
-    };
-  }
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Chelan_Class_Roster_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+  };
 }
