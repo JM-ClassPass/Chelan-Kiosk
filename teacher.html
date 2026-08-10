@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chelan High School - Student Roster Management</title>
+  <title>Chelan High School - Live Teacher Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -11,30 +11,26 @@
 
   <!-- Dark Forest Green Header Bar -->
   <header class="bg-[#0B4F2C] text-white px-6 py-3 shadow-md flex justify-between items-center z-30">
-    <!-- Left: Logo, Title & Version Tag -->
+    <!-- Left: Logo, Title, Subtitle & Version -->
     <div class="flex items-center gap-3">
       <img 
         src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" 
         alt="Chelan High School Logo" 
         class="h-10 w-auto object-contain"
       />
-      <div class="flex items-center gap-2">
-        <div>
-          <h1 class="text-base font-extrabold tracking-wide uppercase leading-none">CHELAN HIGH SCHOOL</h1>
-          <p class="text-xs text-emerald-200 font-medium mt-0.5">Student Roster Management</p>
-        </div>
-        <span class="bg-emerald-800/80 text-amber-300 text-[10px] font-mono font-bold px-2.5 py-1 rounded-full border border-emerald-600/40 ml-2">
-          v1.1.10
-        </span>
+      <div>
+        <h1 class="text-base font-extrabold tracking-wide uppercase leading-none">CHELAN HIGH SCHOOL</h1>
+        <p class="text-xs text-emerald-200 font-medium mt-0.5">Live Teacher Control Center</p>
+        <p class="text-[10px] text-amber-300 font-mono font-bold leading-tight mt-0.5">v1.1.10</p>
       </div>
     </div>
 
     <!-- Center Navigation Tabs -->
     <nav class="hidden md:flex items-center gap-1 bg-[#07381e] p-1.5 rounded-xl border border-emerald-600/30">
-      <a href="teacher.html" class="px-3.5 py-1.5 rounded-lg text-xs font-bold text-emerald-100 hover:text-white hover:bg-emerald-800/50 transition flex items-center gap-1.5">
+      <a href="teacher.html" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-[#0B4F2C] text-white shadow-sm border border-emerald-500/30 flex items-center gap-1.5">
         <i class="fa-solid fa-gauge text-emerald-300"></i> Live Dashboard
       </a>
-      <a href="roster.html" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-[#0B4F2C] text-white shadow-sm border border-emerald-500/30 flex items-center gap-1.5">
+      <a href="roster.html" class="px-3.5 py-1.5 rounded-lg text-xs font-bold text-emerald-100 hover:text-white hover:bg-emerald-800/50 transition flex items-center gap-1.5">
         <i class="fa-solid fa-users text-emerald-300"></i> Manage Roster
       </a>
       <a href="index.html" target="_blank" class="px-3.5 py-1.5 rounded-lg text-xs font-bold text-emerald-100 hover:text-white hover:bg-emerald-800/50 transition flex items-center gap-1.5">
@@ -45,110 +41,49 @@
     <!-- Right: Room & Clock -->
     <div class="flex items-center gap-3">
       <div class="text-right pl-3 border-l border-emerald-700/60 flex flex-col justify-center">
-        <div id="roster-clock" class="text-base font-mono font-bold tracking-tight">00:00:00 PM</div>
-        <div id="roster-room" class="text-[10px] text-emerald-200 font-bold uppercase tracking-wider">TEACHER STATION &bull; ROOM 176</div>
+        <div id="dashboard-clock" class="text-base font-mono font-bold tracking-tight">00:00:00 PM</div>
+        <div id="dashboard-room" class="text-[10px] text-emerald-200 font-bold uppercase tracking-wider">TEACHER STATION &bull; ROOM 176</div>
       </div>
     </div>
   </header>
 
-  <!-- Main Container Layout -->
+  <!-- Dashboard Grid Canvas -->
   <main class="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto">
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-      <!-- ================= LEFT COLUMN: UNIFIED ROSTER TOOLS CARD (5 cols) ================= -->
-      <section class="lg:col-span-5">
-        <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 flex flex-col gap-6">
+      <!-- ================= COLUMN 1: PHONES IN ROOM (4 cols) ================= -->
+      <section class="lg:col-span-4 flex flex-col gap-4">
+        <div class="bg-white rounded-3xl p-5 shadow-sm border border-slate-200 flex flex-col h-full">
           
-          <!-- Master Card Header -->
-          <div class="border-b border-slate-100 pb-3">
-            <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2">
-              <i class="fa-solid fa-wrench text-[#0B4F2C]"></i> Roster Tools
-            </h2>
-            <p class="text-xs text-slate-400 font-medium mt-0.5">Manage and bulk import your Chelan student roster.</p>
-          </div>
-
-          <!-- Section 1: Quick Add Student -->
-          <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4">
-            <h3 class="text-xs font-extrabold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-              <i class="fa-solid fa-user-plus text-[#0B4F2C]"></i> Quick Add Student
-            </h3>
-
-            <form id="form-add-student" class="space-y-3">
+          <!-- Column Header -->
+          <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-xl bg-emerald-100 text-[#0B4F2C] flex items-center justify-center font-bold text-lg">
+                <i class="fa-solid fa-mobile-screen"></i>
+              </div>
               <div>
-                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">ID / Barcode</label>
-                <input 
-                  type="text" 
-                  id="input-id" 
-                  placeholder="e.g. 10482" 
-                  class="w-full text-xs font-mono font-bold py-2.5 px-3 rounded-xl border border-slate-300 focus:border-[#0B4F2C] focus:outline-none text-slate-800 bg-white"
-                  required
-                />
+                <h2 class="text-base font-extrabold text-slate-800 leading-tight">Checked-In Phones</h2>
+                <p class="text-xs text-slate-400 font-medium">In Storage Rack: <span id="dash-phone-count" class="font-bold text-[#0B4F2C]">0</span></p>
               </div>
+            </div>
 
-              <div class="grid grid-cols-2 gap-2">
-                <div>
-                  <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">First Name</label>
-                  <input 
-                    type="text" 
-                    id="input-firstname" 
-                    placeholder="First Name" 
-                    class="w-full text-xs font-bold py-2.5 px-3 rounded-xl border border-slate-300 focus:border-[#0B4F2C] focus:outline-none text-slate-800 bg-white"
-                    required
-                  />
-                </div>
-                <div>
-                  <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Last Name</label>
-                  <input 
-                    type="text" 
-                    id="input-lastname" 
-                    placeholder="Last Name" 
-                    class="w-full text-xs font-bold py-2.5 px-3 rounded-xl border border-slate-300 focus:border-[#0B4F2C] focus:outline-none text-slate-800 bg-white"
-                    required
-                  />
-                </div>
-              </div>
-
-              <button type="submit" class="w-full bg-[#0B4F2C] hover:bg-[#07381e] text-white font-bold py-2.5 rounded-xl shadow-sm transition text-xs flex items-center justify-center gap-1.5">
-                <i class="fa-solid fa-plus text-amber-300"></i> Add Student to Roster
-              </button>
-            </form>
+            <!-- Sort Bar -->
+            <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-[11px] font-bold">
+              <button id="sort-pocket" class="px-2 py-1 rounded-lg bg-white text-[#0B4F2C] shadow-xs">Slot</button>
+              <button id="sort-first" class="px-2 py-1 rounded-lg text-slate-600 hover:text-slate-900">First</button>
+              <button id="sort-last" class="px-2 py-1 rounded-lg text-slate-600 hover:text-slate-900">Last</button>
+            </div>
           </div>
 
-          <!-- Section 2: Bulk Roster Import (CSV / Drag & Drop) -->
-          <div class="bg-emerald-50/40 border border-emerald-200/60 rounded-2xl p-4">
-            <h3 class="text-xs font-extrabold text-[#0B4F2C] uppercase tracking-wider mb-3 flex items-center gap-1.5">
-              <i class="fa-solid fa-folder-open"></i> Bulk Roster Import (CSV / Sheet)
-            </h3>
+          <!-- Phone Rack List Container -->
+          <div id="phones-container" class="flex-1 space-y-2.5 overflow-y-auto max-h-[620px] pr-1">
+            <!-- Dynamically populated by teacher.js -->
+          </div>
 
-            <!-- Radio Mode Controls -->
-            <div class="space-y-1.5 mb-4 text-xs font-bold text-slate-700">
-              <label class="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="import-mode" value="merge" checked class="accent-[#0B4F2C]">
-                <span>Add / Merge Students (Default)</span>
-              </label>
-              <label class="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="import-mode" value="replace" class="accent-rose-600">
-                <span class="text-slate-600">Replace Entire Roster</span>
-              </label>
-            </div>
-
-            <!-- Drag & Drop Area -->
-            <div 
-              id="drop-zone" 
-              class="border-2 border-dashed border-emerald-400 bg-white hover:bg-emerald-50/50 rounded-2xl p-5 text-center transition cursor-pointer mb-3"
-            >
-              <i class="fa-solid fa-cloud-arrow-up text-emerald-700 text-2xl mb-1"></i>
-              <p id="drop-zone-text" class="text-xs font-bold text-slate-700">Drag & Drop CSV File Here</p>
-              <p class="text-[10px] text-slate-400 font-medium my-1">or</p>
-              <button type="button" id="btn-browse-file" class="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold shadow-xs">
-                Browse File
-              </button>
-              <input type="file" id="csv-file-input" accept=".csv" class="hidden" />
-            </div>
-
-            <!-- Process Import Button -->
-            <button type="button" id="btn-process-import" class="w-full bg-[#0B4F2C] hover:bg-[#07381e] text-white font-bold py-2.5 rounded-xl shadow-sm transition text-xs flex items-center justify-center gap-1.5">
-              <i class="fa-solid fa-bolt text-amber-300"></i> Process Import
+          <!-- Bottom Action: Return All -->
+          <div class="pt-4 border-t border-slate-100 mt-4">
+            <button id="btn-checkout-all" type="button" class="w-full bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-700 font-bold py-2.5 rounded-xl border border-slate-200 hover:border-rose-300 text-xs transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-arrow-right-from-bracket"></i> Check Out All Phones
             </button>
           </div>
 
@@ -156,51 +91,82 @@
       </section>
 
 
-      <!-- ================= RIGHT COLUMN: CLASS ROSTER TABLE (7 cols) ================= -->
-      <section class="lg:col-span-7">
-        <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 flex flex-col h-full min-h-[620px]">
+      <!-- ================= COLUMN 2: PASSES & QUICK TOOLS (4 cols) ================= -->
+      <section class="lg:col-span-4 flex flex-col gap-6">
+
+        <!-- Bathroom Pass Card (Rose Accent) -->
+        <div class="bg-white rounded-3xl p-5 shadow-sm border-l-8 border-l-rose-700 border-y border-r border-slate-200">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-restroom text-rose-700 text-lg"></i>
+              <h3 class="text-sm font-extrabold text-slate-800">Bathroom Passes Out</h3>
+            </div>
+            <span id="dash-bathroom-count" class="bg-rose-100 text-rose-800 text-xs font-bold px-2.5 py-0.5 rounded-full border border-rose-200">0/1</span>
+          </div>
+
+          <div id="bathroom-pass-container" class="space-y-2">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- Hall Pass Card (Indigo Accent) -->
+        <div class="bg-white rounded-3xl p-5 shadow-sm border-l-8 border-l-indigo-700 border-y border-r border-slate-200">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-ticket text-indigo-700 text-lg"></i>
+              <h3 class="text-sm font-extrabold text-slate-800">Hall Passes Out</h3>
+            </div>
+            <span id="dash-hall-count" class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2.5 py-0.5 rounded-full border border-indigo-200">0</span>
+          </div>
+
+          <div id="hall-pass-container" class="space-y-2">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- Class Quick Stats -->
+        <div class="bg-white rounded-3xl p-5 shadow-sm border border-slate-200 flex-1 flex flex-col justify-between">
+          <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-wider mb-3">Today's Class Summary</h3>
           
-          <!-- Table Header Controls -->
-          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-100 pb-4 mb-4">
-            <h2 class="text-base font-extrabold text-slate-800 flex items-center gap-2">
-              <i class="fa-solid fa-users text-[#0B4F2C]"></i>
-              Class Roster ( <span id="roster-count" class="text-[#0B4F2C]">0</span> Students )
-            </h2>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+              <span class="text-[10px] font-bold text-slate-400 block uppercase">Total Check-Ins</span>
+              <span id="stat-checkins" class="text-xl font-extrabold text-[#0B4F2C]">0</span>
+            </div>
+            <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+              <span class="text-[10px] font-bold text-slate-400 block uppercase">Pass Trips Taken</span>
+              <span id="stat-trips" class="text-xl font-extrabold text-indigo-700">0</span>
+            </div>
+          </div>
+        </div>
 
-            <div class="flex items-center gap-2 w-full sm:w-auto">
-              <!-- Search Box -->
-              <div class="relative flex-1 sm:w-56">
-                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                <input 
-                  type="text" 
-                  id="search-input" 
-                  placeholder="Search roster..." 
-                  class="w-full pl-9 pr-3.5 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:border-[#0B4F2C] focus:outline-none bg-slate-50"
-                />
-              </div>
+      </section>
 
-              <!-- CSV Export Button -->
-              <button id="btn-export-roster" type="button" class="bg-[#0B4F2C] hover:bg-[#07381e] text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
-                <i class="fa-solid fa-file-csv text-emerald-300"></i> Export CSV
+
+      <!-- ================= COLUMN 3: RUNNING ACTIVITY LOG (4 cols) ================= -->
+      <section class="lg:col-span-4 flex flex-col">
+        <div class="bg-white rounded-3xl p-5 shadow-sm border border-slate-200 flex flex-col h-full">
+          
+          <!-- Header & Actions -->
+          <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-clock-rotate-left text-[#0B4F2C] text-base"></i>
+              <h2 class="text-base font-extrabold text-slate-800">Live Activity Feed</h2>
+            </div>
+            
+            <div class="flex items-center gap-1.5">
+              <button id="btn-export-csv" type="button" title="Export Activity to CSV" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition">
+                <i class="fa-solid fa-download"></i>
+              </button>
+              <button id="btn-clear-logs" type="button" title="Clear Logs" class="p-2 rounded-xl bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-700 text-xs font-bold transition">
+                <i class="fa-solid fa-trash-can"></i>
               </button>
             </div>
           </div>
 
-          <!-- Roster Table -->
-          <div class="flex-1 overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-              <thead>
-                <tr class="border-b border-slate-200 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">
-                  <th class="py-3 px-3">ID Code</th>
-                  <th class="py-3 px-3">First Name</th>
-                  <th class="py-3 px-3">Last Name</th>
-                  <th class="py-3 px-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="roster-table-body" class="divide-y divide-slate-100 text-xs font-bold text-slate-800">
-                <!-- Dynamically populated by roster.js -->
-              </tbody>
-            </table>
+          <!-- Log List -->
+          <div id="activity-log-container" class="flex-1 space-y-2.5 overflow-y-auto max-h-[620px] pr-1">
+            <!-- Dynamically populated -->
           </div>
 
         </div>
@@ -213,6 +179,6 @@
     Chelan High School Classroom Pass System &bull; Powered by Firebase
   </footer>
 
-  <script type="module" src="roster.js"></script>
+  <script type="module" src="teacher.js"></script>
 </body>
 </html>
