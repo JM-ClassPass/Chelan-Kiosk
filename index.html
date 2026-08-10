@@ -6,7 +6,7 @@
     <title>Classroom Kiosk - Chelan High</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Safely load config.js if present; fallback if missing -->
+    <!-- Safely load config.js if present -->
     <script src="config.js" onerror="window.CONFIG = window.CONFIG || { version: '1.000' };"></script>
 
     <style>
@@ -37,7 +37,7 @@
         <div class="flex items-center gap-6">
             <div class="flex gap-2 text-xs font-bold">
                 <div class="bg-green-900/60 px-3 py-1.5 rounded-full border border-green-700/60 flex items-center gap-1.5">
-                    <span>📱</span> Rack: <span id="count-rack">0</span>
+                    <span>📱</span> Phones: <span id="count-rack">0</span>
                 </div>
                 <div class="bg-red-900/60 px-3 py-1.5 rounded-full border border-red-700/60 flex items-center gap-1.5">
                     <span>🚻</span> Bathroom: <span id="count-bath">0</span>/1
@@ -48,7 +48,7 @@
             </div>
             <div class="text-right hidden md:block">
                 <span id="live-clock" class="text-lg font-mono font-bold block leading-none">--:-- --</span>
-                <span class="text-[10px] text-green-300 uppercase tracking-widest">Medical Sciences</span>
+                <span class="text-[10px] text-green-300 uppercase tracking-widest">ROOM 176</span>
             </div>
         </div>
     </header>
@@ -143,23 +143,31 @@
         </div>
     </main>
 
-    <!-- Clock & Version Script -->
+    <!-- Clock & Dynamic Version Script -->
     <script>
         setInterval(() => {
             const clock = document.getElementById('live-clock');
             if(clock) clock.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         }, 1000);
 
-        // Update version badge if CONFIG is defined
-        window.addEventListener('load', () => {
-            if (typeof CONFIG !== 'undefined' && CONFIG.version) {
-                const badge = document.getElementById('app-version-badge');
-                if (badge) badge.textContent = `v${CONFIG.version}`;
+        function updateVersionBadge() {
+            let ver = null;
+            if (typeof CONFIG !== 'undefined') ver = CONFIG.version || CONFIG.appVersion;
+            else if (typeof config !== 'undefined') ver = config.version || config.appVersion;
+            else if (typeof APP_VERSION !== 'undefined') ver = APP_VERSION;
+            else if (window.CONFIG && window.CONFIG.version) ver = window.CONFIG.version;
+
+            const badge = document.getElementById('app-version-badge');
+            if (badge && ver) {
+                badge.textContent = String(ver).startsWith('v') ? ver : `v${ver}`;
             }
-        });
+        }
+
+        window.addEventListener('load', updateVersionBadge);
+        setTimeout(updateVersionBadge, 500);
     </script>
     
-    <!-- Firebase Module & Application Logic -->
+    <!-- Firebase Module & Universal Lookup Logic -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getDatabase, ref, onValue, set, remove, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
@@ -216,40 +224,85 @@
             }
         };
 
-        // Forgiving Roster Lookup
+        // Clean string helper
+        function cleanStr(val) {
+            if (val === null || val === undefined) return '';
+            return String(val).replace(/[^a-zA-Z0-9]/g, '').toLowerCase().trim();
+        }
+
+        // Deep Universal Student Roster Lookup
         function findStudentInRoster(inputId) {
             if (!roster || !inputId) return null;
-            
-            const cleanInput = String(inputId).replace(/[^a-zA-Z0-9]/g, '').toLowerCase().trim();
-            const unpaddedInput = cleanInput.replace(/^0+/, '');
 
-            for (const key in roster) {
-                const student = roster[key];
+            const targetRaw = String(inputId).trim();
+            const targetClean = cleanStr(inputId);
+            const targetUnpadded = targetClean.replace(/^0+/, '');
+
+            if (!targetClean) return null;
+
+            for (const [key, student] of Object.entries(roster)) {
                 if (!student) continue;
 
-                const cleanKey = String(key).replace(/[^a-zA-Z0-9]/g, '').toLowerCase().trim();
+                // Case 1: Simple Key/Value Roster
+                if (typeof student !== 'object') {
+                    const cleanKey = cleanStr(key);
+                    if (cleanKey === targetClean || (targetUnpadded && cleanKey.replace(/^0+/, '') === targetUnpadded)) {
+                        return { id: key, data: { firstName: String(student), lastName: '' } };
+                    }
+                    continue;
+                }
+
+                // Case 2: Check standard Firebase Key
+                const cleanKey = cleanStr(key);
                 const unpaddedKey = cleanKey.replace(/^0+/, '');
-
-                const subId = student.studentId ? String(student.studentId).replace(/[^a-zA-Z0-9]/g, '').toLowerCase().trim() : '';
-                const unpaddedSubId = subId.replace(/^0+/, '');
-
-                const altId = student.id ? String(student.id).replace(/[^a-zA-Z0-9]/g, '').toLowerCase().trim() : '';
-                const unpaddedAltId = altId.replace(/^0+/, '');
-
-                if (
-                    cleanKey === cleanInput || (unpaddedInput && unpaddedKey === unpaddedInput) ||
-                    subId === cleanInput || (unpaddedInput && unpaddedSubId === unpaddedInput) ||
-                    altId === cleanInput || (unpaddedInput && unpaddedAltId === unpaddedInput)
-                ) {
+                if (cleanKey === targetClean || (targetUnpadded && unpaddedKey === targetUnpadded)) {
                     return { id: key, data: student };
+                }
+
+                // Case 3: Scan ALL internal properties (student_id, barcode, ID, localId, etc.)
+                for (const propVal of Object.values(student)) {
+                    if (propVal === null || propVal === undefined) continue;
+                    if (typeof propVal === 'object') continue;
+
+                    const valStr = String(propVal).trim();
+                    const cleanVal = cleanStr(propVal);
+                    const unpaddedVal = cleanVal.replace(/^0+/, '');
+
+                    if (
+                        valStr === targetRaw ||
+                        (cleanVal && cleanVal === targetClean) ||
+                        (targetUnpadded && unpaddedVal && unpaddedVal === targetUnpadded)
+                    ) {
+                        return { id: key, data: student };
+                    }
                 }
             }
 
             return null;
         }
 
+        // Name Formatter Helper
+        function getStudentFullName(data, fallbackId) {
+            if (!data) return fallbackId;
+            if (typeof data === 'string') return data;
+
+            const fname = data.firstName || data.first_name || data.FirstName || data.First_Name || data.fname || data.name || '';
+            const lname = data.lastName || data.last_name || data.LastName || data.Last_Name || data.lname || '';
+
+            const combined = `${fname} ${lname}`.trim();
+            if (combined) return combined;
+
+            if (data.displayName) return data.displayName;
+            if (data.fullName) return data.fullName;
+            if (data.studentName) return data.studentName;
+
+            return fallbackId;
+        }
+
         // Realtime Data Sync
-        onValue(ref(db, 'classroom_roster'), s => roster = s.val() || {});
+        onValue(ref(db, 'classroom_roster'), s => {
+            roster = s.val() || {};
+        });
         
         onValue(ref(db, 'active_phones_in_class'), s => {
             activePhones = s.val() || {};
@@ -437,10 +490,7 @@
                 
                 if (matchedStudent) {
                     studentId = matchedStudent.id;
-                    const data = matchedStudent.data;
-                    const fname = data.firstName || data.first_name || '';
-                    const lname = data.lastName || data.last_name || '';
-                    studentName = `${fname} ${lname}`.trim() || studentId;
+                    studentName = getStudentFullName(matchedStudent.data, studentId);
                 } else {
                     failedAttempts++;
                     if (failedAttempts >= 3) {
