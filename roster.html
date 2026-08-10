@@ -31,11 +31,12 @@
         <div class="flex items-center gap-4">
             <div class="text-right hidden md:block">
                 <span id="live-clock" class="text-lg font-mono font-bold block leading-none">--:--:-- --</span>
-                <span class="text-[10px] text-green-300 uppercase tracking-widest font-bold">MEDICAL SCIENCES</span>
+                <!-- Dynamic Room / Department Subtitle -->
+                <span id="app-dept-tag" class="text-[10px] text-green-300 uppercase tracking-widest font-bold">ROOM 176</span>
             </div>
             <!-- Header Links: Live Dashboard -> Manage Roster -> Kiosk View -->
             <div class="flex gap-2">
-                <a href="https://morinjn.github.io/Chelan-Kiosk/teacher.html" class="bg-green-900/60 hover:bg-green-900 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition-all flex items-center gap-1.5 border border-green-700/60">
+                <a href="teacher.html" class="bg-green-900/60 hover:bg-green-900 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition-all flex items-center gap-1.5 border border-green-700/60">
                     Live Dashboard
                 </a>
                 <a href="roster.html" class="bg-white text-chelan text-xs font-bold px-3.5 py-2 rounded-lg shadow-sm transition-all flex items-center gap-1.5">
@@ -234,9 +235,16 @@
     <!-- Global System Scripts -->
     <script src="config.js?v=1.1.01"></script>
     <script>
-        // Dynamically set header version tag from config.js
-        if (window.APP_CONFIG && window.APP_CONFIG.version) {
-            document.getElementById('app-version-tag').textContent = `Manage Roster v${window.APP_CONFIG.version}`;
+        // Dynamically populate version and department/room from config.js
+        if (window.APP_CONFIG) {
+            if (window.APP_CONFIG.version) {
+                const verTag = document.getElementById('app-version-tag');
+                if (verTag) verTag.textContent = `Manage Roster v${window.APP_CONFIG.version}`;
+            }
+            if (window.APP_CONFIG.department) {
+                const deptTag = document.getElementById('app-dept-tag');
+                if (deptTag) deptTag.textContent = window.APP_CONFIG.department.toUpperCase();
+            }
         }
     </script>
     <script src="roster.js?v=1.1.01"></script>
