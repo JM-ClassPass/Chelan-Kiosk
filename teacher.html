@@ -35,7 +35,7 @@
         <div class="flex items-center gap-3">
             <img src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" alt="Logo" class="h-10">
             <h1 class="text-xl font-bold tracking-wide">Chelan High</h1>
-            <span class="bg-green-800/60 text-green-100 text-[10px] px-2 py-1 rounded-full border border-green-700/50 uppercase tracking-wide">Teacher Dashboard</span>
+            <span class="bg-green-800/60 text-green-100 text-[10px] px-2 py-1 rounded-full border border-green-700/50 uppercase tracking-wide font-mono">Teacher Dashboard v1.001</span>
         </div>
         <div class="flex items-center gap-6">
             <div class="text-right hidden sm:block">
@@ -187,43 +187,63 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // Robust submit handling
-        document.getElementById('quick-add-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('add-btn');
-            const id = document.getElementById('add-student-id').value.trim();
-            const f = document.getElementById('add-student-fname').value.trim();
-            const l = document.getElementById('add-student-lname').value.trim();
+        // Explicit direct submit handler
+        const form = document.getElementById('quick-add-form');
+        if (form) {
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const btn = document.getElementById('add-btn');
+                const idInput = document.getElementById('add-student-id');
+                const fInput = document.getElementById('add-student-fname');
+                const lInput = document.getElementById('add-student-lname');
 
-            if (!id || !f || !l) return;
+                const studentId = idInput.value.trim();
+                const firstName = fInput.value.trim();
+                const lastName = lInput.value.trim();
 
-            btn.disabled = true;
-            btn.textContent = "Saving...";
+                if (!studentId || !firstName || !lastName) {
+                    alert("Please fill in all 3 fields.");
+                    return;
+                }
 
-            // Timeout safety net
-            const timeout = setTimeout(() => {
-                btn.disabled = false;
-                btn.textContent = "+ Add to Roster";
-            }, 3000);
+                btn.disabled = true;
+                btn.textContent = "Saving...";
 
-            set(ref(db, 'classroom_roster/' + id), {
-                firstName: f,
-                lastName: l
-            }).then(() => {
-                clearTimeout(timeout);
-                document.getElementById('quick-add-form').reset();
-                btn.textContent = "✓ Saved!";
-                setTimeout(() => {
-                    btn.textContent = "+ Add to Roster";
-                    btn.disabled = false;
-                }, 1200);
-            }).catch((err) => {
-                clearTimeout(timeout);
-                alert("Database Error: " + err.message);
-                btn.textContent = "+ Add to Roster";
-                btn.disabled = false;
+                const studentRef = ref(db, 'classroom_roster/' + studentId);
+                
+                set(studentRef, {
+                    firstName: firstName,
+                    lastName: lastName
+                })
+                .then(() => {
+                    btn.textContent = "✓ Added!";
+                    btn.classList.remove('bg-chelan');
+                    btn.classList.add('bg-green-600');
+                    form.reset();
+                    
+                    setTimeout(() => {
+                        btn.textContent = "+ Add to Roster";
+                        btn.classList.remove('bg-green-600');
+                        btn.classList.add('bg-chelan');
+                        btn.disabled = false;
+                    }, 1500);
+                })
+                .catch((error) => {
+                    console.error("Firebase write error:", error);
+                    alert("Error saving: " + error.message);
+                    btn.textContent = "Error!";
+                    btn.classList.remove('bg-chelan');
+                    btn.classList.add('bg-red-600');
+                    
+                    setTimeout(() => {
+                        btn.textContent = "+ Add to Roster";
+                        btn.classList.remove('bg-red-600');
+                        btn.classList.add('bg-chelan');
+                        btn.disabled = false;
+                    }, 2000);
+                });
             });
-        });
+        }
 
         onValue(ref(db, 'active_phones_in_class'), s => renderPhones(s.val() || {}));
         onValue(ref(db, 'active_bathroom_passes'), s => renderPasses('b', s.val() || {}));
