@@ -3,132 +3,131 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chelan High - Student Kiosk</title>
+  <title>Chelan High School - Classroom Phone & Pass Kiosk</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col font-sans overflow-x-hidden select-none">
+<body class="bg-[#f0f4f8] min-h-screen flex flex-col font-sans text-slate-800 antialiased select-none">
 
-  <!-- Header Navigation Bar -->
-  <header class="bg-white border-b border-slate-200 px-6 py-3 shadow-sm flex justify-between items-center sticky top-0 z-30">
-    <!-- Official Chelan High Logo & Room Info -->
-    <div class="flex items-center gap-4">
+  <!-- Dark Forest Green Header Bar -->
+  <header class="bg-[#0B4F2C] text-white px-6 py-3 shadow-md flex justify-between items-center z-30">
+    <!-- Left: Official Chelan Logo & Title -->
+    <div class="flex items-center gap-3">
       <img 
         src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" 
-        alt="Chelan High School" 
+        alt="Chelan High School Logo" 
         class="h-10 w-auto object-contain"
       />
-      <div class="border-l border-slate-200 pl-4 hidden sm:block">
-        <h1 class="text-base font-bold text-slate-900 leading-tight">Student Pass & Phone Kiosk</h1>
-        <div class="flex items-center gap-2 mt-0.5">
-          <span id="kiosk-version" class="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-300">v1.1.10</span>
-          <span id="kiosk-room" class="text-xs text-slate-500 font-semibold">ROOM 176</span>
-        </div>
+      <div>
+        <h1 class="text-base font-extrabold tracking-wide uppercase leading-none">CHELAN HIGH SCHOOL</h1>
+        <p class="text-xs text-emerald-200 font-medium mt-0.5">Classroom Phone & Pass Kiosk</p>
       </div>
     </div>
 
-    <!-- Live Clock & Teacher Access Button -->
-    <div class="flex items-center gap-4">
-      <div class="text-right">
-        <div id="kiosk-clock" class="text-xl font-mono font-extrabold text-emerald-600">00:00:00 AM</div>
-        <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Kiosk Active</div>
+    <!-- Right: Live Counters, Room Number, & Clock -->
+    <div class="flex items-center gap-3">
+      <div class="hidden sm:flex items-center gap-2 text-xs font-bold">
+        <!-- Rack Badge -->
+        <div class="bg-[#07381e] border border-emerald-500/30 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+          <i class="fa-solid fa-mobile-screen text-emerald-300"></i> Rack: <span id="rack-count">0</span>
+        </div>
+        <!-- Bathroom Badge -->
+        <div id="badge-bathroom-header" class="bg-rose-900/80 border border-rose-500/30 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+          <i class="fa-solid fa-restroom text-rose-300"></i> Bathroom: <span id="bathroom-count">0/1</span>
+        </div>
+        <!-- Hall Pass Badge -->
+        <div id="badge-hall-header" class="bg-indigo-900/80 border border-indigo-500/30 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+          <i class="fa-solid fa-ticket text-indigo-300"></i> Hall Pass: <span id="hall-count">0</span>
+        </div>
       </div>
-      <!-- Teacher Portal Shortcut -->
-      <a href="teacher.html" class="p-2.5 rounded-xl bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200 transition border border-slate-200" title="Teacher Access">
-        <i class="fa-solid fa-lock text-sm"></i>
-      </a>
+
+      <!-- Room & Clock -->
+      <div class="text-right pl-3 border-l border-emerald-700/60 flex flex-col justify-center">
+        <div id="kiosk-clock" class="text-base font-mono font-bold tracking-tight">00:00:00 PM</div>
+        <div id="kiosk-room" class="text-[10px] text-emerald-200 font-bold uppercase tracking-wider">ROOM 176</div>
+      </div>
     </div>
   </header>
 
-  <!-- Main Kiosk Workspace (Side-by-Side Layout) -->
-  <main class="flex-1 max-w-[1600px] w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-
-    <!-- LEFT PANEL: Action Tabs, Student ID Display & Keypad (5 Cols) -->
-    <section class="lg:col-span-5 bg-white border border-slate-200 rounded-3xl p-6 shadow-lg flex flex-col gap-5">
+  <!-- Main Kiosk Container -->
+  <main class="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-10">
+    
+    <!-- Centered Single-Card Module -->
+    <div id="kiosk-card" class="bg-white rounded-3xl shadow-xl max-w-4xl w-full border-l-[12px] border-[#0B4F2C] p-6 sm:p-10 flex flex-col items-center transition-all duration-300">
       
-      <!-- 1. Mode Action Tabs -->
-      <div>
-        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">1. Select Action</label>
-        <div class="grid grid-cols-3 gap-2">
-          <button id="tab-phone" class="px-3 py-2.5 rounded-xl font-bold text-xs transition border border-emerald-500 bg-emerald-500 text-white shadow-md flex items-center justify-center gap-1.5">
-            <i class="fa-solid fa-mobile-screen"></i> Phone
-          </button>
-          <button id="tab-bathroom" class="px-3 py-2.5 rounded-xl font-bold text-xs transition border border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200 flex items-center justify-center gap-1.5">
-            <i class="fa-solid fa-restroom"></i> Bathroom
-          </button>
-          <button id="tab-hall" class="px-3 py-2.5 rounded-xl font-bold text-xs transition border border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200 flex items-center justify-center gap-1.5">
-            <i class="fa-solid fa-id-badge"></i> Hall Pass
-          </button>
-        </div>
+      <!-- Top Mode Badge Pill -->
+      <div id="mode-badge" class="bg-emerald-100 text-[#0B4F2C] text-xs font-bold uppercase tracking-wider px-4 py-1.5 rounded-full border border-emerald-300 mb-3">
+        PHONE CHECK-IN / OUT
       </div>
 
-      <!-- 2. Student ID Input Display Box -->
-      <div>
-        <div class="flex justify-between items-center mb-1.5">
-          <label class="text-xs font-bold uppercase tracking-wider text-slate-400">2. Scan or Enter Student ID</label>
-          <button id="toggle-mask-btn" class="text-xs text-slate-400 hover:text-slate-600 transition" title="Toggle ID Masking">
-            <i class="fa-solid fa-eye"></i>
-          </button>
-        </div>
-        <div class="bg-slate-50 border-2 border-slate-300 rounded-2xl p-4 text-center shadow-inner flex items-center justify-center min-h-[64px]">
-          <span id="id-display" class="text-2xl font-mono tracking-widest text-slate-400 select-none">• • • • • •</span>
-        </div>
-      </div>
+      <!-- Main Heading -->
+      <h2 id="mode-heading" class="text-2xl sm:text-3xl font-extrabold text-slate-900 text-center tracking-tight">
+        Scan/Enter Student Barcode or ID
+      </h2>
 
-      <!-- 3. Keypad Number Buttons -->
-      <div class="grid grid-cols-3 gap-3">
-        <button id="btn-1" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-2xl font-bold py-3.5 rounded-2xl border border-slate-200 shadow-sm active:scale-95 transition">1</button>
-        <button id="btn-2" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-2xl font-bold py-3.5 rounded-2xl border border-slate-200 shadow-sm active:scale-95 transition">2</button>
-        <button id="btn-3" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-2xl font-bold py-3.5 rounded-2xl border border-slate-200 shadow-sm active:scale-95 transition">3</button>
+      <!-- Subtitle -->
+      <p id="mode-subtitle" class="text-xs sm:text-sm text-slate-500 text-center mt-1.5 mb-6 max-w-xl">
+        Scan student ID card or manually enter ID, then select a chosen pocket slot.
+      </p>
 
-        <button id="btn-4" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-2xl font-bold py-3.5 rounded-2xl border border-slate-200 shadow-sm active:scale-95 transition">4</button>
-        <button id="btn-5" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-2xl font-bold py-3.5 rounded-2xl border border-slate-200 shadow-sm active:scale-95 transition">5</button>
-        <button id="btn-6" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-2xl font-bold py-3.5 rounded-2xl border border-slate-200 shadow-sm active:scale-95 transition">6</button>
-
-        <button id="btn-7" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-2xl font-bold py-3.5 rounded-2xl border border-slate-200 shadow-sm active:scale-95 transition">7</button>
-        <button id="btn-8" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-2xl font-bold py-3.5 rounded-2xl border border-slate-200 shadow-sm active:scale-95 transition">8</button>
-        <button id="btn-9" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-2xl font-bold py-3.5 rounded-2xl border border-slate-200 shadow-sm active:scale-95 transition">9</button>
-
-        <button id="btn-clear" class="bg-rose-100 hover:bg-rose-200 text-rose-700 text-sm font-bold py-3.5 rounded-2xl border border-rose-200 shadow-sm active:scale-95 transition">Clear</button>
-        <button id="btn-0" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-2xl font-bold py-3.5 rounded-2xl border border-slate-200 shadow-sm active:scale-95 transition">0</button>
-        <button id="btn-submit" class="bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-extrabold py-3.5 rounded-2xl shadow-md active:scale-95 transition flex items-center justify-center gap-1">
-          Submit <i class="fa-solid fa-arrow-right text-xs"></i>
+      <!-- Pill Mode Selector Bar (Centered) -->
+      <div class="bg-slate-100 p-1.5 rounded-2xl flex items-center gap-2 mb-6 w-full max-w-lg border border-slate-200">
+        <button id="tab-phone" type="button" class="flex-1 py-2.5 px-3 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 bg-[#0B4F2C] text-white shadow-sm">
+          <i class="fa-solid fa-mobile-screen"></i> Phone Mode
+        </button>
+        <button id="tab-bathroom" type="button" class="flex-1 py-2.5 px-3 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 text-slate-600 hover:text-slate-900">
+          <i class="fa-solid fa-restroom"></i> Bathroom (1 Max)
+        </button>
+        <button id="tab-hall" type="button" class="flex-1 py-2.5 px-3 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 text-slate-600 hover:text-slate-900">
+          <i class="fa-solid fa-ticket"></i> Hall Pass
         </button>
       </div>
 
-    </section>
+      <!-- ID Input Box -->
+      <div class="w-full max-w-2xl mb-6">
+        <input 
+          type="text" 
+          id="id-input" 
+          placeholder="Scan or Enter ID Here..." 
+          class="w-full text-center text-xl sm:text-2xl font-mono font-bold py-4 px-6 rounded-2xl border-2 border-slate-300 focus:border-[#0B4F2C] focus:outline-none focus:ring-4 focus:ring-emerald-500/10 text-slate-800 placeholder-slate-400 bg-white transition shadow-sm"
+          autofocus
+          autocomplete="off"
+        />
+      </div>
 
-    <!-- RIGHT PANEL: Pocket Selector Grid (7 Cols) -->
-    <section class="lg:col-span-7 bg-white border border-slate-200 rounded-3xl p-6 shadow-lg flex flex-col">
-      <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
-        <div>
-          <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
-            <i class="fa-solid fa-border-all text-emerald-600"></i> Phone Pocket Grid (1–36)
-          </h2>
-          <p class="text-xs text-slate-500">Tap an open pocket to select it for phone check-in.</p>
+      <!-- Pocket Selector Box (Visible only in Phone Mode) -->
+      <div id="pocket-section" class="w-full max-w-2xl bg-slate-50 border border-slate-200 rounded-2xl p-4 mb-6">
+        <div class="flex justify-between items-center mb-3">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+            <i class="fa-solid fa-border-all text-emerald-700"></i> TAP YOUR CHOSEN POCKET SLOT
+          </span>
+          <span id="chosen-slot-badge" class="bg-emerald-100 text-[#0B4F2C] text-xs font-bold px-3 py-1 rounded-full border border-emerald-300">
+            Chosen Slot: None Selected
+          </span>
         </div>
-        <div class="flex items-center gap-3 text-xs font-semibold">
-          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span> Open</span>
-          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-slate-300 inline-block"></span> In Use</span>
+
+        <!-- Scrollable 1-36 Pocket Grid -->
+        <div id="pocket-grid" class="grid grid-cols-6 sm:grid-cols-9 gap-2 max-h-[220px] overflow-y-auto p-1">
+          <!-- Rendered dynamically by app.js -->
         </div>
       </div>
 
-      <!-- Pocket Grid Container (Rendered by app.js) -->
-      <div id="pocket-grid" class="grid grid-cols-6 gap-2.5 sm:gap-3 flex-1">
-        <!-- Buttons 1-36 render here -->
-      </div>
-    </section>
+      <!-- Submit Scan / Entry Button -->
+      <button id="btn-submit" type="button" class="w-full max-w-2xl bg-[#0B4F2C] hover:bg-[#07381e] text-white text-lg font-bold py-4 rounded-2xl shadow-lg transition transform active:scale-[0.99] flex items-center justify-center gap-2">
+        <i class="fa-solid fa-bolt text-amber-300"></i> Submit Scan / Entry
+      </button>
 
+    </div>
   </main>
 
-  <!-- Toast Notification Overlay -->
+  <!-- Toast Feedback Overlay -->
   <div id="kiosk-toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 px-6 py-3 rounded-2xl shadow-2xl font-bold text-sm border border-white/20 backdrop-blur-md transition-all duration-300 z-50 hidden opacity-0"></div>
 
   <footer class="text-center py-3 text-xs text-slate-400 font-medium">
     Chelan High School Classroom Pass System &bull; Powered by Firebase
   </footer>
 
-  <!-- Script Module Import -->
+  <!-- App Logic Module -->
   <script type="module" src="app.js"></script>
 </body>
 </html>
