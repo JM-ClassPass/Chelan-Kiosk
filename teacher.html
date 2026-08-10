@@ -46,8 +46,8 @@
             </div>
             <div class="flex gap-2">
                 <a href="teacher.html" class="bg-white text-chelan font-bold text-sm px-4 py-2 rounded-lg shadow">Live Dashboard</a>
-                <a href="index.html" class="bg-green-900/60 hover:bg-green-900 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition-all border border-green-700/60 flex items-center">Kiosk View</a>
                 <a href="roster.html" class="bg-green-900/60 hover:bg-green-900 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition-all border border-green-700/60 flex items-center">Manage Roster</a>
+                <a href="index.html" class="bg-green-900/60 hover:bg-green-900 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition-all border border-green-700/60 flex items-center">Kiosk View</a>
             </div>
         </div>
     </header>
@@ -190,7 +190,6 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // State variables to hold live Firebase data
         let phonesData = {};
         let bathroomPassesData = {};
         let hallPassesData = {};
@@ -253,7 +252,6 @@
             });
         }
 
-        // Firebase Realtime Listeners
         onValue(ref(db, 'active_phones_in_class'), s => {
             phonesData = s.val() || {};
             renderPhones();
@@ -261,20 +259,18 @@
         onValue(ref(db, 'active_bathroom_passes'), s => {
             bathroomPassesData = s.val() || {};
             renderPasses('b', bathroomPassesData);
-            renderPhones(); // Re-render phones to update highlight badges
+            renderPhones();
         });
         onValue(ref(db, 'active_hall_passes'), s => {
             hallPassesData = s.val() || {};
             renderPasses('h', hallPassesData);
-            renderPhones(); // Re-render phones to update highlight badges
+            renderPhones();
         });
         onValue(ref(db, 'system_logs'), s => renderLogs(s.val() || {}));
 
-        // Phone Sorting Function
         window.setPhoneSort = (sortType) => {
             currentSort = sortType;
             
-            // Update button UI state
             const btnFirst = document.getElementById('sort-first');
             const btnLast = document.getElementById('sort-last');
             const btnPocket = document.getElementById('sort-pocket');
@@ -299,7 +295,6 @@
                 return;
             }
 
-            // Convert to array for sorting
             const items = keys.map(id => ({ id, ...phonesData[id] }));
 
             items.sort((a, b) => {
@@ -312,7 +307,6 @@
                     const pocketB = parseInt(b.pocket) || 0;
                     return pocketA - pocketB;
                 } else {
-                    // Default: 'last'
                     const nameA = (a.lastName || a.studentName || '').toLowerCase();
                     const nameB = (b.lastName || b.studentName || '').toLowerCase();
                     return nameA.localeCompare(nameB);
@@ -324,7 +318,6 @@
                 const hasBathroomPass = !!bathroomPassesData[id];
                 const hasHallPass = !!hallPassesData[id];
 
-                // Determine background highlight & badge styling
                 let containerClass = "border-green-200 bg-green-50/70";
                 let badgeClass = "text-green-800 bg-green-200/80";
                 let passTag = "";
