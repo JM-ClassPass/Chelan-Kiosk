@@ -9,7 +9,7 @@
         .bg-chelan { background-color: #0d5235; }
         .text-chelan { color: #0d5235; }
         .border-chelan { border-color: #0d5235; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     </style>
 </head>
@@ -53,44 +53,65 @@
     </header>
 
     <!-- Main Content -->
-    <main class="flex-grow max-w-[1200px] w-full mx-auto p-4 lg:p-6 flex flex-col gap-6">
+    <main class="flex-grow max-w-[1400px] w-full mx-auto p-4 lg:p-6 flex flex-col gap-6">
         
-        <!-- Action Bar & Add Student Form -->
+        <!-- Action Bar & Roster Controls -->
         <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-                <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">👥 Classroom Roster</h2>
-                <p class="text-xs text-slate-500 mt-1">Add, update, or remove student accounts from the system.</p>
+                <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">👥 Classroom Roster Management</h2>
+                <p class="text-xs text-slate-500 mt-1">Manage student IDs, names, periods, and perform bulk CSV imports or exports.</p>
             </div>
 
-            <!-- Add Student Form -->
-            <form id="add-roster-form" class="flex flex-wrap sm:flex-nowrap gap-2 w-full md:w-auto">
-                <input type="text" id="add-id" placeholder="ID / Barcode" required class="text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-chelan w-full sm:w-28">
-                <input type="text" id="add-fname" placeholder="First Name" required class="text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-chelan w-full sm:w-32">
-                <input type="text" id="add-lname" placeholder="Last Name" required class="text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-chelan w-full sm:w-32">
-                <button type="submit" id="add-roster-btn" class="bg-chelan hover:bg-green-800 text-white text-xs font-bold px-4 py-2 rounded-lg transition whitespace-nowrap">+ Add Student</button>
-            </form>
+            <!-- Roster Action Buttons -->
+            <div class="flex flex-wrap gap-2 w-full md:w-auto">
+                <button onclick="openAddModal()" class="bg-chelan hover:bg-green-800 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition flex items-center gap-1.5 shadow-sm">
+                    <span>+</span> Add Student
+                </button>
+                <button onclick="openImportModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-3.5 py-2 rounded-lg transition border border-slate-300 flex items-center gap-1.5">
+                    <span>📥</span> Import CSV
+                </button>
+                <button onclick="exportRosterCSV()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-3.5 py-2 rounded-lg transition border border-slate-300 flex items-center gap-1.5">
+                    <span>📤</span> Export CSV
+                </button>
+            </div>
         </div>
 
-        <!-- Roster Table Container -->
+        <!-- Filter & Search Toolbar -->
         <div class="bg-white rounded-2xl border border-slate-200 shadow-sm flex-grow flex flex-col overflow-hidden">
-            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <span id="roster-count" class="text-xs font-bold text-slate-500">0 Total Students</span>
-                <input type="text" id="search-roster" oninput="filterRoster()" placeholder="🔍 Search roster..." class="text-xs border border-slate-200 rounded-full px-3 py-1.5 w-60 bg-white focus:outline-none">
+            <div class="p-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-slate-50">
+                <div class="flex items-center gap-3">
+                    <span id="roster-count" class="text-xs font-bold text-chelan bg-green-50 border border-green-200 px-3 py-1.5 rounded-lg">0 Total Students</span>
+                    <select id="period-filter" onchange="filterRoster()" class="text-xs border border-slate-200 rounded-lg px-2.5 py-1.5 bg-white font-medium focus:outline-none">
+                        <option value="ALL">All Periods</option>
+                        <option value="1">Period 1</option>
+                        <option value="2">Period 2</option>
+                        <option value="3">Period 3</option>
+                        <option value="4">Period 4</option>
+                        <option value="5">Period 5</option>
+                        <option value="6">Period 6</option>
+                        <option value="7">Period 7</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="text" id="search-roster" oninput="filterRoster()" placeholder="🔍 Search ID or name..." class="text-xs border border-slate-200 rounded-lg px-3 py-1.5 w-full sm:w-64 bg-white focus:outline-none">
+                </div>
             </div>
 
-            <div class="overflow-auto custom-scrollbar flex-grow">
+            <!-- Main Table -->
+            <div class="overflow-auto custom-scrollbar flex-grow min-h-[400px]">
                 <table class="w-full text-left text-sm whitespace-nowrap">
-                    <thead class="bg-slate-100/70 text-slate-600 font-semibold sticky top-0 border-b border-slate-200">
+                    <thead class="bg-slate-100/80 text-slate-600 font-semibold sticky top-0 border-b border-slate-200">
                         <tr>
-                            <th class="px-6 py-3">Student ID</th>
-                            <th class="px-6 py-3">First Name</th>
-                            <th class="px-6 py-3">Last Name</th>
+                            <th class="px-6 py-3 cursor-pointer select-none hover:text-slate-900" onclick="setSort('id')">Student ID / Barcode ↕</th>
+                            <th class="px-6 py-3 cursor-pointer select-none hover:text-slate-900" onclick="setSort('first')">First Name ↕</th>
+                            <th class="px-6 py-3 cursor-pointer select-none hover:text-slate-900" onclick="setSort('last')">Last Name ↕</th>
+                            <th class="px-6 py-3 cursor-pointer select-none hover:text-slate-900" onclick="setSort('period')">Period ↕</th>
                             <th class="px-6 py-3 text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="roster-table-body" class="divide-y divide-slate-100">
                         <tr>
-                            <td colspan="4" class="px-6 py-4 text-center text-slate-400 text-xs italic">Loading roster data...</td>
+                            <td colspan="5" class="px-6 py-8 text-center text-slate-400 text-xs italic">Loading roster data...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -98,7 +119,65 @@
         </div>
     </main>
 
-    <!-- Lock Screen & Navigation Logic -->
+    <!-- Add / Edit Student Modal -->
+    <div id="student-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 id="modal-title" class="font-bold text-slate-800 text-lg">Add New Student</h3>
+                <button onclick="closeStudentModal()" class="text-slate-400 hover:text-slate-600 font-bold text-xl leading-none">&times;</button>
+            </div>
+            <form id="student-form" onsubmit="saveStudent(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Student ID / Barcode</label>
+                    <input type="text" id="modal-id" required class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-chelan">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">First Name</label>
+                        <input type="text" id="modal-fname" required class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-chelan">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Last Name</label>
+                        <input type="text" id="modal-lname" required class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-chelan">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Class Period</label>
+                    <select id="modal-period" class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-chelan">
+                        <option value="1">Period 1</option>
+                        <option value="2">Period 2</option>
+                        <option value="3">Period 3</option>
+                        <option value="4">Period 4</option>
+                        <option value="5">Period 5</option>
+                        <option value="6">Period 6</option>
+                        <option value="7">Period 7</option>
+                    </select>
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button type="button" onclick="closeStudentModal()" class="w-1/2 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition">Cancel</button>
+                    <button type="submit" id="save-student-btn" class="w-1/2 py-2 text-xs font-bold text-white bg-chelan hover:bg-green-800 rounded-lg transition">Save Student</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Import CSV Modal -->
+    <div id="import-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-slate-800 text-lg">Import Roster via CSV</h3>
+                <button onclick="closeImportModal()" class="text-slate-400 hover:text-slate-600 font-bold text-xl leading-none">&times;</button>
+            </div>
+            <p class="text-xs text-slate-500">CSV format should have columns: <code class="bg-slate-100 px-1 py-0.5 rounded font-mono">ID, FirstName, LastName, Period</code></p>
+            <textarea id="csv-input" rows="6" placeholder="Paste CSV text here e.g.:&#10;10001, John, Doe, 1&#10;10002, Jane, Smith, 2" class="w-full text-xs font-mono p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-chelan"></textarea>
+            <div class="flex gap-2">
+                <button onclick="closeImportModal()" class="w-1/2 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition">Cancel</button>
+                <button onclick="processCSVImport()" class="w-1/2 py-2 text-xs font-bold text-white bg-chelan hover:bg-green-800 rounded-lg transition">Import Data</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lock Screen & Timer Scripts -->
     <script>
         const TEACHER_PIN = "486200";
         if (localStorage.getItem('chelan_teacher_authorized') === 'true') {
@@ -117,7 +196,7 @@
         }, 1000);
     </script>
 
-    <!-- Firebase Realtime Data Module -->
+    <!-- Firebase Realtime Module & Logic -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getDatabase, ref, set, remove, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
@@ -136,47 +215,63 @@
         const db = getDatabase(app);
 
         let rosterData = {};
+        let currentSort = 'last';
+        let sortAsc = true;
+        let editingId = null;
 
-        // Load Roster from Firebase
+        // Sync with Firebase
         onValue(ref(db, 'classroom_roster'), snapshot => {
             rosterData = snapshot.val() || {};
             renderRoster();
         });
 
-        // Add Student Handler
-        document.getElementById('add-roster-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const id = document.getElementById('add-id').value.trim();
-            const firstName = document.getElementById('add-fname').value.trim();
-            const lastName = document.getElementById('add-lname').value.trim();
-
-            if (!id || !firstName || !lastName) return;
-
-            set(ref(db, 'classroom_roster/' + id), {
-                firstName: firstName,
-                lastName: lastName
-            }).then(() => {
-                document.getElementById('add-roster-form').reset();
-            });
-        });
-
         window.filterRoster = () => renderRoster();
+
+        window.setSort = (field) => {
+            if (currentSort === field) {
+                sortAsc = !sortAsc;
+            } else {
+                currentSort = field;
+                sortAsc = true;
+            }
+            renderRoster();
+        };
 
         function renderRoster() {
             const search = document.getElementById('search-roster').value.toLowerCase();
+            const periodVal = document.getElementById('period-filter').value;
             const tbody = document.getElementById('roster-table-body');
             const keys = Object.keys(rosterData);
 
-            const filteredKeys = keys.filter(id => {
+            let filteredKeys = keys.filter(id => {
                 const s = rosterData[id];
+                const period = String(s.period || '1');
+                if (periodVal !== 'ALL' && period !== periodVal) return false;
+
                 const full = `${s.firstName || ''} ${s.lastName || ''} ${id}`.toLowerCase();
                 return full.includes(search);
             });
 
-            document.getElementById('roster-count').textContent = `${filteredKeys.length} Student${filteredKeys.length === 1 ? '' : 's'}`;
+            // Sorting Logic
+            filteredKeys.sort((a, b) => {
+                const sA = rosterData[a];
+                const sB = rosterData[b];
+                let valA = '', valB = '';
+
+                if (currentSort === 'id') { valA = a; valB = b; }
+                else if (currentSort === 'first') { valA = (sA.firstName || '').toLowerCase(); valB = (sB.firstName || '').toLowerCase(); }
+                else if (currentSort === 'period') { valA = parseInt(sA.period || 0); valB = parseInt(sB.period || 0); }
+                else { valA = (sA.lastName || '').toLowerCase(); valB = (sB.lastName || '').toLowerCase(); }
+
+                if (valA < valB) return sortAsc ? -1 : 1;
+                if (valA > valB) return sortAsc ? 1 : -1;
+                return 0;
+            });
+
+            document.getElementById('roster-count').textContent = `${filteredKeys.length} Total Students`;
 
             if (filteredKeys.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-slate-400 text-xs italic">No matching students found.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-slate-400 text-xs italic">No matching students found.</td></tr>';
                 return;
             }
 
@@ -184,21 +279,128 @@
                 const s = rosterData[id];
                 return `
                     <tr class="hover:bg-slate-50 transition">
-                        <td class="px-6 py-3 font-mono text-xs text-slate-600">${id}</td>
+                        <td class="px-6 py-3 font-mono text-xs font-bold text-slate-700">${id}</td>
                         <td class="px-6 py-3 font-medium text-slate-800">${s.firstName || '--'}</td>
                         <td class="px-6 py-3 font-medium text-slate-800">${s.lastName || '--'}</td>
-                        <td class="px-6 py-3 text-right">
-                            <button onclick="deleteStudent('${id}')" class="text-xs bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-2.5 py-1 rounded font-bold transition">Remove</button>
+                        <td class="px-6 py-3 font-medium text-slate-600">Period ${s.period || '1'}</td>
+                        <td class="px-6 py-3 text-right space-x-1">
+                            <button onclick="openEditModal('${id}')" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 px-2.5 py-1 rounded font-bold transition">Edit</button>
+                            <button onclick="deleteStudent('${id}')" class="text-xs bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-2.5 py-1 rounded font-bold transition">Delete</button>
                         </td>
                     </tr>
                 `;
             }).join('');
         }
 
+        // Modal Controls & Form Submissions
+        window.openAddModal = () => {
+            editingId = null;
+            document.getElementById('modal-title').textContent = "Add New Student";
+            document.getElementById('student-form').reset();
+            document.getElementById('modal-id').disabled = false;
+            document.getElementById('student-modal').classList.remove('hidden');
+        };
+
+        window.openEditModal = (id) => {
+            editingId = id;
+            const s = rosterData[id];
+            if (!s) return;
+            document.getElementById('modal-title').textContent = "Edit Student";
+            document.getElementById('modal-id').value = id;
+            document.getElementById('modal-id').disabled = true;
+            document.getElementById('modal-fname').value = s.firstName || '';
+            document.getElementById('modal-lname').value = s.lastName || '';
+            document.getElementById('modal-period').value = s.period || '1';
+            document.getElementById('student-modal').classList.remove('hidden');
+        };
+
+        window.closeStudentModal = () => {
+            document.getElementById('student-modal').classList.add('hidden');
+        };
+
+        window.saveStudent = (e) => {
+            e.preventDefault();
+            const id = document.getElementById('modal-id').value.trim();
+            const firstName = document.getElementById('modal-fname').value.trim();
+            const lastName = document.getElementById('modal-lname').value.trim();
+            const period = document.getElementById('modal-period').value;
+
+            if (!id || !firstName || !lastName) return;
+
+            set(ref(db, 'classroom_roster/' + id), {
+                firstName: firstName,
+                lastName: lastName,
+                period: period
+            }).then(() => {
+                closeStudentModal();
+            });
+        };
+
         window.deleteStudent = (id) => {
-            if (confirm(`Are you sure you want to remove student ID ${id} from the roster?`)) {
+            if (confirm(`Are you sure you want to remove student ID ${id}?`)) {
                 remove(ref(db, 'classroom_roster/' + id));
             }
+        };
+
+        // CSV Import / Export
+        window.openImportModal = () => {
+            document.getElementById('csv-input').value = '';
+            document.getElementById('import-modal').classList.remove('hidden');
+        };
+
+        window.closeImportModal = () => {
+            document.getElementById('import-modal').classList.add('hidden');
+        };
+
+        window.processCSVImport = () => {
+            const raw = document.getElementById('csv-input').value.trim();
+            if (!raw) return;
+
+            const lines = raw.split('\n');
+            let count = 0;
+
+            lines.forEach(line => {
+                const parts = line.split(',').map(p => p.trim());
+                if (parts.length >= 3) {
+                    const id = parts[0];
+                    const firstName = parts[1];
+                    const lastName = parts[2];
+                    const period = parts[3] || '1';
+
+                    if (id && firstName && lastName && id.toLowerCase() !== 'id') {
+                        set(ref(db, 'classroom_roster/' + id), {
+                            firstName: firstName,
+                            lastName: lastName,
+                            period: period
+                        });
+                        count++;
+                    }
+                }
+            });
+
+            alert(`Successfully imported/updated ${count} student records.`);
+            closeImportModal();
+        };
+
+        window.exportRosterCSV = () => {
+            const keys = Object.keys(rosterData);
+            if (keys.length === 0) {
+                alert("No roster data to export.");
+                return;
+            }
+
+            let csv = "ID,FirstName,LastName,Period\n";
+            keys.forEach(id => {
+                const s = rosterData[id];
+                csv += `"${id}","${s.firstName || ''}","${s.lastName || ''}","${s.period || '1'}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `Chelan_Roster_Export_${new Date().toISOString().split('T')[0]}.csv`);
+            a.click();
         };
     </script>
 </body>
