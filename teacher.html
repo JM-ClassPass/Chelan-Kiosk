@@ -36,7 +36,7 @@
             <img src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" alt="Logo" class="h-10">
             <div class="flex items-center gap-2">
                 <h1 class="text-xl font-bold tracking-wide">Chelan High</h1>
-                <span class="bg-green-800/80 text-green-200 text-xs px-2.5 py-0.5 rounded-full font-semibold border border-green-700/50">Teacher Dashboard v1.004</span>
+                <span class="bg-green-800/80 text-green-200 text-xs px-2.5 py-0.5 rounded-full font-semibold border border-green-700/50">Teacher Dashboard v1.005</span>
             </div>
         </div>
         <div class="flex items-center gap-6">
@@ -85,7 +85,7 @@
         <!-- RIGHT COLUMN: Tools, Approvals & Logs -->
         <div class="xl:col-span-2 flex flex-col gap-6">
 
-            <!-- TASK #3: Pending Roster Approvals Card / Banner -->
+            <!-- Pending Roster Approvals Card / Banner -->
             <div id="pending-approvals-card" class="bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 shadow-sm hidden">
                 <div class="flex justify-between items-center mb-3 border-b border-amber-200/80 pb-2">
                     <h3 class="font-black text-amber-900 text-sm flex items-center gap-2">
@@ -189,7 +189,7 @@
     </script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, set, remove, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getDatabase, ref, set, remove, push, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
         
         const firebaseConfig = {
             apiKey: "AIzaSyDOqjLMzMydaR31WWUA35sr1FrNLfHPxuI",
@@ -210,7 +210,6 @@
         let pendingApprovalsData = {};
         let currentSort = 'last';
 
-        // Helper function for safe HTML string escaping
         function escapeAttr(str) {
             return String(str || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
         }
@@ -320,9 +319,10 @@
                         <div class="flex items-center gap-2">
                             <span class="font-mono text-xs font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded border border-amber-300">${id}</span>
                             <span class="font-bold text-sm text-slate-800">${item.firstName || ''} ${item.lastName || ''}</span>
+                            ${item.pocket ? `<span class="text-[10px] bg-green-100 text-green-800 font-bold px-1.5 py-0.5 rounded border border-green-200">Pocket #${item.pocket}</span>` : ''}
                         </div>
                         <div class="flex items-center gap-1.5">
-                            <button onclick="approvePendingStudent('${safeId}', '${safeFirst}', '${safeLast}')" class="bg-green-700 hover:bg-green-800 text-white font-bold text-xs px-3 py-1 rounded-lg transition shadow-sm">
+                            <button onclick="approvePendingStudent('${safeId}')" class="bg-green-700 hover:bg-green-800 text-white font-bold text-xs px-3 py-1 rounded-lg transition shadow-sm">
                                 Approve
                             </button>
                             <button onclick="rejectPendingStudent('${safeId}')" class="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-2.5 py-1 rounded-lg transition shadow-sm">
@@ -334,10 +334,52 @@
             }).join('');
         }
 
-        // Global Approval / Rejection Handlers
-        window.approvePendingStudent = (id, firstName, lastName) => {
+        // Updated Approval Handler
+        window.approvePendingStudent = (id) => {
+            const item = pendingApprovalsData[id];
+            if (!item) return;
+
+            const firstName = item.firstName || '';
+            const lastName = item.lastName || '';
+            const fullName = `${firstName} ${lastName}`.trim() || id;
+
+            // 1. Save to Roster
             set(ref(db, `classroom_roster/${id}`), { firstName, lastName })
-                .then(() => remove(ref(db, `pending_roster_approvals/${id}`)))
+                .then(() => {
+                    const isPhoneSubmission = item.source === 'phone' || item.pocket !== undefined;
+
+                    // 2. If submission came from phone portal, check in to room
+                    if (isPhoneSubmission) {
+                        const pocketNum = item.pocket || 0;
+
+                        set(ref(db, `active_phones_in_class/${id}`), {
+                            studentName: fullName,
+                            firstName: firstName,
+                            lastName: lastName,
+                            pocket: pocketNum,
+                            timestamp: Date.now()
+                        });
+
+                        // 3. Log to Running Log
+                        push(ref(db, 'system_logs'), {
+                            studentId: id,
+                            name: fullName,
+                            action: `Approved & Checked in (Pocket #${pocketNum})`,
+                            timestamp: Date.now()
+                        });
+                    } else {
+                        // Regular Roster Approval log
+                        push(ref(db, 'system_logs'), {
+                            studentId: id,
+                            name: fullName,
+                            action: 'Approved & Added to Roster',
+                            timestamp: Date.now()
+                        });
+                    }
+
+                    // 4. Clean up pending request
+                    return remove(ref(db, `pending_roster_approvals/${id}`));
+                })
                 .catch(err => alert("Error approving student: " + err.message));
         };
 
@@ -450,7 +492,9 @@
                 let pill = 'bg-slate-100 text-slate-600';
                 if(l.action && l.action.includes('Bathroom')) pill = 'bg-red-100 text-red-700';
                 if(l.action && l.action.includes('Hall')) pill = 'bg-indigo-100 text-indigo-700';
-                if(l.action && l.action.includes('Phone')) pill = 'bg-green-100 text-green-700';
+                if(l.action && l.action.includes('Approved')) pill = 'bg-emerald-100 text-emerald-800 font-black';
+                else if(l.action && l.action.includes('Phone')) pill = 'bg-green-100 text-green-700';
+                
                 return `<tr>
                     <td class="px-4 py-2 text-slate-500 font-mono text-xs">${time}</td>
                     <td class="px-4 py-2 font-medium text-slate-800">${l.name || l.studentId || 'Unknown'}</td>
