@@ -1,386 +1,295 @@
-/**
- * Chelan High School - Live Teacher Control Center Engine (teacher.js)
- */
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Kiosk - Chelan High Pass System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .bg-chelan { background-color: #0d5235; }
+        .text-chelan { color: #0d5235; }
+        .border-chelan { border-color: #0d5235; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col items-center justify-center p-4">
 
-import { APP_CONFIG, formatTime } from './config.js';
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
-import { 
-  getDatabase, ref, onValue, remove, push, serverTimestamp 
-} from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
+    <!-- Header / Nav link back to Dashboard -->
+    <div class="fixed top-4 right-4 z-10">
+        <a href="teacher.html" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold px-3 py-2 rounded-lg shadow-md transition">Teacher View 🔒</a>
+    </div>
 
-// Initialize Firebase
-const app = initializeApp(APP_CONFIG.firebaseConfig);
-const db = getDatabase(app);
-
-// State
-let checkedInPhones = {};
-let activePasses = {};
-let activityLogs = {};
-let currentSort = "pocket"; // 'pocket', 'first', 'last'
-
-document.addEventListener("DOMContentLoaded", () => {
-  initClock();
-  setupSorting();
-  setupBulkActions();
-  attachFirebaseListeners();
-
-  // Refresh dynamic timers every second
-  setInterval(() => {
-    renderPhones();
-    renderPasses();
-  }, 1000);
-});
-
-// Live Clock
-function initClock() {
-  const clockEl = document.getElementById("dashboard-clock");
-  if (!clockEl) return;
-  const update = () => {
-    clockEl.textContent = formatTime(new Date());
-  };
-  setInterval(update, 1000);
-  update();
-}
-
-// Listeners
-function attachFirebaseListeners() {
-  onValue(ref(db, "checkedInPhones"), (snapshot) => {
-    checkedInPhones = snapshot.exists() ? snapshot.val() : {};
-    renderPhones();
-    updateCounters();
-  });
-
-  onValue(ref(db, "activePasses"), (snapshot) => {
-    activePasses = snapshot.exists() ? snapshot.val() : {};
-    renderPasses();
-    updateCounters();
-  });
-
-  onValue(ref(db, "logs"), (snapshot) => {
-    activityLogs = snapshot.exists() ? snapshot.val() : {};
-    renderActivityLogs();
-    updateStats();
-  });
-}
-
-// Counters
-function updateCounters() {
-  const phoneCountEl = document.getElementById("dash-phone-count");
-  const bathCountEl = document.getElementById("dash-bathroom-count");
-  const hallCountEl = document.getElementById("dash-hall-count");
-
-  const phoneCount = Object.keys(checkedInPhones).length;
-  const bathLimit = APP_CONFIG?.passLimits?.bathroom || 1;
-  const bathCount = Object.values(activePasses).filter(p => p.type === "bathroom").length;
-  const hallCount = Object.values(activePasses).filter(p => p.type === "hall").length;
-
-  if (phoneCountEl) phoneCountEl.textContent = phoneCount;
-  if (bathCountEl) bathCountEl.textContent = `${bathCount}/${bathLimit}`;
-  if (hallCountEl) hallCountEl.textContent = hallCount;
-}
-
-// Sorting Controls
-function setupSorting() {
-  const btnPocket = document.getElementById("sort-pocket");
-  const btnFirst = document.getElementById("sort-first");
-  const btnLast = document.getElementById("sort-last");
-
-  const resetBtnStyles = () => {
-    [btnPocket, btnFirst, btnLast].forEach(btn => {
-      if (btn) btn.className = "px-2 py-1 rounded-lg text-slate-600 hover:text-slate-900";
-    });
-  };
-
-  if (btnPocket) {
-    btnPocket.onclick = () => {
-      resetBtnStyles();
-      btnPocket.className = "px-2 py-1 rounded-lg bg-white text-[#0B4F2C] shadow-xs font-bold";
-      currentSort = "pocket";
-      renderPhones();
-    };
-  }
-
-  if (btnFirst) {
-    btnFirst.onclick = () => {
-      resetBtnStyles();
-      btnFirst.className = "px-2 py-1 rounded-lg bg-white text-[#0B4F2C] shadow-xs font-bold";
-      currentSort = "first";
-      renderPhones();
-    };
-  }
-
-  if (btnLast) {
-    btnLast.onclick = () => {
-      resetBtnStyles();
-      btnLast.className = "px-2 py-1 rounded-lg bg-white text-[#0B4F2C] shadow-xs font-bold";
-      currentSort = "last";
-      renderPhones();
-    };
-  }
-}
-
-// Render Checked-In Phones
-function renderPhones() {
-  const container = document.getElementById("phones-container");
-  if (!container) return;
-
-  const entries = Object.entries(checkedInPhones);
-
-  if (entries.length === 0) {
-    container.innerHTML = `
-      <div class="text-center py-12 text-slate-400">
-        <i class="fa-solid fa-mobile-screen-button text-3xl mb-2 opacity-50"></i>
-        <p class="text-xs font-bold">No phones currently checked in.</p>
-      </div>
-    `;
-    return;
-  }
-
-  // Sort Array
-  entries.sort(([pNumA, a], [pNumB, b]) => {
-    if (currentSort === "pocket") return parseInt(pNumA) - parseInt(pNumB);
-    if (currentSort === "first") return (a.firstName || "").localeCompare(b.firstName || "");
-    if (currentSort === "last") return (a.lastName || "").localeCompare(b.lastName || "");
-    return 0;
-  });
-
-  const now = Date.now();
-
-  container.innerHTML = entries.map(([pocket, data]) => {
-    const elapsedSecs = data.timestamp ? Math.floor((now - data.timestamp) / 1000) : 0;
-    const elapsedFormatted = formatDuration(elapsedSecs);
-
-    return `
-      <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3 flex items-center justify-between hover:border-emerald-500/50 transition">
-        <div class="flex items-center gap-3">
-          <span class="w-9 h-9 rounded-xl bg-[#0B4F2C] text-white font-mono font-black text-xs flex items-center justify-center shadow-xs">
-            #${pocket.padStart(2, '0')}
-          </span>
-          <div>
-            <p class="text-xs font-bold text-slate-800 leading-tight">${data.firstName || ''} ${data.lastName || ''}</p>
-            <p class="text-[10px] text-slate-400 font-mono">ID: ${data.id || 'N/A'}</p>
-          </div>
+    <div class="max-w-xl w-full bg-white rounded-3xl shadow-xl border border-slate-200 p-8 space-y-6 text-center">
+        <div class="flex justify-center items-center gap-3 mb-2">
+            <img src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" alt="Logo" class="h-12">
+            <h1 class="text-2xl font-black text-chelan tracking-wide">Chelan High Pass System</h1>
         </div>
 
-        <div class="flex items-center gap-2">
-          <span class="text-[10px] font-mono font-bold bg-emerald-100 text-[#0B4F2C] px-2 py-0.5 rounded-full border border-emerald-200">
-            ${elapsedFormatted}
-          </span>
-          <button data-checkout="${pocket}" class="btn-checkout-single p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition">
-            <i class="fa-solid fa-right-from-bracket text-xs"></i>
-          </button>
+        <div id="status-message" class="min-h-[2rem] text-sm font-bold text-slate-500">
+            Scan your student ID barcode or type your ID to begin.
         </div>
-      </div>
-    `;
-  }).join('');
 
-  // Attach single checkout event listeners
-  document.querySelectorAll(".btn-checkout-single").forEach(btn => {
-    btn.onclick = async (e) => {
-      const pocket = e.currentTarget.getAttribute("data-checkout");
-      const phoneData = checkedInPhones[pocket];
-      if (pocket && phoneData) {
-        await remove(ref(db, `checkedInPhones/${pocket}`));
-        await push(ref(db, "logs"), {
-          timestamp: serverTimestamp(),
-          studentId: phoneData.id,
-          studentName: `${phoneData.firstName} ${phoneData.lastName}`,
-          action: "PHONE_CHECKOUT",
-          details: `Manual teacher check-out from Pocket #${pocket}`
-        });
-      }
-    };
-  });
-}
+        <!-- Main Input Form -->
+        <form id="kiosk-form" class="space-y-4">
+            <input type="text" id="student-id-input" placeholder="Scan or Enter ID" autofocus required autocomplete="off"
+                class="w-full text-center font-mono text-2xl tracking-wider px-4 py-4 bg-slate-50 border-2 border-slate-300 rounded-2xl focus:outline-none focus:border-chelan">
 
-// Render Passes
-function renderPasses() {
-  const bathContainer = document.getElementById("bathroom-pass-container");
-  const hallContainer = document.getElementById("hall-pass-container");
-
-  const passes = Object.entries(activePasses);
-  const bathPasses = passes.filter(([_, p]) => p.type === "bathroom");
-  const hallPasses = passes.filter(([_, p]) => p.type === "hall");
-
-  const now = Date.now();
-
-  // Render Bathroom
-  if (bathContainer) {
-    if (bathPasses.length === 0) {
-      bathContainer.innerHTML = `<p class="text-xs text-slate-400 py-2 italic text-center">No students out for bathroom</p>`;
-    } else {
-      bathContainer.innerHTML = bathPasses.map(([key, data]) => {
-        const elapsed = data.startTime ? Math.floor((now - data.startTime) / 1000) : 0;
-        return `
-          <div class="bg-rose-50 border border-rose-200 rounded-2xl p-3 flex items-center justify-between">
-            <div>
-              <p class="text-xs font-bold text-rose-950">${data.studentName}</p>
-              <p class="text-[10px] font-mono text-rose-700">Out: ${formatDuration(elapsed)}</p>
+            <div id="pocket-selection" class="hidden space-y-2">
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider">Select Pocket Number:</label>
+                <input type="number" id="pocket-input" min="1" max="50" placeholder="Pocket #"
+                    class="w-full text-center font-mono text-2xl px-4 py-3 bg-slate-50 border-2 border-slate-300 rounded-2xl focus:outline-none focus:border-chelan">
             </div>
-            <button data-return="${key}" class="btn-return-pass text-xs font-bold bg-rose-700 text-white px-3 py-1.5 rounded-xl hover:bg-rose-800 transition">
-              Return
-            </button>
-          </div>
-        `;
-      }).join('');
-    }
-  }
 
-  // Render Hall
-  if (hallContainer) {
-    if (hallPasses.length === 0) {
-      hallContainer.innerHTML = `<p class="text-xs text-slate-400 py-2 italic text-center">No active hall passes</p>`;
-    } else {
-      hallContainer.innerHTML = hallPasses.map(([key, data]) => {
-        const elapsed = data.startTime ? Math.floor((now - data.startTime) / 1000) : 0;
-        return `
-          <div class="bg-indigo-50 border border-indigo-200 rounded-2xl p-3 flex items-center justify-between">
-            <div>
-              <p class="text-xs font-bold text-indigo-950">${data.studentName}</p>
-              <p class="text-[10px] font-mono text-indigo-700">Out: ${formatDuration(elapsed)}</p>
+            <!-- Action Selectors -->
+            <div class="grid grid-cols-3 gap-3 pt-2">
+                <button type="button" onclick="handleAction('phone')" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-4 rounded-2xl shadow transition text-sm flex flex-col items-center gap-1">
+                    <span class="text-xl">📱</span>
+                    <span>Phone Check In/Out</span>
+                </button>
+                <button type="button" onclick="handleAction('bathroom')" class="bg-red-700 hover:bg-red-800 text-white font-bold py-4 rounded-2xl shadow transition text-sm flex flex-col items-center gap-1">
+                    <span class="text-xl">🚻</span>
+                    <span>Bathroom Pass</span>
+                </button>
+                <button type="button" onclick="handleAction('hall')" class="bg-indigo-700 hover:bg-indigo-800 text-white font-bold py-4 rounded-2xl shadow transition text-sm flex flex-col items-center gap-1">
+                    <span class="text-xl">🎟️</span>
+                    <span>Hall Pass</span>
+                </button>
             </div>
-            <button data-return="${key}" class="btn-return-pass text-xs font-bold bg-indigo-700 text-white px-3 py-1.5 rounded-xl hover:bg-indigo-800 transition">
-              Return
-            </button>
-          </div>
-        `;
-      }).join('');
-    }
-  }
+        </form>
 
-  // Pass Return Listeners
-  document.querySelectorAll(".btn-return-pass").forEach(btn => {
-    btn.onclick = async (e) => {
-      const key = e.currentTarget.getAttribute("data-return");
-      const pass = activePasses[key];
-      if (key && pass) {
-        await remove(ref(db, `activePasses/${key}`));
-        await push(ref(db, "logs"), {
-          timestamp: serverTimestamp(),
-          studentId: pass.studentId,
-          studentName: pass.studentName,
-          action: "PASS_RETURN",
-          details: `Manual return of ${pass.type.toUpperCase()} pass`
-        });
-      }
-    };
-  });
-}
-
-// Render Logs Feed
-function renderActivityLogs() {
-  const container = document.getElementById("activity-log-container");
-  if (!container) return;
-
-  const logs = Object.values(activityLogs);
-  if (logs.length === 0) {
-    container.innerHTML = `<p class="text-xs text-slate-400 py-10 text-center">No activity recorded today.</p>`;
-    return;
-  }
-
-  logs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-
-  container.innerHTML = logs.map(log => {
-    const timeStr = log.timestamp ? formatTime(new Date(log.timestamp)) : 'Just Now';
-    let badgeClass = "bg-slate-100 text-slate-700";
-
-    if (log.action?.includes("CHECKIN")) badgeClass = "bg-emerald-100 text-[#0B4F2C]";
-    if (log.action?.includes("CHECKOUT")) badgeClass = "bg-amber-100 text-amber-800";
-    if (log.action?.includes("BATHROOM")) badgeClass = "bg-rose-100 text-rose-800";
-    if (log.action?.includes("HALL")) badgeClass = "bg-indigo-100 text-indigo-800";
-
-    return `
-      <div class="bg-slate-50 border border-slate-100 rounded-2xl p-2.5 flex items-start gap-2.5">
-        <span class="text-[10px] font-mono text-slate-400 font-bold whitespace-nowrap pt-0.5">${timeStr}</span>
-        <div class="flex-1 min-w-0">
-          <div class="flex items-center justify-between gap-1">
-            <p class="text-xs font-bold text-slate-800 truncate">${log.studentName || 'Student'}</p>
-            <span class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${badgeClass}">
-              ${log.action || 'LOG'}
-            </span>
-          </div>
-          <p class="text-[11px] text-slate-500 truncate mt-0.5">${log.details || ''}</p>
+        <!-- Unrecognized Student Modal / Form -->
+        <div id="new-student-modal" class="hidden bg-amber-50 border-2 border-amber-300 p-6 rounded-2xl text-left space-y-4">
+            <h3 class="font-bold text-amber-900 text-sm uppercase tracking-wider flex items-center gap-2">
+                <span>⚠️</span> Unrecognized ID
+            </h3>
+            <p class="text-xs text-amber-800">Your ID was not found in the roster. Enter your name below to request teacher approval.</p>
+            <div class="grid grid-cols-2 gap-2">
+                <input type="text" id="new-first-name" placeholder="First Name" class="text-xs px-3 py-2 border border-amber-300 rounded-lg bg-white focus:outline-none">
+                <input type="text" id="new-last-name" placeholder="Last Name" class="text-xs px-3 py-2 border border-amber-300 rounded-lg bg-white focus:outline-none">
+            </div>
+            <div class="flex gap-2">
+                <button type="button" onclick="submitPendingStudent()" class="w-full bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold py-2 rounded-lg transition">Submit Request</button>
+                <button type="button" onclick="cancelPendingStudent()" class="bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs font-bold px-4 py-2 rounded-lg transition">Cancel</button>
+            </div>
         </div>
-      </div>
-    `;
-  }).join('');
-}
+    </div>
 
-// Update Daily Stats Block
-function updateStats() {
-  const checkinsEl = document.getElementById("stat-checkins");
-  const tripsEl = document.getElementById("stat-trips");
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, get, set, remove, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-  const logs = Object.values(activityLogs);
-  const checkinCount = logs.filter(l => l.action === "PHONE_CHECKIN").length;
-  const tripCount = logs.filter(l => l.action?.startsWith("PASS_") && l.action !== "PASS_RETURN").length;
+        const firebaseConfig = {
+            apiKey: "AIzaSyDOqjLMzMydaR31WWUA35sr1FrNLfHPxuI",
+            authDomain: "chelan-classroom-pass-a811e.firebaseapp.com",
+            databaseURL: "https://chelan-classroom-pass-a811e-default-rtdb.firebaseio.com",
+            projectId: "chelan-classroom-pass-a811e",
+            storageBucket: "chelan-classroom-pass-a811e.firebasestorage.app",
+            messagingSenderId: "645480807479",
+            appId: "1:645480807479:web:d280d4ef38e8754a9953b2"
+        };
 
-  if (checkinsEl) checkinsEl.textContent = checkinCount;
-  if (tripsEl) tripsEl.textContent = tripCount;
-}
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
 
-// Bulk Actions & CSV Export
-function setupBulkActions() {
-  const btnCheckoutAll = document.getElementById("btn-checkout-all");
-  const btnExport = document.getElementById("btn-export-csv");
-  const btnClear = document.getElementById("btn-clear-logs");
+        let currentUnrecognizedId = null;
+        let pendingActionType = null;
 
-  if (btnCheckoutAll) {
-    btnCheckoutAll.onclick = async () => {
-      const entries = Object.entries(checkedInPhones);
-      if (entries.length === 0) return;
+        window.handleAction = async (actionType) => {
+            const idInput = document.getElementById('student-id-input');
+            const studentId = idInput.value.trim();
+            const status = document.getElementById('status-message');
 
-      if (confirm(`Are you sure you want to check out all ${entries.length} phones?`)) {
-        for (const [pocket, data] of entries) {
-          await remove(ref(db, `checkedInPhones/${pocket}`));
-          await push(ref(db, "logs"), {
-            timestamp: serverTimestamp(),
-            studentId: data.id,
-            studentName: `${data.firstName} ${data.lastName}`,
-            action: "PHONE_CHECKOUT",
-            details: `Bulk check-out from Pocket #${pocket}`
-          });
+            if (!studentId) {
+                setStatus("Please scan or enter your student ID.", "text-red-600");
+                return;
+            }
+
+            try {
+                // Check roster
+                const rosterSnap = await get(ref(db, `classroom_roster/${studentId}`));
+                if (!rosterSnap.exists()) {
+                    currentUnrecognizedId = studentId;
+                    pendingActionType = actionType;
+                    document.getElementById('new-student-modal').classList.remove('hidden');
+                    return;
+                }
+
+                const student = rosterSnap.val();
+                const studentName = `${student.firstName || ''} ${student.lastName || ''}`.trim() || studentId;
+
+                if (actionType === 'phone') {
+                    await processPhoneAction(studentId, studentName, student);
+                } else if (actionType === 'bathroom') {
+                    await processBathroomAction(studentId, studentName);
+                } else if (actionType === 'hall') {
+                    await processHallAction(studentId, studentName);
+                }
+
+                idInput.value = '';
+                document.getElementById('pocket-selection').classList.add('hidden');
+                document.getElementById('pocket-input').value = '';
+
+            } catch (err) {
+                console.error("Action error:", err);
+                setStatus("An error occurred. Please try again.", "text-red-600");
+            }
+        };
+
+        async function processPhoneAction(studentId, studentName, student) {
+            const phoneSnap = await get(ref(db, `active_phones_in_class/${studentId}`));
+            
+            if (phoneSnap.exists()) {
+                // Check Out
+                await remove(ref(db, `active_phones_in_class/${studentId}`));
+                await push(ref(db, 'system_logs'), {
+                    studentId: studentId,
+                    name: studentName,
+                    type: 'Phone',
+                    details: 'COS',
+                    timestamp: Date.now()
+                });
+                setStatus(`Phone Checked Out for ${studentName}`, "text-green-700");
+            } else {
+                // Check In - requires pocket #
+                const pocketInput = document.getElementById('pocket-input');
+                const pocketVal = pocketInput.value.trim();
+                const pocketElem = document.getElementById('pocket-selection');
+
+                if (pocketElem.classList.contains('hidden')) {
+                    pocketElem.classList.remove('hidden');
+                    pocketInput.focus();
+                    setStatus(`Enter Pocket # for ${studentName}`, "text-amber-700");
+                    return;
+                }
+
+                if (!pocketVal) {
+                    setStatus("Please enter a valid pocket number.", "text-red-600");
+                    return;
+                }
+
+                const pocketNum = parseInt(pocketVal, 10);
+                const formattedPocket = String(pocketNum).padStart(2, '0');
+
+                await set(ref(db, `active_phones_in_class/${studentId}`), {
+                    studentName: studentName,
+                    firstName: student.firstName || '',
+                    lastName: student.lastName || '',
+                    pocket: pocketNum,
+                    timestamp: Date.now()
+                });
+
+                await push(ref(db, 'system_logs'), {
+                    studentId: studentId,
+                    name: studentName,
+                    type: 'Phone',
+                    details: `CI-${formattedPocket}`,
+                    timestamp: Date.now()
+                });
+
+                setStatus(`Phone Checked In (Pocket #${pocketNum}) for ${studentName}`, "text-green-700");
+            }
         }
-      }
-    };
-  }
 
-  if (btnExport) {
-    btnExport.onclick = () => {
-      const logs = Object.values(activityLogs);
-      if (logs.length === 0) {
-        alert("No log data available to export.");
-        return;
-      }
+        async function processBathroomAction(studentId, studentName) {
+            const passSnap = await get(ref(db, `active_bathroom_passes/${studentId}`));
 
-      let csv = "Timestamp,Student ID,Student Name,Action,Details\n";
-      logs.forEach(l => {
-        const time = l.timestamp ? new Date(l.timestamp).toLocaleString() : "";
-        csv += `"${time}","${l.studentId || ''}","${l.studentName || ''}","${l.action || ''}","${l.details || ''}"\n`;
-      });
+            if (passSnap.exists()) {
+                // Return
+                await remove(ref(db, `active_bathroom_passes/${studentId}`));
+                await push(ref(db, 'system_logs'), {
+                    studentId: studentId,
+                    name: studentName,
+                    type: 'Bathroom',
+                    details: 'BP-I',
+                    timestamp: Date.now()
+                });
+                setStatus(`Bathroom Pass Returned: ${studentName}`, "text-green-700");
+            } else {
+                // Out
+                await set(ref(db, `active_bathroom_passes/${studentId}`), {
+                    studentName: studentName,
+                    timestamp: Date.now()
+                });
+                await push(ref(db, 'system_logs'), {
+                    studentId: studentId,
+                    name: studentName,
+                    type: 'Bathroom',
+                    details: 'BP-O',
+                    timestamp: Date.now()
+                });
+                setStatus(`Bathroom Pass Out: ${studentName}`, "text-red-600");
+            }
+        }
 
-      const blob = new Blob([csv], { type: "text/csv" });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `Chelan_Pass_Log_${new Date().toISOString().slice(0,10)}.csv`;
-      a.click();
-    };
-  }
+        async function processHallAction(studentId, studentName) {
+            const passSnap = await get(ref(db, `active_hall_passes/${studentId}`));
 
-  if (btnClear) {
-    btnClear.onclick = async () => {
-      if (confirm("Are you sure you want to clear today's activity log? This cannot be undone.")) {
-        await remove(ref(db, "logs"));
-      }
-    };
-  }
-}
+            if (passSnap.exists()) {
+                // Return
+                await remove(ref(db, `active_hall_passes/${studentId}`));
+                await push(ref(db, 'system_logs'), {
+                    studentId: studentId,
+                    name: studentName,
+                    type: 'Hall Pass',
+                    details: 'HP-I',
+                    timestamp: Date.now()
+                });
+                setStatus(`Hall Pass Returned: ${studentName}`, "text-green-700");
+            } else {
+                // Out
+                await set(ref(db, `active_hall_passes/${studentId}`), {
+                    studentName: studentName,
+                    timestamp: Date.now()
+                });
+                await push(ref(db, 'system_logs'), {
+                    studentId: studentId,
+                    name: studentName,
+                    type: 'Hall Pass',
+                    details: 'HP-O',
+                    timestamp: Date.now()
+                });
+                setStatus(`Hall Pass Out: ${studentName}`, "text-indigo-600");
+            }
+        }
 
-// Helper: Duration Formatter
-function formatDuration(seconds) {
-  if (seconds < 60) return `${seconds}s`;
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins}m ${secs}s`;
-}
+        window.submitPendingStudent = async () => {
+            const fname = document.getElementById('new-first-name').value.trim();
+            const lname = document.getElementById('new-last-name').value.trim();
+            const pocketVal = document.getElementById('pocket-input').value.trim();
+
+            if (!fname || !lname) {
+                alert("Please enter both first and last name.");
+                return;
+            }
+
+            try {
+                await set(ref(db, `pending_roster_approvals/${currentUnrecognizedId}`), {
+                    firstName: fname,
+                    lastName: lname,
+                    pocket: pocketVal ? parseInt(pocketVal, 10) : 0,
+                    timestamp: Date.now()
+                });
+
+                document.getElementById('new-student-modal').classList.add('hidden');
+                document.getElementById('student-id-input').value = '';
+                document.getElementById('new-first-name').value = '';
+                document.getElementById('new-last-name').value = '';
+                
+                setStatus("Approval request submitted to teacher.", "text-amber-700");
+            } catch (err) {
+                console.error("Pending approval error:", err);
+            }
+        };
+
+        window.cancelPendingStudent = () => {
+            document.getElementById('new-student-modal').classList.add('hidden');
+            currentUnrecognizedId = null;
+        };
+
+        function setStatus(msg, colorClass = "text-slate-500") {
+            const s = document.getElementById('status-message');
+            s.className = `min-h-[2rem] text-sm font-bold ${colorClass}`;
+            s.textContent = msg;
+        }
+    </script>
+</body>
+</html>
