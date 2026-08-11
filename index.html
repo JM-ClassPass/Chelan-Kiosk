@@ -3,50 +3,51 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chelan High School - Classroom Pass Kiosk</title>
+  <title>CHS Classroom Pass Kiosk</title>
+  <link rel="icon" type="image/png" href="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-[#f0f4f8] min-h-screen flex flex-col font-sans text-slate-800 antialiased select-none">
-
+  
   <!-- Header Bar -->
   <header class="bg-[#0B4F2C] text-white px-6 py-4 shadow-lg flex justify-between items-center z-30">
     <div class="flex items-center gap-3">
       <img 
-        src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" 
-        alt="Chelan High School Logo" 
-        class="h-10 w-auto object-contain"
+         src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" 
+         alt="Chelan High School Logo" 
+         class="h-10 w-auto object-contain"
       />
       <div class="flex items-center gap-2">
         <div>
           <h1 class="text-base font-extrabold tracking-wide uppercase leading-none">CHELAN HIGH SCHOOL</h1>
           <p class="text-xs text-emerald-200 font-medium mt-0.5">Classroom Pass Kiosk</p>
         </div>
-        <span class="bg-emerald-800/80 text-amber-300 text-[10px] font-mono font-bold px-2.5 py-1 rounded-full border border-emerald-600/40 ml-2">
-          v1.1.10
+        <span id="kiosk-version" class="bg-emerald-800/80 text-amber-300 text-[10px] font-mono font-bold px-2.5 py-1 rounded-full border border-emerald-600/40 ml-2">
+          v1.1.12
         </span>
       </div>
     </div>
-
+    
     <!-- Live Time and Room Info -->
     <div class="flex items-center gap-4">
       <div class="text-right pl-3 border-l border-emerald-700/60 flex flex-col justify-center">
         <div id="kiosk-clock" class="text-base font-mono font-bold tracking-tight">00:00:00 PM</div>
-        <div id="kiosk-room" class="text-[10px] text-emerald-200 font-bold uppercase tracking-wider">TEACHER STATION &bull; ROOM 176</div>
+        <div id="kiosk-room" class="text-[10px] text-emerald-200 font-bold uppercase tracking-wider">Loading...</div>
       </div>
     </div>
   </header>
 
-  <!-- Main Navigation Screen Tabs (Phone Storage -> Bathroom Pass -> Hall Pass) -->
+  <!-- Main Navigation Screen Tabs -->
   <main class="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1400px] w-full mx-auto flex flex-col">
     <div class="grid grid-cols-3 gap-3 mb-6 bg-slate-200/60 p-1.5 rounded-2xl border border-slate-300/60">
-      <button id="tab-phone" class="kiosk-tab py-3.5 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 transition bg-[#0B4F2C] text-white shadow-md">
+      <button id="tab-phone" class="kiosk-tab py-3.5 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 transition bg-[#0B4F2C] text-white shadow-md" data-action="phone">
         <i class="fa-solid fa-mobile-screen-button text-base"></i> Phone Storage
       </button>
-      <button id="tab-bathroom" class="kiosk-tab py-3.5 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 transition text-slate-600 hover:text-slate-900 hover:bg-white/60">
+      <button id="tab-bathroom" class="kiosk-tab py-3.5 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 transition text-slate-600 hover:text-slate-900 hover:bg-white/60" data-action="bathroom">
         <i class="fa-solid fa-restroom text-base"></i> Bathroom Pass
       </button>
-      <button id="tab-hall" class="kiosk-tab py-3.5 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 transition text-slate-600 hover:text-slate-900 hover:bg-white/60">
+      <button id="tab-hall" class="kiosk-tab py-3.5 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 transition text-slate-600 hover:text-slate-900 hover:bg-white/60" data-action="hall">
         <i class="fa-solid fa-person-walking text-base"></i> Hall Pass
       </button>
     </div>
@@ -60,15 +61,15 @@
           Phone Storage Mode Active
         </span>
         <h2 id="screen-title" class="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">
-          Scan Student ID to Store Phone
+          Scan/Enter ID to Store Phone
         </h2>
         <p id="screen-subtitle" class="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
-          Scan your ID to check in your mobile device into a classroom pocket.
+          Scan/Enter ID to check in your mobile device into a classroom pocket.
         </p>
       </div>
 
       <!-- Center Content: Phone Pocket Selection Grid -->
-      <div id="phone-pocket-container" class="w-full max-w-3xl mx-auto my-4 bg-slate-50 border border-slate-200 rounded-2xl p-4">
+      <div id="phone-pocket-container" class="w-full max-w-3xl mx-auto my-4 bg-slate-50 border border-slate-200 rounded-2xl p-4 transition-all">
         <div class="flex items-center justify-between mb-3 px-1">
           <span class="text-xs font-extrabold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
             <i class="fa-solid fa-border-all text-[#0B4F2C]"></i> Select Storage Pocket
@@ -77,9 +78,8 @@
             Defaulted to Lowest Available (#<span id="selected-pocket-num">1</span>)
           </span>
         </div>
-
         <div id="pocket-grid" class="grid grid-cols-6 sm:grid-cols-12 gap-2">
-          <!-- Dynamically populated 36 pockets -->
+          <!-- Dynamically populated 36 pockets via JS -->
         </div>
       </div>
 
@@ -87,12 +87,12 @@
       <div class="my-auto py-2 max-w-md w-full mx-auto text-center space-y-3">
         <div class="relative">
           <input 
-            type="text" 
-            id="kiosk-id-input" 
-            placeholder="Scan or Type ID..." 
-            class="w-full text-center text-2xl font-mono font-black py-3.5 px-6 rounded-2xl border-2 border-slate-300 focus:border-[#0B4F2C] focus:ring-4 focus:ring-emerald-100 focus:outline-none transition tracking-widest text-slate-800 bg-slate-50"
-            autofocus
-            autocomplete="off"
+             type="text" 
+             id="kiosk-id-input" 
+             placeholder="Scan or Type ID..." 
+             class="w-full text-center text-2xl font-mono font-black py-3.5 px-6 rounded-2xl border-2 border-slate-300 focus:border-[#0B4F2C] focus:ring-4 focus:ring-emerald-100 focus:outline-none transition tracking-widest text-slate-800 bg-slate-50"
+             autofocus
+             autocomplete="off"
           />
         </div>
         
@@ -102,7 +102,7 @@
       </div>
 
       <!-- Attempt 3 Guest Request Pop-Up Modal -->
-      <div id="guest-request-modal" class="hidden fixed inset-0 z-40 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
+      <div id="guest-request-modal" class="hidden fixed inset-0 z-40 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-200">
           <div class="text-center mb-4">
             <div class="w-12 h-12 bg-amber-100 text-amber-800 rounded-2xl flex items-center justify-center mx-auto mb-2 text-xl font-bold">
@@ -133,19 +133,18 @@
           </div>
         </div>
       </div>
-
     </div>
   </main>
 
   <!-- 1-Second Fullscreen Timed Confirmation Overlay -->
-  <div id="fullscreen-notice" class="fixed inset-0 z-50 hidden flex flex-col items-center justify-center bg-slate-900/95 text-white backdrop-blur-md transition-all duration-150 p-6">
-    <div id="fullscreen-notice-icon" class="text-6xl mb-4 text-emerald-400">
+  <div id="fullscreen-notice" class="fixed inset-0 z-50 hidden flex-col items-center justify-center bg-slate-900/95 text-white backdrop-blur-md transition-all duration-150 p-6">
+    <div id="fullscreen-notice-icon" class="text-7xl mb-6 text-emerald-400">
       <i class="fa-solid fa-circle-check"></i>
     </div>
-    <h2 id="fullscreen-notice-title" class="text-3xl font-black text-center tracking-tight mb-2">
+    <h2 id="fullscreen-notice-title" class="text-4xl font-black text-center tracking-tight mb-2">
       PASS CREATED SUCCESSFULLY
     </h2>
-    <p id="fullscreen-notice-subtitle" class="text-base text-center text-slate-300 max-w-lg font-medium">
+    <p id="fullscreen-notice-subtitle" class="text-xl text-center text-slate-300 max-w-lg font-medium">
       Student checked out.
     </p>
   </div>
@@ -154,6 +153,7 @@
     Chelan High School Classroom Pass System &bull; Powered by Firebase
   </footer>
 
-  <script type="module" src="app.js"></script>
+  <!-- Firebase Database Logic Linked as Module -->
+  <script type="module" src="kiosk.js"></script>
 </body>
 </html>
