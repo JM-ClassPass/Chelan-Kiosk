@@ -1,403 +1,931 @@
-/* Chelan High School - Teacher Dashboard Logic */
+let sortMode = 'lname'; 
+let logSortColumn = 'time'; 
+let logSortOrder = 'desc'; 
 
-// --- Default State & Storage Initialization ---
-const DEFAULT_ROSTER = [
-  { id: '10482', fname: 'Alexander', lname: 'Wright', pocket: 1 },
-  { id: '10495', fname: 'Brianna', lname: 'Martinez', pocket: 2 },
-  { id: '10512', fname: 'Cameron', lname: 'Davis', pocket: 3 },
-  { id: '10530', fname: 'Daniel', lname: 'Kim', pocket: 4 },
-  { id: '10544', fname: 'Emma', lname: 'Thompson', pocket: 5 },
-  { id: '10561', fname: 'Gabriel', lname: 'Garcia', pocket: 6 }
-];
+let rosterSortColumn = 'lname'; 
+let rosterSortOrder = 'asc'; 
 
-let roster = JSON.parse(localStorage.getItem('chelan_roster')) || DEFAULT_ROSTER;
-let inRoom = JSON.parse(localStorage.getItem('chelan_in_room')) || [];
-let bathroomPasses = JSON.parse(localStorage.getItem('chelan_bathroom')) || [];
-let hallPasses = JSON.parse(localStorage.getItem('chelan_hallpass')) || [];
-let logs = JSON.parse(localStorage.getItem('chelan_logs')) || [];
-let pendingRequests = JSON.parse(localStorage.getItem('chelan_pending')) || [];
-
-let sortMode = 'lname'; // 'fname', 'lname', 'pocket'
-let logSort = { field: 'time', asc: false };
-let rosterSort = { field: 'lname', asc: true };
 let isEditAllMode = false;
-let contextMenuTarget = null;
-let pendingConfirmCallback = null;
-let undoStack = [];
+let editingStudentId = null;
+let lastAutoCheckDate = null;
+let pendingConfirmAction = null;
+let contextStudentId = null;
 
-// --- Persistence Helpers ---
-function saveState() {
-  localStorage.setItem('chelan_roster', JSON.stringify(roster));
-  localStorage.setItem('chelan_in_room', JSON.stringify(inRoom));
-  localStorage.setItem('chelan_bathroom', JSON.stringify(bathroomPasses));
-  localStorage.setItem('chelan_hallpass', JSON.stringify(hallPasses));
-  localStorage.setItem('chelan_logs', JSON.stringify(logs));
-  localStorage.setItem('chelan_pending', JSON.stringify(pendingRequests));
+let roster = JSON.parse(localStorage.getItem('classroom_roster')) || {};
+let logs = JSON.parse(localStorage.getItem('classroom_logs')) || [];
+let activePasses = JSON.parse(localStorage.getItem('active_bathroom_passes')) || {};
+let activeHallPasses = JSON.parse(localStorage.getItem('active_hall_passes')) || {};
+let activePhonesInClass = JSON.parse(localStorage.getItem('active_phones_in_class')) || {};
+let pendingRequests = JSON.parse(localStorage.getItem('pending_roster_requests')) || [];
+
+let historyStack = [];
+
+function saveSnapshot() {
+  historyStack.push(JSON.stringify({
+    logs: logs,
+    activePasses: activePasses,
+    activeHallPasses: activeHallPasses,
+    activePhonesInClass: activePhonesInClass,
+    pendingRequests: pendingRequests
+  }));
+  if (historyStack.length > 20) historyStack.shift();
 }
 
-function pushUndoSnapshot() {
-  undoStack.push(JSON.stringify({ roster, inRoom, bathroomPasses, hallPasses, logs }));
-  if (undoStack.length > 20) undoStack.shift();
-}
-
-// Keyboard Ctrl+Z Undo Listener
 window.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
-    if (undoStack.length > 0) {
-      const lastState = JSON.parse(undoStack.pop());
-      roster = lastState.roster;
-      inRoom = lastState.inRoom;
-      bathroomPasses = lastState.bathroomPasses;
-      hallPasses = lastState.hallPasses;
-      logs = lastState.logs;
-      saveState();
-      refreshData();
-      renderRoster();
-      showUndoToast();
-    }
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    e.preventDefault();
+    performUndo();
   }
 });
 
-function showUndoToast() {
+function performUndo() {
+  if (historyStack.length === 0) return;
+  let snapshot = JSON.parse(historyStack.pop());
+  
+  logs = snapshot.logs || [];
+  activePasses = snapshot.activePasses || {};
+  activeHallPasses = snapshot.activeHallPasses || {};
+  activePhonesInClass = snapshot.activePhonesInClass || {};
+  pendingRequests = snapshot.pendingRequests || [];
+
+  localStorage.setItem('classroom_logs', JSON.stringify(logs));
+  localStorage.setItem('active_bathroom_passes', JSON.stringify(activePasses));
+  localStorage.setItem('active_hall_passes', JSON.stringify(activeHallPasses));
+  localStorage.setItem('active_phones_in_class', JSON.stringify(activePhonesInClass));
+  localStorage.setItem('pending_roster_requests', JSON.stringify(pendingRequests));
+
+  refreshData();
+
   const toast = document.getElementById('undo-toast');
-  toast.classList.remove('hidden');
-  setTimeout(() => toast.classList.add('hidden'), 2500);
+  if (toast) {
+    toast.classList.remove('hidden');
+    setTimeout(() => { toast.classList.add('hidden'); }, 1800);
+  }
 }
 
-// --- Live Clock ---
-function startClock() {
-  const update = () => {
-    const clockEl = document.getElementById('teacher-live-clock');
-    if (clockEl) {
-      const now = new Date();
-      clockEl.innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    }
-  };
-  update();
-  setInterval(update, 1000);
+window.addEventListener('DOMContentLoaded', () => {
+  updateTeacherClock();
+  setInterval(updateTeacherClock, 1000);
+  setInterval(refreshData, 1000);
+  setInterval(checkAutoCheckout, 5000);
+  refreshData();
+});
+
+function updateTeacherClock() {
+  const now = new Date();
+  const elem = document.getElementById('teacher-live-clock');
+  if (elem) {
+    elem.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
 }
 
-// --- Navigation Tabs ---
 function switchTab(tab) {
-  const viewDash = document.getElementById('view-dashboard');
-  const viewRoster = document.getElementById('view-roster');
-  const btnDash = document.getElementById('btn-dash');
-  const btnRost = document.getElementById('btn-rost');
-
   if (tab === 'dashboard') {
-    viewDash.classList.remove('hidden');
-    viewRoster.classList.add('hidden');
-    btnDash.className = "px-4 py-1.5 bg-white text-emerald-950 rounded-xl font-bold text-xs shadow-sm transition";
-    btnRost.className = "px-4 py-1.5 bg-emerald-900/60 hover:bg-emerald-900 text-emerald-100 rounded-xl font-bold text-xs transition";
-    refreshData();
+    document.getElementById('view-dashboard').classList.remove('hidden');
+    document.getElementById('view-roster').classList.add('hidden');
+    document.getElementById('btn-dash').className = 'px-4 py-1.5 bg-white text-emerald-950 rounded-xl font-bold text-xs shadow-sm transition';
+    document.getElementById('btn-rost').className = 'px-4 py-1.5 bg-emerald-900/60 hover:bg-emerald-900 text-emerald-100 rounded-xl font-bold text-xs transition';
   } else {
-    viewDash.classList.add('hidden');
-    viewRoster.classList.remove('hidden');
-    btnRost.className = "px-4 py-1.5 bg-white text-emerald-950 rounded-xl font-bold text-xs shadow-sm transition";
-    btnDash.className = "px-4 py-1.5 bg-emerald-900/60 hover:bg-emerald-900 text-emerald-100 rounded-xl font-bold text-xs transition";
+    document.getElementById('view-dashboard').classList.add('hidden');
+    document.getElementById('view-roster').classList.remove('hidden');
+    document.getElementById('btn-rost').className = 'px-4 py-1.5 bg-white text-emerald-950 rounded-xl font-bold text-xs shadow-sm transition';
+    document.getElementById('btn-dash').className = 'px-4 py-1.5 bg-emerald-900/60 hover:bg-emerald-900 text-emerald-100 rounded-xl font-bold text-xs transition';
     renderRoster();
   }
 }
 
-// --- Sort Controls ---
+// Helper for converting shorthand detail codes to plain English descriptions
+function getReadableDetails(code) {
+  if (!code || code === '--') return 'Activity Recorded';
+  if (code.startsWith('CI-')) {
+    let pocketNum = code.replace('CI-', '');
+    return `Phone Check-In (Pocket #${pocketNum})`;
+  }
+  if (code === 'COA') return 'Phone Check-Out All (Teacher)';
+  if (code === 'COS') return 'Phone Check-Out (Kiosk)';
+  if (code === 'COED') return 'Phone Check-Out (End of Day)';
+  if (code === 'BP-O') return 'Bathroom Pass Departure';
+  if (code === 'BP-I') return 'Bathroom Pass Return';
+  if (code === 'HP-O') return 'Hall Pass Departure';
+  if (code === 'HP-I') return 'Hall Pass Return';
+  return code;
+}
+
+// Helper for parsing "Xm Ys" formatted duration back into milliseconds
+function parseDurationToMs(durStr) {
+  if (!durStr || durStr === '--' || durStr === 'Active') return 0;
+  let totalMs = 0;
+  let m = durStr.match(/(\d+)\s*m/);
+  if (m) totalMs += parseInt(m[1]) * 60000;
+  let s = durStr.match(/(\d+)\s*s/);
+  if (s) totalMs += parseInt(s[1]) * 1000;
+  return totalMs;
+}
+
+function approvePendingRequest(index) {
+  saveSnapshot();
+  pendingRequests = JSON.parse(localStorage.getItem('pending_roster_requests')) || [];
+  let req = pendingRequests[index];
+  if (!req) return;
+
+  roster[req.id] = { firstName: req.firstName, lastName: req.lastName };
+  localStorage.setItem('classroom_roster', JSON.stringify(roster));
+
+  const now = new Date();
+  const studentName = `${req.firstName} ${req.lastName}`;
+
+  if (req.mode === 'phone') {
+    let slotStr = `CI-${String(req.slot || 1).padStart(2, '0')}`;
+    activePhonesInClass[req.id] = { slot: req.slot || 1, timestamp: Date.now() };
+    logs.unshift({
+      timestamp: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      dateStamp: now.toLocaleDateString(),
+      id: req.id,
+      name: studentName,
+      type: 'Phone',
+      duration: '--',
+      details: slotStr
+    });
+    localStorage.setItem('active_phones_in_class', JSON.stringify(activePhonesInClass));
+  } else if (req.mode === 'bathroom') {
+    if (!activePhonesInClass[req.id]) {
+      alert(`${studentName} must have their phone checked in before taking a bathroom pass.`);
+      return;
+    }
+    activePasses[req.id] = Date.now();
+    logs.unshift({
+      timestamp: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      dateStamp: now.toLocaleDateString(),
+      id: req.id,
+      name: studentName,
+      type: 'Bathroom',
+      duration: 'Active',
+      details: 'BP-O'
+    });
+    localStorage.setItem('active_bathroom_passes', JSON.stringify(activePasses));
+  } else if (req.mode === 'hallpass') {
+    if (!activePhonesInClass[req.id]) {
+      alert(`${studentName} must have their phone checked in before taking a hall pass.`);
+      return;
+    }
+    activeHallPasses[req.id] = Date.now();
+    logs.unshift({
+      timestamp: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      dateStamp: now.toLocaleDateString(),
+      id: req.id,
+      name: studentName,
+      type: 'Hall Pass',
+      duration: 'Active',
+      details: 'HP-O'
+    });
+    localStorage.setItem('active_hall_passes', JSON.stringify(activeHallPasses));
+  }
+
+  localStorage.setItem('classroom_logs', JSON.stringify(logs));
+  pendingRequests.splice(index, 1);
+  localStorage.setItem('pending_roster_requests', JSON.stringify(pendingRequests));
+
+  renderRoster();
+  refreshData();
+}
+
+function dismissPendingRequest(index) {
+  saveSnapshot();
+  pendingRequests = JSON.parse(localStorage.getItem('pending_roster_requests')) || [];
+  pendingRequests.splice(index, 1);
+  localStorage.setItem('pending_roster_requests', JSON.stringify(pendingRequests));
+  refreshData();
+}
+
+function openContextMenu(e, id) {
+  e.preventDefault();
+  e.stopPropagation();
+  contextStudentId = id;
+
+  const menu = document.getElementById('student-context-menu');
+  const nameElem = document.getElementById('ctx-student-name');
+  const idElem = document.getElementById('ctx-student-id');
+  const stName = getStandardDisplayName(roster[id]) || id;
+
+  nameElem.textContent = stName;
+  idElem.textContent = `ID: ${id}`;
+
+  const lblPhone = document.getElementById('ctx-lbl-phone');
+  const lblBathroom = document.getElementById('ctx-lbl-bathroom');
+  const lblHall = document.getElementById('ctx-lbl-hallpass');
+
+  lblPhone.textContent = activePhonesInClass[id] ? "Checked In" : "Checked Out";
+  lblBathroom.textContent = activePasses[id] ? "OUT (Bathroom Pass)" : "In Room";
+  lblHall.textContent = activeHallPasses[id] ? "OUT (Hall Pass)" : "In Room";
+
+  menu.style.top = `${e.clientY}px`;
+  menu.style.left = `${e.clientX}px`;
+  menu.classList.remove('hidden');
+}
+
+function closeContextMenu() {
+  document.getElementById('student-context-menu').classList.add('hidden');
+  contextStudentId = null;
+}
+
+function menuTogglePhone() {
+  if (!contextStudentId) return;
+  saveSnapshot();
+  const id = contextStudentId;
+  const now = new Date();
+  const studentName = getStandardDisplayName(roster[id]) || id;
+
+  if (activePhonesInClass[id]) {
+    let checkInTime = activePhonesInClass[id].timestamp || Date.now();
+    let phoneDuration = formatDuration(Date.now() - checkInTime);
+    delete activePhonesInClass[id];
+
+    logs.unshift({
+      timestamp: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      dateStamp: now.toLocaleDateString(),
+      id: id,
+      name: studentName,
+      type: 'Phone',
+      duration: phoneDuration,
+      details: 'COA'
+    });
+  } else {
+    activePhonesInClass[id] = { slot: 1, timestamp: Date.now() };
+    logs.unshift({
+      timestamp: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      dateStamp: now.toLocaleDateString(),
+      id: id,
+      name: studentName,
+      type: 'Phone',
+      duration: '--',
+      details: 'CI-01'
+    });
+  }
+
+  localStorage.setItem('active_phones_in_class', JSON.stringify(activePhonesInClass));
+  localStorage.setItem('classroom_logs', JSON.stringify(logs));
+  closeContextMenu();
+  refreshData();
+}
+
+function menuToggleBathroom() {
+  if (!contextStudentId) return;
+  const id = contextStudentId;
+  const studentName = getStandardDisplayName(roster[id]) || id;
+
+  if (!activePasses[id] && !activePhonesInClass[id]) {
+    alert(`${studentName} must have their phone checked in before taking a bathroom pass.`);
+    closeContextMenu();
+    return;
+  }
+
+  saveSnapshot();
+  const now = new Date();
+
+  if (activePasses[id]) {
+    let durationMs = Date.now() - activePasses[id];
+    let formattedDur = formatDuration(durationMs);
+    delete activePasses[id];
+
+    logs.unshift({
+      timestamp: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      dateStamp: now.toLocaleDateString(),
+      id: id,
+      name: studentName,
+      type: 'Bathroom',
+      duration: formattedDur,
+      details: 'BP-I'
+    });
+  } else {
+    delete activeHallPasses[id];
+    activePasses[id] = Date.now();
+
+    logs.unshift({
+      timestamp: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      dateStamp: now.toLocaleDateString(),
+      id: id,
+      name: studentName,
+      type: 'Bathroom',
+      duration: 'Active',
+      details: 'BP-O'
+    });
+  }
+
+  localStorage.setItem('active_bathroom_passes', JSON.stringify(activePasses));
+  localStorage.setItem('active_hall_passes', JSON.stringify(activeHallPasses));
+  localStorage.setItem('classroom_logs', JSON.stringify(logs));
+  closeContextMenu();
+  refreshData();
+}
+
+function menuToggleHallPass() {
+  if (!contextStudentId) return;
+  const id = contextStudentId;
+  const studentName = getStandardDisplayName(roster[id]) || id;
+
+  if (!activeHallPasses[id] && !activePhonesInClass[id]) {
+    alert(`${studentName} must have their phone checked in before taking a hall pass.`);
+    closeContextMenu();
+    return;
+  }
+
+  saveSnapshot();
+  const now = new Date();
+
+  if (activeHallPasses[id]) {
+    let durationMs = Date.now() - activeHallPasses[id];
+    let formattedDur = formatDuration(durationMs);
+    delete activeHallPasses[id];
+
+    logs.unshift({
+      timestamp: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      dateStamp: now.toLocaleDateString(),
+      id: id,
+      name: studentName,
+      type: 'Hall Pass',
+      duration: formattedDur,
+      details: 'HP-I'
+    });
+  } else {
+    delete activePasses[id];
+    activePasses[id] = Date.now();
+
+    logs.unshift({
+      timestamp: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      dateStamp: now.toLocaleDateString(),
+      id: id,
+      name: studentName,
+      type: 'Hall Pass',
+      duration: 'Active',
+      details: 'HP-O'
+    });
+  }
+
+  localStorage.setItem('active_bathroom_passes', JSON.stringify(activePasses));
+  localStorage.setItem('active_hall_passes', JSON.stringify(activeHallPasses));
+  localStorage.setItem('classroom_logs', JSON.stringify(logs));
+  closeContextMenu();
+  refreshData();
+}
+
 function setSortMode(mode) {
   sortMode = mode;
-  ['fname', 'lname', 'pocket'].forEach(m => {
-    const btn = document.getElementById(`sort-btn-${m}`);
-    if (m === mode) {
-      btn.className = "px-2 py-0.5 rounded-lg text-[11px] font-bold transition-all duration-150 chelan-primary-green text-white shadow-xs";
-    } else {
-      btn.className = "px-2 py-0.5 rounded-lg text-[11px] font-bold transition-all duration-150 text-slate-600 hover:text-slate-900";
+  const btnFname = document.getElementById('sort-btn-fname');
+  const btnLname = document.getElementById('sort-btn-lname');
+  const btnPocket = document.getElementById('sort-btn-pocket');
+
+  btnFname.className = "px-2 py-0.5 rounded-lg text-[11px] font-bold transition-all duration-150 text-slate-600 hover:text-slate-900";
+  btnLname.className = "px-2 py-0.5 rounded-lg text-[11px] font-bold transition-all duration-150 text-slate-600 hover:text-slate-900";
+  btnPocket.className = "px-2 py-0.5 rounded-lg text-[11px] font-bold transition-all duration-150 text-slate-600 hover:text-slate-900";
+
+  if (mode === 'fname') {
+    btnFname.className = "px-2 py-0.5 rounded-lg text-[11px] font-bold transition-all duration-150 chelan-primary-green text-white shadow-xs";
+  } else if (mode === 'lname') {
+    btnLname.className = "px-2 py-0.5 rounded-lg text-[11px] font-bold transition-all duration-150 chelan-primary-green text-white shadow-xs";
+  } else {
+    btnPocket.className = "px-2 py-0.5 rounded-lg text-[11px] font-bold transition-all duration-150 chelan-primary-green text-white shadow-xs";
+  }
+  refreshData();
+}
+
+function toggleLogSort(column) {
+  if (logSortColumn === column) {
+    logSortOrder = logSortOrder === 'asc' ? 'desc' : 'asc';
+  } else {
+    logSortColumn = column;
+    logSortOrder = 'asc';
+  }
+  updateLogSortHeaderIcons();
+  refreshData();
+}
+
+function updateLogSortHeaderIcons() {
+  const cols = ['time', 'name', 'type', 'duration', 'details'];
+  cols.forEach(c => {
+    const iconElem = document.getElementById(`sort-icon-log-${c}`);
+    if (iconElem) {
+      if (c === logSortColumn) {
+        iconElem.textContent = logSortOrder === 'asc' ? '↑' : '↓';
+        iconElem.className = 'text-[#0A4D2E] font-bold';
+      } else {
+        iconElem.textContent = '↕';
+        iconElem.className = 'text-slate-400 font-normal';
+      }
     }
   });
-  renderInRoomStudents();
 }
 
-// --- Main Data Rendering & Calculations ---
+function toggleRosterSort(column) {
+  if (rosterSortColumn === column) {
+    rosterSortOrder = rosterSortOrder === 'asc' ? 'desc' : 'asc';
+  } else {
+    rosterSortColumn = column;
+    rosterSortOrder = 'asc';
+  }
+  updateRosterSortHeaderIcons();
+  renderRoster();
+}
+
+function updateRosterSortHeaderIcons() {
+  const cols = ['id', 'fname', 'lname'];
+  cols.forEach(c => {
+    const iconElem = document.getElementById(`sort-icon-roster-${c}`);
+    if (iconElem) {
+      if (c === rosterSortColumn) {
+        iconElem.textContent = rosterSortOrder === 'asc' ? '↑' : '↓';
+        iconElem.className = 'text-[#0A4D2E] font-bold';
+      } else {
+        iconElem.textContent = '↕';
+        iconElem.className = 'text-slate-400 font-normal';
+      }
+    }
+  });
+}
+
+function getStandardDisplayName(studentObj) {
+  if (!studentObj) return "Unknown Student";
+  if (typeof studentObj === 'string') return studentObj;
+  if (studentObj.firstName || studentObj.lastName) {
+    return `${studentObj.firstName || ''} ${studentObj.lastName || ''}`.trim();
+  }
+  return "Unknown Student";
+}
+
+function formatDuration(ms) {
+  if (isNaN(ms) || ms < 0) return '0m 0s';
+  let totalSeconds = Math.floor(ms / 1000);
+  let mins = Math.floor(totalSeconds / 60);
+  let secs = totalSeconds % 60;
+  return `${mins}m ${secs}s`;
+}
+
+function checkOutAll(codeType = 'COA') {
+  activePhonesInClass = JSON.parse(localStorage.getItem('active_phones_in_class')) || {};
+  activePasses = JSON.parse(localStorage.getItem('active_bathroom_passes')) || {};
+  activeHallPasses = JSON.parse(localStorage.getItem('active_hall_passes')) || {};
+
+  let phoneIds = Object.keys(activePhonesInClass);
+  let passIds = Object.keys(activePasses);
+  let hallIds = Object.keys(activeHallPasses);
+
+  if (phoneIds.length === 0 && passIds.length === 0 && hallIds.length === 0) {
+    if (codeType === 'COA') alert("No active check-ins or departures to check out.");
+    return;
+  }
+
+  saveSnapshot();
+  const now = new Date();
+  const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  phoneIds.forEach(id => {
+    let name = getStandardDisplayName(roster[id]) || id;
+    let checkInTime = activePhonesInClass[id].timestamp || Date.now();
+    let phoneDuration = formatDuration(Date.now() - checkInTime);
+
+    logs.unshift({
+      timestamp: timeString,
+      dateStamp: now.toLocaleDateString(),
+      id: id,
+      name: name,
+      type: 'Phone',
+      duration: phoneDuration,
+      details: codeType
+    });
+  });
+
+  passIds.forEach(id => {
+    let name = getStandardDisplayName(roster[id]) || id;
+    let durationMs = Date.now() - activePasses[id];
+    let formattedDur = formatDuration(durationMs);
+
+    logs.unshift({
+      timestamp: timeString,
+      dateStamp: now.toLocaleDateString(),
+      id: id,
+      name: name,
+      type: 'Bathroom',
+      duration: formattedDur,
+      details: 'BP-I'
+    });
+  });
+
+  hallIds.forEach(id => {
+    let name = getStandardDisplayName(roster[id]) || id;
+    let durationMs = Date.now() - activeHallPasses[id];
+    let formattedDur = formatDuration(durationMs);
+
+    logs.unshift({
+      timestamp: timeString,
+      dateStamp: now.toLocaleDateString(),
+      id: id,
+      name: name,
+      type: 'Hall Pass',
+      duration: formattedDur,
+      details: 'HP-I'
+    });
+  });
+
+  localStorage.setItem('active_phones_in_class', JSON.stringify({}));
+  localStorage.setItem('active_bathroom_passes', JSON.stringify({}));
+  localStorage.setItem('active_hall_passes', JSON.stringify({}));
+  localStorage.setItem('classroom_logs', JSON.stringify(logs));
+  refreshData();
+}
+
+function checkAutoCheckout() {
+  const now = new Date();
+  const hours = now.getHours();
+  const minutes = now.getMinutes();
+  const todayStr = now.toLocaleDateString();
+
+  if (hours === 15 && minutes === 15 && lastAutoCheckDate !== todayStr) {
+    lastAutoCheckDate = todayStr;
+    checkOutAll('COED');
+  }
+}
+
+async function processGoogleSheet() {
+  const url = document.getElementById('sheet-url').value.trim();
+  if (!url) { alert("Please paste a valid Google Sheet CSV URL."); return; }
+
+  const syncMode = document.querySelector('input[name="sync-mode"]:checked')?.value || 'replace';
+
+  try {
+    const response = await fetch(url);
+    const csvText = await response.text();
+    const rows = csvText.split('\n');
+    
+    let parsedRoster = {};
+    rows.forEach(row => {
+      const cols = row.split(',').map(c => c.replace(/^["'](.+(?=["']))["']$/, '$1').trim());
+      if (cols.length >= 2 && cols[0] && cols[1]) {
+        let fullName = cols[1];
+        let parts = fullName.split(' ');
+        let firstName = parts[0] || '';
+        let lastName = parts.slice(1).join(' ') || '';
+        parsedRoster[cols[0]] = { firstName, lastName };
+      }
+    });
+
+    let parsedCount = Object.keys(parsedRoster).length;
+    if (parsedCount > 0) {
+      if (syncMode === 'replace') {
+        roster = parsedRoster;
+      } else {
+        roster = { ...roster, ...parsedRoster };
+      }
+
+      localStorage.setItem('classroom_roster', JSON.stringify(roster));
+      renderRoster();
+      refreshData();
+      
+      const actionText = syncMode === 'replace' ? 'replaced entire roster with' : 'added students to roster from';
+      alert(`Successfully ${actionText} sheet (${parsedCount} students processed)!`);
+    } else {
+      alert("Could not parse data. Ensure Column A is ID and Column B is Name.");
+    }
+  } catch (err) {
+    alert("Failed to fetch Google Sheet. Make sure the sheet is published to the web as CSV.");
+  }
+}
+
 function refreshData() {
-  renderInRoomStudents();
-  renderPassCards();
-  renderLogs();
-  calculateSummaryMetrics();
-  renderPendingRequests();
-}
+  logs = JSON.parse(localStorage.getItem('classroom_logs')) || [];
+  activePasses = JSON.parse(localStorage.getItem('active_bathroom_passes')) || {};
+  activeHallPasses = JSON.parse(localStorage.getItem('active_hall_passes')) || {};
+  activePhonesInClass = JSON.parse(localStorage.getItem('active_phones_in_class')) || {};
+  roster = JSON.parse(localStorage.getItem('classroom_roster')) || roster;
+  pendingRequests = JSON.parse(localStorage.getItem('pending_roster_requests')) || [];
 
-function calculateSummaryMetrics() {
-  const inRoomBadge = document.getElementById('count-in-room-badge');
-  const combinedTimeEl = document.getElementById('summary-combined-pass-time');
-  const highestActivityEl = document.getElementById('summary-highest-activity');
+  const todayDateStr = new Date().toLocaleDateString();
 
-  if (inRoomBadge) inRoomBadge.innerText = `${inRoom.length} Active`;
+  // Today's Class Summary Analytics Calculations
+  let totalPassMsToday = 0;
+  let highestActivityMsToday = 0;
 
-  // Calculate pass totals from logs
-  let totalPassSeconds = 0;
-  let maxPassSeconds = 0;
-
-  logs.forEach(log => {
-    if (log.durationSec) {
-      totalPassSeconds += log.durationSec;
-      if (log.durationSec > maxPassSeconds) {
-        maxPassSeconds = log.durationSec;
+  logs.forEach(l => {
+    let lDate = l.dateStamp || todayDateStr;
+    if (lDate === todayDateStr) {
+      let durMs = parseDurationToMs(l.duration);
+      if (l.type === 'Bathroom' || l.type === 'Hall Pass') {
+        totalPassMsToday += durMs;
+      }
+      if (durMs > highestActivityMsToday) {
+        highestActivityMsToday = durMs;
       }
     }
   });
 
-  if (combinedTimeEl) combinedTimeEl.innerText = formatDuration(totalPassSeconds);
-  if (highestActivityEl) highestActivityEl.innerText = formatDuration(maxPassSeconds);
-}
-
-function formatDuration(sec) {
-  if (!sec || sec <= 0) return '0m 0s';
-  const m = Math.floor(sec / 60);
-  const s = sec % 60;
-  return `${m}m ${s}s`;
-}
-
-// Render Left Side: Students Currently in Class
-function renderInRoomStudents() {
-  const container = document.getElementById('in-room-container');
-  if (!container) return;
-
-  if (inRoom.length === 0) {
-    container.innerHTML = `<p class="text-sm text-slate-400 italic col-span-2 text-center py-6">No students currently checked in.</p>`;
-    return;
-  }
-
-  const sorted = [...inRoom].sort((a, b) => {
-    if (sortMode === 'fname') return a.fname.localeCompare(b.fname);
-    if (sortMode === 'lname') return a.lname.localeCompare(b.lname);
-    if (sortMode === 'pocket') return (a.pocket || 99) - (b.pocket || 99);
-    return 0;
+  // Include currently active passes into total pass time calculation
+  Object.keys(activePasses).forEach(id => {
+    let passMs = Date.now() - activePasses[id];
+    totalPassMsToday += passMs;
+    if (passMs > highestActivityMsToday) highestActivityMsToday = passMs;
+  });
+  Object.keys(activeHallPasses).forEach(id => {
+    let passMs = Date.now() - activeHallPasses[id];
+    totalPassMsToday += passMs;
+    if (passMs > highestActivityMsToday) highestActivityMsToday = passMs;
   });
 
-  container.innerHTML = sorted.map((st) => {
-    const isBathroom = bathroomPasses.some(b => b.id === st.id);
-    const isHall = hallPasses.some(h => h.id === st.id);
+  // Update Top Summary Banner Display
+  const elemCombined = document.getElementById('summary-combined-pass-time');
+  const elemHighest = document.getElementById('summary-highest-activity');
+  if (elemCombined) elemCombined.textContent = formatDuration(totalPassMsToday);
+  if (elemHighest) elemHighest.textContent = formatDuration(highestActivityMsToday);
 
-    return `
-      <div oncontextmenu="openContextMenu(event, '${st.id}')" 
-           class="bg-slate-50 hover:bg-emerald-50/50 border border-slate-200 rounded-xl p-2.5 flex justify-between items-center transition select-none cursor-pointer">
-        <div class="flex items-center gap-2 overflow-hidden">
-          <span class="text-[10px] font-bold bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-mono">
-            #${st.pocket || '--'}
-          </span>
-          <span class="text-xs font-bold text-slate-800 truncate">
-            ${st.fname} ${st.lname}
-          </span>
+  // Pending Requests Banner Rendering
+  const reqBanner = document.getElementById('pending-requests-banner');
+  const reqList = document.getElementById('pending-requests-list');
+  const reqCount = document.getElementById('pending-requests-count');
+
+  if (pendingRequests.length > 0) {
+    reqCount.textContent = pendingRequests.length;
+    reqList.innerHTML = pendingRequests.map((r, idx) => `
+      <div class="bg-white p-3.5 rounded-xl border border-amber-300 shadow-xs flex flex-col justify-between space-y-2">
+        <div class="space-y-1">
+          <div class="flex justify-between items-start">
+            <span class="font-bold text-slate-800 text-sm">${r.firstName} ${r.lastName}</span>
+            <span class="font-mono text-[10px] text-amber-900 bg-amber-100 border border-amber-300 px-1.5 py-0.5 rounded font-bold">ID: ${r.id}</span>
+          </div>
+          <div class="text-[11px] text-slate-600 space-y-0.5">
+            <p><strong>Requested Action:</strong> <span class="uppercase font-bold text-amber-900">${r.mode}</span></p>
+            <p><strong>Time Submitted:</strong> ${r.timestamp}</p>
+          </div>
         </div>
-        <div class="flex items-center gap-1">
-          ${isBathroom ? '<span class="text-xs" title="Bathroom Pass Active">🚻</span>' : ''}
-          ${isHall ? '<span class="text-xs" title="Hall Pass Active">🎟️</span>' : ''}
-          <button onclick="event.stopPropagation(); openContextMenu(event, '${st.id}')" class="text-slate-400 hover:text-slate-700 px-1 text-xs">
-            ⋮
+        <div class="grid grid-cols-2 gap-1.5 pt-1.5 border-t border-amber-100">
+          <button onclick="approvePendingRequest(${idx})" class="py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white font-bold rounded-lg text-[11px] transition shadow-xs">
+            ✅ Approve & Add
+          </button>
+          <button onclick="dismissPendingRequest(${idx})" class="py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-[11px] transition">
+            ❌ Dismiss
           </button>
         </div>
       </div>
-    `;
-  }).join('');
-}
-
-// Render Bathroom & Hall Pass Cards
-function renderPassCards() {
-  const bCount = document.getElementById('count-out-room');
-  const bList = document.getElementById('active-passes');
-  const hCount = document.getElementById('count-hall-pass');
-  const hList = document.getElementById('active-hall-passes');
-
-  // Bathroom
-  if (bCount) bCount.innerText = `${bathroomPasses.length}/1`;
-  if (bList) {
-    if (bathroomPasses.length === 0) {
-      bList.innerHTML = `<p class="text-xs text-slate-400 italic">No students out.</p>`;
-    } else {
-      bList.innerHTML = bathroomPasses.map(st => `
-        <div class="bg-red-50 border border-red-200 rounded-xl p-2 flex justify-between items-center text-xs">
-          <div>
-            <span class="font-bold text-red-950 block">${st.fname} ${st.lname}</span>
-            <span class="text-[10px] text-red-600 font-mono">${getElapsedMinutes(st.startTime)}</span>
-          </div>
-          <button onclick="returnBathroomPass('${st.id}')" class="px-2 py-1 bg-red-700 hover:bg-red-800 text-white rounded-lg text-[10px] font-bold">
-            Return
-          </button>
-        </div>
-      `).join('');
-    }
+    `).join('');
+    reqBanner.classList.remove('hidden');
+  } else {
+    reqBanner.classList.add('hidden');
   }
 
-  // Hall Pass
-  if (hCount) hCount.innerText = `${hallPasses.length} Out`;
-  if (hList) {
-    if (hallPasses.length === 0) {
-      hList.innerHTML = `<p class="text-xs text-slate-400 italic">No students out.</p>`;
+  // Render "Students Currently in Class" Card Grid
+  const inRoomContainer = document.getElementById('in-room-container');
+  const phoneKeys = Object.keys(activePhonesInClass);
+  const countBadge = document.getElementById('count-in-room-badge');
+  if (countBadge) countBadge.textContent = `${phoneKeys.length} Active`;
+
+  if (phoneKeys.length === 0) {
+    inRoomContainer.innerHTML = `<p class="text-sm text-slate-400 italic col-span-2 text-center py-6">No students currently checked in.</p>`;
+  } else {
+    let studentList = phoneKeys.map(id => {
+      let st = roster[id];
+      let phoneData = activePhonesInClass[id];
+      let checkInTimestamp = phoneData.timestamp || Date.now();
+      let inRoomDuration = formatDuration(Date.now() - checkInTimestamp);
+
+      return {
+        id: id,
+        displayName: getStandardDisplayName(st) || id,
+        firstName: (st && st.firstName) ? st.firstName : '',
+        lastName: (st && st.lastName) ? st.lastName : '',
+        slot: Number(phoneData.slot),
+        inRoomDuration: inRoomDuration,
+        hasBathroomPass: !!activePasses[id],
+        hasHallPass: !!activeHallPasses[id]
+      };
+    });
+
+    if (sortMode === 'fname') {
+      studentList.sort((a, b) => a.firstName.localeCompare(b.firstName));
+    } else if (sortMode === 'lname') {
+      studentList.sort((a, b) => a.lastName.localeCompare(b.lastName));
     } else {
-      hList.innerHTML = hallPasses.map(st => `
-        <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-2 flex justify-between items-center text-xs">
-          <div>
-            <span class="font-bold text-indigo-950 block">${st.fname} ${st.lname}</span>
-            <span class="text-[10px] text-indigo-600 font-mono">${getElapsedMinutes(st.startTime)}</span>
+      studentList.sort((a, b) => a.slot - b.slot);
+    }
+
+    inRoomContainer.innerHTML = studentList.map(item => {
+      let slotPadded = String(item.slot).padStart(2, '0');
+      let borderBgClass = "bg-emerald-50/90 border-emerald-300 hover:border-emerald-500 shadow-2xs";
+      let badgeClass = "bg-emerald-800 text-white";
+      let statusLabel = `In: ${item.inRoomDuration} (#${slotPadded})`;
+
+      if (item.hasBathroomPass) {
+        borderBgClass = "bg-red-100 border-red-500 shadow-xs animate-pulse hover:border-red-700";
+        badgeClass = "bg-red-700 text-white font-black";
+        statusLabel = `BP-O (#${slotPadded})`;
+      } else if (item.hasHallPass) {
+        borderBgClass = "bg-indigo-100 border-indigo-500 shadow-xs hover:border-indigo-700";
+        badgeClass = "bg-indigo-700 text-white font-black";
+        statusLabel = `HP-O (#${slotPadded})`;
+      }
+
+      return `
+        <div oncontextmenu="openContextMenu(event, '${item.id}')" 
+             title="Right-click to manually adjust status"
+             class="flex justify-between items-center p-2.5 border rounded-xl transition-all cursor-context-menu select-none ${borderBgClass}">
+          <div class="truncate pr-1">
+            <span class="font-bold text-slate-900 text-xs block truncate">${item.displayName}</span>
           </div>
-          <button onclick="returnHallPass('${st.id}')" class="px-2 py-1 bg-indigo-700 hover:bg-indigo-800 text-white rounded-lg text-[10px] font-bold">
-            Return
-          </button>
-        </div>
-      `).join('');
-    }
+          <span class="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-md whitespace-nowrap ${badgeClass}">${statusLabel}</span>
+        </div>`;
+    }).join('');
   }
-}
 
-function getElapsedMinutes(startTimeStr) {
-  if (!startTimeStr) return '0m';
-  const start = new Date(startTimeStr);
-  const now = new Date();
-  const diffSec = Math.floor((now - start) / 1000);
-  return formatDuration(diffSec);
-}
+  // Bathroom Active Pass Card Name Resolution Fix
+  const activeContainer = document.getElementById('active-passes');
+  const passKeys = Object.keys(activePasses);
+  document.getElementById('count-out-room').textContent = `${passKeys.length}/1`;
 
-// Render Running Logs
-function renderLogs() {
-  const table = document.getElementById('logs-table');
-  const countEl = document.getElementById('log-count');
-  const searchVal = (document.getElementById('search-log')?.value || '').toLowerCase();
+  if (passKeys.length === 0) {
+    activeContainer.innerHTML = `<p class="text-xs text-slate-400 italic">No students out.</p>`;
+  } else {
+    activeContainer.innerHTML = passKeys.map(id => {
+      let elapsedMs = Date.now() - activePasses[id];
+      let formattedTime = formatDuration(elapsedMs);
+      let stName = getStandardDisplayName(roster[id]) || id;
+      return `<div class="flex justify-between items-center p-2 bg-red-50 border border-red-200 rounded-xl">
+        <span class="font-bold text-red-950 text-xs truncate">${stName}</span>
+        <span class="text-red-800 font-mono font-semibold text-[10px] bg-red-100 px-1.5 py-0.5 rounded-md ml-1">${formattedTime}</span>
+      </div>`;
+    }).join('');
+  }
 
-  if (!table) return;
+  // Hall Pass Active Pass Card Name Resolution Fix
+  const hallContainer = document.getElementById('active-hall-passes');
+  const hallKeys = Object.keys(activeHallPasses);
+  document.getElementById('count-hall-pass').textContent = `${hallKeys.length} Out`;
 
-  let filtered = logs.filter(l => 
-    l.studentName.toLowerCase().includes(searchVal) ||
-    l.type.toLowerCase().includes(searchVal) ||
-    (l.details || '').toLowerCase().includes(searchVal)
-  );
+  if (hallKeys.length === 0) {
+    hallContainer.innerHTML = `<p class="text-xs text-slate-400 italic">No students out.</p>`;
+  } else {
+    hallContainer.innerHTML = hallKeys.map(id => {
+      let elapsedMs = Date.now() - activeHallPasses[id];
+      let formattedTime = formatDuration(elapsedMs);
+      let stName = getStandardDisplayName(roster[id]) || id;
+      return `<div class="flex justify-between items-center p-2 bg-indigo-50 border border-indigo-200 rounded-xl">
+        <span class="font-bold text-indigo-950 text-xs truncate">${stName}</span>
+        <span class="text-indigo-800 font-mono font-semibold text-[10px] bg-indigo-100 px-1.5 py-0.5 rounded-md ml-1">${formattedTime}</span>
+      </div>`;
+    }).join('');
+  }
 
-  filtered.sort((a, b) => {
-    let valA = a[logSort.field] || '';
-    let valB = b[logSort.field] || '';
-    if (logSort.field === 'time') {
-      valA = new Date(a.rawTime || a.time);
-      valB = new Date(b.rawTime || b.time);
+  // Running Log Table Output with Human-Readable Nomenclature
+  const searchQuery = (document.getElementById('search-log')?.value || '').toLowerCase().trim();
+  let filteredLogs = logs.filter(l => {
+    if (!searchQuery) return true;
+    let readableDesc = getReadableDetails(l.details).toLowerCase();
+    return (
+      (l.name || '').toLowerCase().includes(searchQuery) ||
+      (l.timestamp || '').toLowerCase().includes(searchQuery) ||
+      (l.type || '').toLowerCase().includes(searchQuery) ||
+      (l.duration || '').toLowerCase().includes(searchQuery) ||
+      readableDesc.includes(searchQuery)
+    );
+  });
+
+  let reverse = logSortOrder === 'desc';
+  filteredLogs.sort((a, b) => {
+    let valA = '', valB = '';
+
+    if (logSortColumn === 'time') {
+      valA = (a.dateStamp || '') + ' ' + (a.timestamp || '');
+      valB = (b.dateStamp || '') + ' ' + (b.timestamp || '');
+    } else if (logSortColumn === 'name') {
+      valA = (a.name || '').toLowerCase();
+      valB = (b.name || '').toLowerCase();
+    } else if (logSortColumn === 'type') {
+      valA = (a.type || '').toLowerCase();
+      valB = (b.type || '').toLowerCase();
+    } else if (logSortColumn === 'duration') {
+      valA = parseDurationToMs(a.duration);
+      valB = parseDurationToMs(b.duration);
+    } else if (logSortColumn === 'details') {
+      valA = getReadableDetails(a.details).toLowerCase();
+      valB = getReadableDetails(b.details).toLowerCase();
     }
-    if (valA < valB) return logSort.asc ? -1 : 1;
-    if (valA > valB) return logSort.asc ? 1 : -1;
+
+    if (valA < valB) return reverse ? 1 : -1;
+    if (valA > valB) return reverse ? -1 : 1;
     return 0;
   });
 
-  if (countEl) countEl.innerText = `${filtered.length} entries`;
+  const logTable = document.getElementById('logs-table');
+  document.getElementById('log-count').textContent = `${filteredLogs.length} entries`;
+  if (filteredLogs.length === 0) {
+    logTable.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400 italic">No matching log entries found.</td></tr>`;
+  } else {
+    logTable.innerHTML = filteredLogs.map(l => {
+      let typeBadgeClass = 'bg-emerald-100 text-emerald-900 border border-emerald-200';
+      if (l.type === 'Bathroom') typeBadgeClass = 'bg-red-100 text-red-900 border border-red-200';
+      if (l.type === 'Hall Pass') typeBadgeClass = 'bg-indigo-100 text-indigo-900 border border-indigo-200';
 
-  if (filtered.length === 0) {
-    table.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400 italic">No activity logged yet.</td></tr>`;
+      let readableDetailText = getReadableDetails(l.details);
+
+      return `
+        <tr class="hover:bg-slate-50 transition-colors">
+          <td class="p-2.5 font-mono text-xs text-slate-600">${l.timestamp}</td>
+          <td class="p-2.5 font-bold text-slate-800 text-xs">${l.name}</td>
+          <td class="p-2.5"><span class="px-2 py-0.5 text-[10px] rounded-md font-bold ${typeBadgeClass}">${l.type}</span></td>
+          <td class="p-2.5 font-mono text-xs font-bold text-slate-700">${l.duration || '--'}</td>
+          <td class="p-2.5 text-xs text-slate-700 font-medium">${readableDetailText}</td>
+        </tr>`;
+    }).join('');
+  }
+}
+
+function addStudent(event) {
+  event.preventDefault();
+  const id = document.getElementById('r-id').value.trim();
+  const fname = document.getElementById('r-fname').value.trim();
+  const lname = document.getElementById('r-lname').value.trim();
+
+  if (roster[id]) {
+    let existingName = `${roster[id].firstName} ${roster[id].lastName}`;
+    alert(`Student ID "${id}" already exists in the roster for ${existingName}. Duplicate IDs are not allowed.`);
     return;
   }
 
-  table.innerHTML = filtered.map(l => `
-    <tr class="hover:bg-slate-50 transition">
-      <td class="p-2.5 font-mono text-slate-500 whitespace-nowrap">${l.time}</td>
-      <td class="p-2.5 font-bold text-slate-800">${l.studentName}</td>
-      <td class="p-2.5">
-        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${
-          l.type === 'Phone Check-In' ? 'bg-emerald-100 text-emerald-800' :
-          l.type === 'Bathroom Pass' ? 'bg-red-100 text-red-800' :
-          l.type === 'Hall Pass' ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-100 text-slate-700'
-        }">${l.type}</span>
-      </td>
-      <td class="p-2.5 font-mono text-slate-600">${l.duration || '--'}</td>
-      <td class="p-2.5 text-slate-600">${l.details || '--'}</td>
-    </tr>
-  `).join('');
-}
-
-function toggleLogSort(field) {
-  if (logSort.field === field) {
-    logSort.asc = !logSort.asc;
-  } else {
-    logSort.field = field;
-    logSort.asc = true;
-  }
-  
-  ['time', 'name', 'type', 'duration', 'details'].forEach(f => {
-    const icon = document.getElementById(`sort-icon-log-${f}`);
-    if (icon) {
-      if (f === field) {
-        icon.className = "text-[#0A4D2E] font-bold";
-        icon.innerText = logSort.asc ? "↑" : "↓";
-      } else {
-        icon.className = "text-slate-400 font-normal";
-        icon.innerText = "↕";
-      }
-    }
-  });
-
-  renderLogs();
-}
-
-// --- Roster Tab Functions ---
-function renderRoster() {
-  const table = document.getElementById('roster-table');
-  const countEl = document.getElementById('roster-count');
-  const searchVal = (document.getElementById('search-roster')?.value || '').toLowerCase();
-
-  if (!table) return;
-
-  let filtered = roster.filter(s => 
-    s.id.toLowerCase().includes(searchVal) ||
-    s.fname.toLowerCase().includes(searchVal) ||
-    s.lname.toLowerCase().includes(searchVal)
-  );
-
-  filtered.sort((a, b) => {
-    let valA = a[rosterSort.field] || '';
-    let valB = b[rosterSort.field] || '';
-    if (valA < valB) return rosterSort.asc ? -1 : 1;
-    if (valA > valB) return rosterSort.asc ? 1 : -1;
-    return 0;
-  });
-
-  if (countEl) countEl.innerText = roster.length;
-
-  if (filtered.length === 0) {
-    table.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400 italic">No students in roster.</td></tr>`;
-    return;
-  }
-
-  table.innerHTML = filtered.map(st => `
-    <tr class="hover:bg-slate-50 transition">
-      <td class="p-3 font-mono font-semibold text-slate-700">
-        ${isEditAllMode ? `<input type="text" data-id="${st.id}" data-field="id" value="${st.id}" class="w-full px-2 py-1 border rounded text-xs font-mono">` : st.id}
-      </td>
-      <td class="p-3 font-semibold text-slate-800">
-        ${isEditAllMode ? `<input type="text" data-id="${st.id}" data-field="fname" value="${st.fname}" class="w-full px-2 py-1 border rounded text-xs">` : st.fname}
-      </td>
-      <td class="p-3 font-semibold text-slate-800">
-        ${isEditAllMode ? `<input type="text" data-id="${st.id}" data-field="lname" value="${st.lname}" class="w-full px-2 py-1 border rounded text-xs">` : st.lname}
-      </td>
-      <td class="p-3 text-right">
-        <button onclick="removeRosterStudent('${st.id}')" class="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-800 rounded-lg text-xs font-bold transition">
-          🗑️ Delete
-        </button>
-      </td>
-    </tr>
-  `).join('');
-}
-
-function toggleRosterSort(field) {
-  if (rosterSort.field === field) {
-    rosterSort.asc = !rosterSort.asc;
-  } else {
-    rosterSort.field = field;
-    rosterSort.asc = true;
-  }
-
-  ['id', 'fname', 'lname'].forEach(f => {
-    const icon = document.getElementById(`sort-icon-roster-${f}`);
-    if (icon) {
-      if (f === field) {
-        icon.className = "text-[#0A4D2E] font-bold";
-        icon.innerText = rosterSort.asc ? "↑" : "↓";
-      } else {
-        icon.className = "text-slate-400 font-normal";
-        icon.innerText = "↕";
-      }
-    }
-  });
-
+  roster[id] = { firstName: fname, lastName: lname };
+  localStorage.setItem('classroom_roster', JSON.stringify(roster));
+  document.getElementById('r-id').value = '';
+  document.getElementById('r-fname').value = '';
+  document.getElementById('r-lname').value = '';
   renderRoster();
+  
+  const toast = document.getElementById('global-save-toast');
+  if (toast) {
+    toast.textContent = "Student Added ✓";
+    toast.classList.remove('hidden');
+    setTimeout(() => { toast.classList.add('hidden'); }, 1800);
+  }
+}
+
+function addRosterStudentTab(event) {
+  event.preventDefault();
+  const id = document.getElementById('roster-tab-id').value.trim();
+  const fname = document.getElementById('roster-tab-fname').value.trim();
+  const lname = document.getElementById('roster-tab-lname').value.trim();
+
+  if (roster[id]) {
+    let existingName = `${roster[id].firstName} ${roster[id].lastName}`;
+    alert(`Student ID "${id}" already exists in the roster for ${existingName}. Duplicate IDs are not allowed.`);
+    return;
+  }
+
+  roster[id] = { firstName: fname, lastName: lname };
+  localStorage.setItem('classroom_roster', JSON.stringify(roster));
+  document.getElementById('roster-tab-id').value = '';
+  document.getElementById('roster-tab-fname').value = '';
+  document.getElementById('roster-tab-lname').value = '';
+  renderRoster();
+  
+  const toast = document.getElementById('global-save-toast');
+  if (toast) {
+    toast.textContent = "Student Added ✓";
+    toast.classList.remove('hidden');
+    setTimeout(() => { toast.classList.add('hidden'); }, 1800);
+  }
+}
+
+function editStudent(id) {
+  editingStudentId = id;
+  renderRoster();
+}
+
+function autoSaveStudentRow(oldId) {
+  const idElem = document.getElementById(`edit-id-${oldId}`);
+  const fnameElem = document.getElementById(`edit-fname-${oldId}`);
+  const lnameElem = document.getElementById(`edit-lname-${oldId}`);
+
+  if (!idElem || !fnameElem || !lnameElem) return;
+
+  const newId = idElem.value.trim();
+  const newFname = fnameElem.value.trim();
+  const newLname = lnameElem.value.trim();
+
+  if (!newId || !newFname || !newLname) return;
+
+  if (newId !== oldId && roster[newId]) {
+    alert(`Cannot change ID to "${newId}". That ID already belongs to ${roster[newId].firstName} ${roster[newId].lastName}.`);
+    idElem.value = oldId;
+    return;
+  }
+
+  if (newId !== oldId) {
+    delete roster[oldId];
+  }
+
+  roster[newId] = { firstName: newFname, lastName: newLname };
+  localStorage.setItem('classroom_roster', JSON.stringify(roster));
+  
+  const toast = document.getElementById(`saved-toast-${oldId}`);
+  if (toast) {
+    toast.classList.remove('hidden');
+    setTimeout(() => { if (toast) toast.classList.add('hidden'); }, 1200);
+  }
+
+  refreshData();
 }
 
 function enableEditAll() {
@@ -408,432 +936,272 @@ function enableEditAll() {
 }
 
 function saveEditAll() {
-  pushUndoSnapshot();
-  const inputs = document.querySelectorAll('#roster-table input');
-  const tempMap = {};
+  let newRoster = {};
+  const entries = Object.keys(roster);
 
-  inputs.forEach(input => {
-    const origId = input.getAttribute('data-id');
-    const field = input.getAttribute('data-field');
-    if (!tempMap[origId]) tempMap[origId] = { id: origId };
-    tempMap[origId][field] = input.value.trim();
-  });
+  for (let oldId of entries) {
+    const idElem = document.getElementById(`edit-id-${oldId}`);
+    const fnameElem = document.getElementById(`edit-fname-${oldId}`);
+    const lnameElem = document.getElementById(`edit-lname-${oldId}`);
 
-  roster = Object.values(tempMap).filter(s => s.id && s.fname && s.lname);
-  saveState();
+    if (idElem && fnameElem && lnameElem) {
+      const nid = idElem.value.trim() || oldId;
+      const nfn = fnameElem.value.trim();
+      const nln = lnameElem.value.trim();
+
+      if (nid !== oldId && newRoster[nid]) {
+        alert(`Duplicate ID detected (${nid}). Changes canceled.`);
+        return;
+      }
+      newRoster[nid] = { firstName: nfn, lastName: nln };
+    } else {
+      newRoster[oldId] = roster[oldId];
+    }
+  }
+
+  roster = newRoster;
+  localStorage.setItem('classroom_roster', JSON.stringify(roster));
 
   isEditAllMode = false;
+  editingStudentId = null;
   document.getElementById('btn-edit-all').classList.remove('hidden');
   document.getElementById('btn-save-all').classList.add('hidden');
 
-  const saveToast = document.getElementById('global-save-toast');
-  if (saveToast) {
-    saveToast.classList.remove('hidden');
-    setTimeout(() => saveToast.classList.add('hidden'), 2000);
-  }
-
   renderRoster();
-}
-
-// --- Quick Add Forms ---
-function addStudent(e) {
-  e.preventDefault();
-  pushUndoSnapshot();
-  const idInput = document.getElementById('r-id');
-  const fnameInput = document.getElementById('r-fname');
-  const lnameInput = document.getElementById('r-lname');
-
-  const id = idInput.value.trim();
-  const fname = fnameInput.value.trim();
-  const lname = lnameInput.value.trim();
-
-  if (!id || !fname || !lname) return;
-
-  let existing = roster.find(s => s.id === id);
-  if (!existing) {
-    existing = { id, fname, lname, pocket: roster.length + 1 };
-    roster.push(existing);
-  }
-
-  if (!inRoom.some(s => s.id === id)) {
-    inRoom.push(existing);
-    addLogEntry(existing.fname + ' ' + existing.lname, 'Phone Check-In', '--', 'Manual Check-in');
-  }
-
-  idInput.value = '';
-  fnameInput.value = '';
-  lnameInput.value = '';
-
-  saveState();
   refreshData();
-}
 
-function addRosterStudentTab(e) {
-  e.preventDefault();
-  pushUndoSnapshot();
-  const id = document.getElementById('roster-tab-id').value.trim();
-  const fname = document.getElementById('roster-tab-fname').value.trim();
-  const lname = document.getElementById('roster-tab-lname').value.trim();
-
-  if (!id || !fname || !lname) return;
-
-  if (roster.some(s => s.id === id)) {
-    alert('Student ID already exists in roster.');
-    return;
-  }
-
-  roster.push({ id, fname, lname, pocket: roster.length + 1 });
-  saveState();
-  renderRoster();
-
-  document.getElementById('roster-tab-id').value = '';
-  document.getElementById('roster-tab-fname').value = '';
-  document.getElementById('roster-tab-lname').value = '';
-}
-
-function removeRosterStudent(id) {
-  showConfirmModal("Delete Student?", "Remove this student permanently from class roster?", "🗑️", () => {
-    pushUndoSnapshot();
-    roster = roster.filter(s => s.id !== id);
-    inRoom = inRoom.filter(s => s.id !== id);
-    bathroomPasses = bathroomPasses.filter(s => s.id !== id);
-    hallPasses = hallPasses.filter(s => s.id !== id);
-    saveState();
-    refreshData();
-    renderRoster();
-  });
-}
-
-// --- Google Sheet Sync ---
-async function processGoogleSheet() {
-  const urlInput = document.getElementById('sheet-url');
-  const url = urlInput.value.trim();
-  if (!url) {
-    alert('Please enter a published Google Sheet CSV URL.');
-    return;
-  }
-
-  const syncMode = document.querySelector('input[name="sync-mode"]:checked')?.value || 'replace';
-
-  try {
-    const res = await fetch(url);
-    const csvText = await res.text();
-    const lines = csvText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-
-    pushUndoSnapshot();
-    const newStudents = [];
-
-    lines.forEach((line, idx) => {
-      if (idx === 0 && line.toLowerCase().includes('id')) return; // skip header
-      const parts = line.split(',').map(p => p.replace(/"/g, '').trim());
-      if (parts.length >= 3) {
-        newStudents.push({
-          id: parts[0],
-          fname: parts[1],
-          lname: parts[2],
-          pocket: newStudents.length + 1
-        });
-      }
-    });
-
-    if (newStudents.length > 0) {
-      if (syncMode === 'replace') {
-        roster = newStudents;
-      } else {
-        newStudents.forEach(st => {
-          if (!roster.some(s => s.id === st.id)) roster.push(st);
-        });
-      }
-      saveState();
-      renderRoster();
-      alert(`Successfully processed ${newStudents.length} student records!`);
-    } else {
-      alert('No valid student rows found in CSV data.');
-    }
-  } catch (err) {
-    alert('Failed to fetch Google Sheet CSV. Check URL permissions.');
+  const toast = document.getElementById('global-save-toast');
+  if (toast) {
+    toast.textContent = "All Changes Saved ✓";
+    toast.classList.remove('hidden');
+    setTimeout(() => { toast.classList.add('hidden'); }, 2000);
   }
 }
 
-// --- Context Menu & Actions ---
-function openContextMenu(e, studentId) {
-  e.preventDefault();
-  e.stopPropagation();
-
-  const student = roster.find(s => s.id === studentId) || inRoom.find(s => s.id === studentId);
-  if (!student) return;
-
-  contextMenuTarget = student;
-  const menu = document.getElementById('student-context-menu');
-  document.getElementById('ctx-student-name').innerText = `${student.fname} ${student.lname}`;
-  document.getElementById('ctx-student-id').innerText = `ID: ${student.id}`;
-
-  const isPhone = inRoom.some(s => s.id === student.id);
-  const isBathroom = bathroomPasses.some(s => s.id === student.id);
-  const isHall = hallPasses.some(s => s.id === student.id);
-
-  document.getElementById('ctx-lbl-phone').innerText = isPhone ? 'Checked In' : 'Checked Out';
-  document.getElementById('ctx-lbl-bathroom').innerText = isBathroom ? 'Active' : 'Off';
-  document.getElementById('ctx-lbl-hallpass').innerText = isHall ? 'Active' : 'Off';
-
-  menu.style.top = `${Math.min(e.clientY, window.innerHeight - 180)}px`;
-  menu.style.left = `${Math.min(e.clientX, window.innerWidth - 240)}px`;
-  menu.classList.remove('hidden');
-}
-
-function closeContextMenu() {
-  const menu = document.getElementById('student-context-menu');
-  if (menu) menu.classList.add('hidden');
-}
-
-function menuTogglePhone() {
-  if (!contextMenuTarget) return;
-  pushUndoSnapshot();
-
-  const idx = inRoom.findIndex(s => s.id === contextMenuTarget.id);
-  if (idx >= 0) {
-    inRoom.splice(idx, 1);
-    addLogEntry(`${contextMenuTarget.fname} ${contextMenuTarget.lname}`, 'Phone Check-Out', '--', 'Manual Check-out');
-  } else {
-    inRoom.push(contextMenuTarget);
-    addLogEntry(`${contextMenuTarget.fname} ${contextMenuTarget.lname}`, 'Phone Check-In', '--', 'Manual Check-in');
-  }
-
-  saveState();
-  refreshData();
-  closeContextMenu();
-}
-
-function menuToggleBathroom() {
-  if (!contextMenuTarget) return;
-
-  const isBathroom = bathroomPasses.some(s => s.id === contextMenuTarget.id);
-  if (isBathroom) {
-    returnBathroomPass(contextMenuTarget.id);
-  } else {
-    if (bathroomPasses.length >= 1) {
-      alert('Bathroom pass limit reached (1/1 active).');
-      return;
-    }
-    pushUndoSnapshot();
-    bathroomPasses.push({ ...contextMenuTarget, startTime: new Date().toISOString() });
-    addLogEntry(`${contextMenuTarget.fname} ${contextMenuTarget.lname}`, 'Bathroom Pass', 'Active', 'Pass Issued');
-  }
-
-  saveState();
-  refreshData();
-  closeContextMenu();
-}
-
-function menuToggleHallPass() {
-  if (!contextMenuTarget) return;
-
-  const isHall = hallPasses.some(s => s.id === contextMenuTarget.id);
-  if (isHall) {
-    returnHallPass(contextMenuTarget.id);
-  } else {
-    pushUndoSnapshot();
-    hallPasses.push({ ...contextMenuTarget, startTime: new Date().toISOString() });
-    addLogEntry(`${contextMenuTarget.fname} ${contextMenuTarget.lname}`, 'Hall Pass', 'Active', 'Pass Issued');
-  }
-
-  saveState();
-  refreshData();
-  closeContextMenu();
-}
-
-function returnBathroomPass(id) {
-  pushUndoSnapshot();
-  const pass = bathroomPasses.find(s => s.id === id);
-  if (pass) {
-    const durationSec = Math.floor((new Date() - new Date(pass.startTime)) / 1000);
-    const durationStr = formatDuration(durationSec);
-    addLogEntry(`${pass.fname} ${pass.lname}`, 'Bathroom Pass', durationStr, 'Returned to class', durationSec);
-    bathroomPasses = bathroomPasses.filter(s => s.id !== id);
-    saveState();
-    refreshData();
-  }
-}
-
-function returnHallPass(id) {
-  pushUndoSnapshot();
-  const pass = hallPasses.find(s => s.id === id);
-  if (pass) {
-    const durationSec = Math.floor((new Date() - new Date(pass.startTime)) / 1000);
-    const durationStr = formatDuration(durationSec);
-    addLogEntry(`${pass.fname} ${pass.lname}`, 'Hall Pass', durationStr, 'Returned to class', durationSec);
-    hallPasses = hallPasses.filter(s => s.id !== id);
-    saveState();
-    refreshData();
-  }
-}
-
-function checkOutAll(mode) {
-  showConfirmModal("Check Out All?", "Check out all phones, bathroom passes, and hall passes for active students?", "🚪", () => {
-    pushUndoSnapshot();
-    inRoom.forEach(st => {
-      addLogEntry(`${st.fname} ${st.lname}`, 'Check-Out All', '--', 'Mass Check-Out');
-    });
-    inRoom = [];
-    bathroomPasses = [];
-    hallPasses = [];
-    saveState();
-    refreshData();
-  });
-}
-
-// Log Helper
-function addLogEntry(studentName, type, duration, details, durationSec = 0) {
-  const now = new Date();
-  logs.unshift({
-    rawTime: now.toISOString(),
-    time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    studentName,
-    type,
-    duration,
-    details,
-    durationSec
-  });
-}
-
-// --- Pending Roster Requests Banner ---
-function renderPendingRequests() {
-  const banner = document.getElementById('pending-requests-banner');
-  const count = document.getElementById('pending-requests-count');
-  const list = document.getElementById('pending-requests-list');
-
-  if (!banner || !list) return;
-
-  if (pendingRequests.length === 0) {
-    banner.classList.add('hidden');
-    return;
-  }
-
-  banner.classList.remove('hidden');
-  if (count) count.innerText = pendingRequests.length;
-
-  list.innerHTML = pendingRequests.map((req, idx) => `
-    <div class="bg-white p-3 rounded-xl border border-amber-200 flex justify-between items-center text-xs shadow-xs">
-      <div>
-        <span class="font-bold text-slate-800 block">${req.fname} ${req.lname}</span>
-        <span class="text-[10px] text-slate-400 font-mono">ID: ${req.id} • ${req.time || 'Just now'}</span>
-      </div>
-      <div class="flex items-center gap-1">
-        <button onclick="approveRequest(${idx})" class="px-2 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg font-bold text-[10px]">
-          Approve
-        </button>
-        <button onclick="rejectRequest(${idx})" class="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg font-bold text-[10px]">
-          Reject
-        </button>
-      </div>
-    </div>
-  `).join('');
-}
-
-function approveRequest(idx) {
-  pushUndoSnapshot();
-  const req = pendingRequests[idx];
-  if (req) {
-    if (!roster.some(s => s.id === req.id)) {
-      roster.push({ id: req.id, fname: req.fname, lname: req.lname, pocket: roster.length + 1 });
-    }
-    pendingRequests.splice(idx, 1);
-    saveState();
-    refreshData();
+function deleteStudent(id) {
+  if (confirm("Delete this student from roster?")) {
+    delete roster[id];
+    localStorage.setItem('classroom_roster', JSON.stringify(roster));
     renderRoster();
   }
 }
 
-function rejectRequest(idx) {
-  pushUndoSnapshot();
-  pendingRequests.splice(idx, 1);
-  saveState();
-  refreshData();
-}
+function renderRoster() {
+  const tbody = document.getElementById('roster-table');
+  const searchQuery = (document.getElementById('search-roster')?.value || '').toLowerCase().trim();
+  let entries = Object.entries(roster);
 
-// --- CSV Exports ---
-function exportCSV() {
-  if (logs.length === 0) {
-    alert('No activity logs to export.');
+  if (searchQuery) {
+    entries = entries.filter(([id, st]) => {
+      let fname = (typeof st === 'object' ? st.firstName : st).toLowerCase();
+      let lname = (typeof st === 'object' ? st.lastName : '').toLowerCase();
+      let sid = id.toLowerCase();
+      return sid.includes(searchQuery) || fname.includes(searchQuery) || lname.includes(searchQuery);
+    });
+  }
+
+  let reverse = rosterSortOrder === 'desc';
+  entries.sort((a, b) => {
+    let idA = a[0], stA = a[1];
+    let idB = b[0], stB = b[1];
+
+    let valA = '', valB = '';
+    if (rosterSortColumn === 'id') {
+      valA = idA.toLowerCase();
+      valB = idB.toLowerCase();
+    } else if (rosterSortColumn === 'fname') {
+      valA = (typeof stA === 'object' ? stA.firstName : stA).toLowerCase();
+      valB = (typeof stB === 'object' ? stB.firstName : stB).toLowerCase();
+    } else if (rosterSortColumn === 'lname') {
+      valA = (typeof stA === 'object' ? stA.lastName : '').toLowerCase();
+      valB = (typeof stB === 'object' ? stB.lastName : '').toLowerCase();
+    }
+
+    if (valA < valB) return reverse ? 1 : -1;
+    if (valA > valB) return reverse ? -1 : 1;
+    return 0;
+  });
+
+  document.getElementById('roster-count').textContent = entries.length;
+  
+  if (entries.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400 italic">No matching students found in roster.</td></tr>`;
     return;
   }
-  let csv = 'Timestamp,Student Name,Type,Duration,Details\n';
-  logs.forEach(l => {
-    csv += `"${l.time}","${l.studentName}","${l.type}","${l.duration}","${l.details}"\n`;
-  });
-  downloadFile(csv, `chelan_activity_log_${new Date().toISOString().slice(0,10)}.csv`, 'text/csv');
+
+  tbody.innerHTML = entries.map(([id, st]) => {
+    let fname = typeof st === 'object' ? st.firstName : st;
+    let lname = typeof st === 'object' ? st.lastName : '';
+
+    if (isEditAllMode || editingStudentId === id) {
+      return `
+        <tr class="bg-emerald-50/60">
+          <td class="p-2">
+            <input type="text" id="edit-id-${id}" value="${id}" 
+                   onblur="autoSaveStudentRow('${id}')" 
+                   class="w-full px-2 py-1 border rounded text-xs font-mono focus:bg-white focus:border-[#0A4D2E]">
+          </td>
+          <td class="p-2">
+            <input type="text" id="edit-fname-${id}" value="${fname}" 
+                   onblur="autoSaveStudentRow('${id}')" 
+                   class="w-full px-2 py-1 border rounded text-xs focus:bg-white focus:border-[#0A4D2E]">
+          </td>
+          <td class="p-2">
+            <input type="text" id="edit-lname-${id}" value="${lname}" 
+                   onblur="autoSaveStudentRow('${id}')" 
+                   class="w-full px-2 py-1 border rounded text-xs focus:bg-white focus:border-[#0A4D2E]">
+          </td>
+          <td class="p-2 text-right">
+            <span id="saved-toast-${id}" class="text-[10px] font-bold text-emerald-900 bg-emerald-100 px-2 py-0.5 rounded hidden transition">Saved ✓</span>
+          </td>
+        </tr>`;
+    }
+
+    return `
+      <tr class="hover:bg-slate-50">
+        <td class="p-3 font-mono text-xs">${id}</td>
+        <td class="p-3 font-medium">${fname}</td>
+        <td class="p-3 font-medium">${lname}</td>
+        <td class="p-3 text-right space-x-1">
+          <button onclick="editStudent('${id}')" class="px-2.5 py-1 bg-emerald-50 text-emerald-900 hover:bg-emerald-100 text-xs font-bold rounded-lg transition">Edit</button>
+          <button onclick="deleteStudent('${id}')" class="px-2.5 py-1 bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-bold rounded-lg transition">Delete</button>
+        </td>
+      </tr>`;
+  }).join('');
 }
 
-function exportRosterCSV() {
-  if (roster.length === 0) {
-    alert('No roster data to export.');
-    return;
-  }
-  let csv = 'ID,First Name,Last Name,Pocket Number\n';
-  roster.forEach(s => {
-    csv += `"${s.id}","${s.fname}","${s.lname}","${s.pocket || ''}"\n`;
-  });
-  downloadFile(csv, `chelan_roster_${new Date().toISOString().slice(0,10)}.csv`, 'text/csv');
-}
-
-function downloadFile(content, filename, mimeType) {
-  const blob = new Blob([content], { type: mimeType });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-// --- Session Clears ---
 function promptClearCSV() {
-  showConfirmModal("Clear Activity Logs?", "This will wipe all currently recorded log entries.", "🧹", () => {
-    pushUndoSnapshot();
-    logs = [];
-    saveState();
-    refreshData();
-  });
+  showConfirmModal(
+    '🧹',
+    'Clear CSV Log History?',
+    'This will wipe all historical activity entries from the export list. Active check-ins in the room will remain active.',
+    'Clear CSV Logs',
+    'bg-amber-600 hover:bg-amber-700',
+    executeClearCSV
+  );
 }
 
 function promptResetSession() {
-  showConfirmModal("Reset Entire Session?", "Reset all active passes, currently checked-in students, and activity logs?", "🗑️", () => {
-    pushUndoSnapshot();
-    inRoom = [];
-    bathroomPasses = [];
-    hallPasses = [];
-    logs = [];
-    saveState();
-    refreshData();
-  });
+  showConfirmModal(
+    '🗑️',
+    'Reset Current Session Completely?',
+    'This will clear all running logs AND reset all active student check-ins and bathroom/hall passes.',
+    'Reset Session',
+    'bg-red-700 hover:bg-red-800',
+    executeResetSession
+  );
 }
 
-// --- Modals ---
-function showConfirmModal(title, msg, icon, onConfirm) {
-  document.getElementById('confirm-title').innerText = title;
-  document.getElementById('confirm-message').innerText = msg;
-  document.getElementById('confirm-icon').innerText = icon || '⚠️';
-
-  pendingConfirmCallback = onConfirm;
-  const modal = document.getElementById('confirm-modal');
-  const confirmBtn = document.getElementById('confirm-action-btn');
-
-  confirmBtn.onclick = () => {
-    if (pendingConfirmCallback) pendingConfirmCallback();
+function showConfirmModal(icon, title, message, btnText, btnColorClass, callback) {
+  document.getElementById('confirm-icon').textContent = icon;
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-message').textContent = message;
+  
+  const btn = document.getElementById('confirm-action-btn');
+  btn.textContent = btnText;
+  btn.className = `py-2.5 ${btnColorClass} text-white font-bold rounded-xl text-xs transition shadow`;
+  
+  pendingConfirmAction = callback;
+  document.getElementById('confirm-action-btn').onclick = function() {
+    if (pendingConfirmAction) pendingConfirmAction();
     closeConfirmModal();
   };
 
-  modal.classList.remove('hidden');
+  document.getElementById('confirm-modal').classList.remove('hidden');
 }
 
 function closeConfirmModal() {
-  const modal = document.getElementById('confirm-modal');
-  if (modal) modal.classList.add('hidden');
-  pendingConfirmCallback = null;
+  document.getElementById('confirm-modal').classList.add('hidden');
+  pendingConfirmAction = null;
 }
 
-// --- Page Initialization ---
-document.addEventListener('DOMContentLoaded', () => {
-  startClock();
+function executeClearCSV() {
+  saveSnapshot();
+  localStorage.removeItem('classroom_logs');
   refreshData();
-});
+}
+
+function executeResetSession() {
+  saveSnapshot();
+  localStorage.removeItem('classroom_logs');
+  localStorage.removeItem('active_bathroom_passes');
+  localStorage.removeItem('active_hall_passes');
+  localStorage.removeItem('active_phones_in_class');
+  localStorage.removeItem('pending_roster_requests');
+  refreshData();
+}
+
+function exportCSV() {
+  logs = JSON.parse(localStorage.getItem('classroom_logs')) || [];
+  if (logs.length === 0) { alert("No logs to export!"); return; }
+  
+  const legendKey = [
+    ['CODE KEY', 'DESCRIPTION'],
+    ['Phone Check-In (Pocket #XX)', 'Student checked phone into pocket slot XX'],
+    ['Phone Check-Out All (Teacher)', 'Teacher executed Check Out All command'],
+    ['Phone Check-Out (Kiosk)', 'Student checked phone out via kiosk'],
+    ['Bathroom Pass Departure / Return', 'Bathroom pass duration logged'],
+    ['Hall Pass Departure / Return', 'Hall pass duration logged']
+  ];
+
+  let csvRows = ["Date,Time,ID,Name,Type,Duration,Description / Details,,,CODE KEY,DESCRIPTION"];
+  
+  let maxRows = Math.max(logs.length, legendKey.length - 1);
+
+  for (let i = 0; i < maxRows; i++) {
+    let logCol = ',"","","","","",""';
+    if (i < logs.length) {
+      let l = logs[i];
+      let d = l.dateStamp || new Date().toLocaleDateString();
+      let t = l.timestamp || '';
+      let id = l.id || '';
+      let name = l.name || '';
+      let type = l.type || '';
+      let dur = l.duration || '--';
+      let readableDetails = getReadableDetails(l.details);
+      logCol = `"${d}","${t}","${id}","${name.replace(/"/g, '""')}","${type}","${dur}","${readableDetails.replace(/"/g, '""')}"`;
+    }
+
+    let keyCol = ',"",""';
+    let keyIndex = i + 1;
+    if (keyIndex < legendKey.length) {
+      keyCol = `,,"${legendKey[keyIndex][0]}","${legendKey[keyIndex][1]}"`;
+    }
+
+    csvRows.push(`${logCol}${keyCol}`);
+  }
+
+  const csvData = csvRows.join("\n");
+  const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  
+  link.setAttribute("href", url);
+  link.setAttribute("download", `classroom_export_${new Date().toISOString().slice(0,10)}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+function exportRosterCSV() {
+  const entries = Object.entries(roster);
+  if (entries.length === 0) { alert("Roster is currently empty!"); return; }
+
+  let csvRows = ["ID Code,First Name,Last Name"];
+  entries.forEach(([id, st]) => {
+    let fname = typeof st === 'object' ? st.firstName : st;
+    let lname = typeof st === 'object' ? st.lastName : '';
+    csvRows.push(`"${id}","${fname.replace(/"/g, '""')}","${lname.replace(/"/g, '""')}"`);
+  });
+
+  const csvData = csvRows.join("\n");
+  const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  
+  link.setAttribute("href", url);
+  link.setAttribute("download", `classroom_roster_${new Date().toISOString().slice(0,10)}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
