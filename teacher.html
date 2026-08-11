@@ -3,419 +3,182 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Teacher Control Dashboard - Chelan High</title>
+  <title>Chelan High School - Live Teacher Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    .chelan-primary-green { background-color: #0A4D2E; }
-    .chelan-green-hover:hover { background-color: #063821; }
-    .border-chelan-green { border-color: #0A4D2E; }
-    .text-chelan-green { color: #0A4D2E; }
-  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col" onclick="closeContextMenu()">
+<body class="bg-[#f0f4f8] min-h-screen flex flex-col font-sans text-slate-800 antialiased select-none">
 
-  <!-- Undo Toast Notification -->
-  <div id="undo-toast" class="fixed bottom-5 right-5 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-2xl z-50 flex items-center gap-3 text-xs font-bold border border-slate-700 hidden transition-all">
-    <span>🔄 Undo Action Executed (Ctrl + Z)</span>
-  </div>
-
-  <!-- Context Menu for Student Adjustment -->
-  <div id="student-context-menu" class="fixed bg-white shadow-2xl rounded-2xl border border-slate-200 p-2 z-50 hidden min-w-[220px] text-xs">
-    <div class="px-3 py-1.5 border-b mb-1">
-      <span id="ctx-student-name" class="font-bold text-slate-800 block text-sm">Student Name</span>
-      <span id="ctx-student-id" class="text-[10px] text-slate-400 font-mono">ID: --</span>
-    </div>
-    <div class="space-y-1">
-      <button onclick="menuTogglePhone()" id="ctx-btn-phone" class="w-full text-left px-3 py-2 rounded-xl font-bold flex items-center justify-between hover:bg-slate-100 transition">
-        <span>📱 Toggle Phone Status</span>
-        <span id="ctx-lbl-phone" class="text-[10px] bg-slate-200 px-1.5 py-0.5 rounded">--</span>
-      </button>
-      <button onclick="menuToggleBathroom()" id="ctx-btn-bathroom" class="w-full text-left px-3 py-2 rounded-xl font-bold flex items-center justify-between hover:bg-red-50 text-red-900 transition">
-        <span>🚻 Toggle Bathroom Pass</span>
-        <span id="ctx-lbl-bathroom" class="text-[10px] bg-red-100 px-1.5 py-0.5 rounded">--</span>
-      </button>
-      <button onclick="menuToggleHallPass()" id="ctx-btn-hallpass" class="w-full text-left px-3 py-2 rounded-xl font-bold flex items-center justify-between hover:bg-indigo-50 text-indigo-900 transition">
-        <span>🎟️ Toggle Hall Pass</span>
-        <span id="ctx-lbl-hallpass" class="text-[10px] bg-indigo-100 px-1.5 py-0.5 rounded">--</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- Confirmation Modal -->
-  <div id="confirm-modal" class="fixed inset-0 bg-slate-900/80 flex items-center justify-center z-50 p-4 hidden">
-    <div class="bg-white p-6 rounded-3xl shadow-2xl max-w-md w-full text-center space-y-5 border border-slate-200">
-      <div id="confirm-icon" class="text-5xl">⚠️</div>
+  <!-- Dark Forest Green Header Bar -->
+  <header class="bg-[#0B4F2C] text-white px-6 py-3 shadow-md flex justify-between items-center z-30">
+    <!-- Left: Logo, Title, Subtitle & Version -->
+    <div class="flex items-center gap-3">
+      <img 
+        src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" 
+        alt="Chelan High School Logo" 
+        class="h-10 w-auto object-contain"
+      />
       <div>
-        <h3 id="confirm-title" class="text-xl font-bold text-slate-800">Are you sure?</h3>
-        <p id="confirm-message" class="text-slate-500 text-xs mt-1.5 leading-relaxed">This action cannot be undone.</p>
-      </div>
-      <div class="grid grid-cols-2 gap-3 pt-2">
-        <button onclick="closeConfirmModal()" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition">
-          Cancel
-        </button>
-        <button id="confirm-action-btn" class="py-2.5 bg-red-700 hover:bg-red-800 text-white font-bold rounded-xl text-xs transition shadow">
-          Confirm Action
-        </button>
+        <h1 class="text-base font-extrabold tracking-wide uppercase leading-none">CHELAN HIGH SCHOOL</h1>
+        <p class="text-xs text-emerald-200 font-medium mt-0.5">Live Teacher Control Center</p>
+        <p class="text-[10px] text-amber-300 font-mono font-bold leading-tight mt-0.5">v1.1.10</p>
       </div>
     </div>
-  </div>
 
-  <!-- Main App Body -->
-  <div id="dashboard-content" class="min-h-screen flex flex-col">
-    
-    <!-- Top Header Navigation -->
-    <header class="chelan-primary-green text-white shadow-md py-2.5 px-6 flex justify-between items-center border-b-4 border-emerald-950">
-      <div class="flex items-center gap-4">
-        <img src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" 
-             alt="Chelan High School Logo" 
-             class="h-10 w-auto object-contain drop-shadow-md">
-        <h1 class="text-lg font-black tracking-wide flex items-center gap-2 border-l border-emerald-800/80 pl-4">
-          <span>Chelan High</span>
-          <span class="text-xs bg-white/15 text-emerald-100 border border-white/20 px-2 py-0.5 rounded-full font-semibold">Teacher Dashboard</span>
-        </h1>
+    <!-- Center Navigation Tabs -->
+    <nav class="hidden md:flex items-center gap-1 bg-[#07381e] p-1.5 rounded-xl border border-emerald-600/30">
+      <a href="teacher.html" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-[#0B4F2C] text-white shadow-sm border border-emerald-500/30 flex items-center gap-1.5">
+        <i class="fa-solid fa-gauge text-emerald-300"></i> Live Dashboard
+      </a>
+      <a href="roster.html" class="px-3.5 py-1.5 rounded-lg text-xs font-bold text-emerald-100 hover:text-white hover:bg-emerald-800/50 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-users text-emerald-300"></i> Manage Roster
+      </a>
+      <a href="index.html" target="_blank" class="px-3.5 py-1.5 rounded-lg text-xs font-bold text-emerald-100 hover:text-white hover:bg-emerald-800/50 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-expand text-emerald-300"></i> Kiosk View <i class="fa-solid fa-arrow-up-right-from-square text-[10px] opacity-70"></i>
+      </a>
+    </nav>
+
+    <!-- Right: Room & Clock -->
+    <div class="flex items-center gap-3">
+      <div class="text-right pl-3 border-l border-emerald-700/60 flex flex-col justify-center">
+        <div id="dashboard-clock" class="text-base font-mono font-bold tracking-tight">00:00:00 PM</div>
+        <div id="dashboard-room" class="text-[10px] text-emerald-200 font-bold uppercase tracking-wider">TEACHER STATION &bull; ROOM 176</div>
       </div>
+    </div>
+  </header>
 
-      <div class="flex items-center gap-6">
-        <div class="text-right hidden sm:block border-r border-emerald-800/80 pr-6">
-          <span id="teacher-live-clock" class="text-base font-mono font-bold tracking-wider">--:-- --</span>
-          <p class="text-[10px] text-emerald-200 uppercase font-semibold tracking-widest">Medical Sciences</p>
-        </div>
+  <!-- Dashboard Grid Canvas -->
+  <main class="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-        <div class="space-x-2">
-          <button onclick="switchTab('dashboard')" id="btn-dash" class="px-4 py-1.5 bg-white text-emerald-950 rounded-xl font-bold text-xs shadow-sm transition">Live Dashboard</button>
-          <button onclick="switchTab('roster')" id="btn-rost" class="px-4 py-1.5 bg-emerald-900/60 hover:bg-emerald-900 text-emerald-100 rounded-xl font-bold text-xs transition">Manage Roster</button>
-        </div>
-      </div>
-    </header>
-
-    <main class="flex-grow p-4 max-w-[1600px] mx-auto w-full space-y-6 flex flex-col">
-
-      <!-- Pending Roster Manual Entry Requests Banner Card -->
-      <div id="pending-requests-banner" class="bg-amber-50 border-2 border-amber-400 p-4 rounded-2xl shadow-sm hidden space-y-3">
-        <div class="flex justify-between items-center border-b border-amber-200 pb-2">
-          <h3 class="font-bold text-amber-900 text-sm flex items-center gap-2">
-            <span>📩</span> Pending Roster Manual Entry Requests (<span id="pending-requests-count">0</span>)
-          </h3>
-          <span class="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full uppercase">Action Required</span>
-        </div>
-        <div id="pending-requests-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
-      </div>
-
-      <!-- Dashboard View -->
-      <div id="view-dashboard" class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start flex-grow">
-        
-        <!-- LEFT SIDE: Students Currently in Class -->
-        <div class="lg:col-span-5 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col h-full min-h-[650px] relative overflow-hidden">
-          <div class="absolute top-0 left-0 w-full h-1 chelan-primary-green"></div>
+      <!-- ================= COLUMN 1: PHONES IN ROOM (4 cols) ================= -->
+      <section class="lg:col-span-4 flex flex-col gap-4">
+        <div class="bg-white rounded-3xl p-5 shadow-sm border border-slate-200 flex flex-col h-full">
           
-          <!-- TODAY'S CLASS SUMMARY BANNER (TOP OF CARD) -->
-          <div class="bg-emerald-50/80 border border-emerald-200 p-3 rounded-xl mb-4 space-y-2">
-            <div class="flex justify-between items-center border-b border-emerald-200/60 pb-1.5">
-              <span class="text-xs font-bold uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
-                📊 Today's Class Summary Results
-              </span>
-              <span id="count-in-room-badge" class="text-[11px] font-bold bg-[#0A4D2E] text-white px-2 py-0.5 rounded-full">
-                0 Active
-              </span>
+          <!-- Column Header -->
+          <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-xl bg-emerald-100 text-[#0B4F2C] flex items-center justify-center font-bold text-lg">
+                <i class="fa-solid fa-mobile-screen"></i>
+              </div>
+              <div>
+                <h2 class="text-base font-extrabold text-slate-800 leading-tight">Checked-In Phones</h2>
+                <p class="text-xs text-slate-400 font-medium">In Storage Rack: <span id="dash-phone-count" class="font-bold text-[#0B4F2C]">0</span></p>
+              </div>
             </div>
-            <div class="grid grid-cols-2 gap-2 text-xs">
-              <div class="bg-white p-2 rounded-lg border border-emerald-100 shadow-xs flex flex-col">
-                <span class="text-[10px] text-slate-500 font-medium">Combined Pass Time Today</span>
-                <span id="summary-combined-pass-time" class="font-mono font-bold text-emerald-900 text-sm">0m 0s</span>
-              </div>
-              <div class="bg-white p-2 rounded-lg border border-emerald-100 shadow-xs flex flex-col">
-                <span class="text-[10px] text-slate-500 font-medium">Highest Time Activity</span>
-                <span id="summary-highest-activity" class="font-mono font-bold text-emerald-900 text-sm">0m 0s</span>
-              </div>
+
+            <!-- Sort Bar -->
+            <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-[11px] font-bold">
+              <button id="sort-pocket" class="px-2 py-1 rounded-lg bg-white text-[#0B4F2C] shadow-xs">Slot</button>
+              <button id="sort-first" class="px-2 py-1 rounded-lg text-slate-600 hover:text-slate-900">First</button>
+              <button id="sort-last" class="px-2 py-1 rounded-lg text-slate-600 hover:text-slate-900">Last</button>
             </div>
           </div>
 
-          <!-- Card Title & Controls -->
-          <div class="flex justify-between items-center mb-3 pb-2 border-b gap-2 flex-wrap">
-            <div>
-              <h2 class="font-bold text-slate-800 text-base flex items-center gap-2">
-                <span>📱</span> Students Currently in Class
-              </h2>
+          <!-- Phone Rack List Container -->
+          <div id="phones-container" class="flex-1 space-y-2.5 overflow-y-auto max-h-[620px] pr-1">
+            <!-- Dynamically populated by teacher.js -->
+          </div>
+
+          <!-- Bottom Action: Return All -->
+          <div class="pt-4 border-t border-slate-100 mt-4">
+            <button id="btn-checkout-all" type="button" class="w-full bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-700 font-bold py-2.5 rounded-xl border border-slate-200 hover:border-rose-300 text-xs transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-arrow-right-from-bracket"></i> Check Out All Phones
+            </button>
+          </div>
+
+        </div>
+      </section>
+
+
+      <!-- ================= COLUMN 2: PASSES & QUICK TOOLS (4 cols) ================= -->
+      <section class="lg:col-span-4 flex flex-col gap-6">
+
+        <!-- Bathroom Pass Card (Rose Accent) -->
+        <div class="bg-white rounded-3xl p-5 shadow-sm border-l-8 border-l-rose-700 border-y border-r border-slate-200">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-restroom text-rose-700 text-lg"></i>
+              <h3 class="text-sm font-extrabold text-slate-800">Bathroom Passes Out</h3>
+            </div>
+            <span id="dash-bathroom-count" class="bg-rose-100 text-rose-800 text-xs font-bold px-2.5 py-0.5 rounded-full border border-rose-200">0/1</span>
+          </div>
+
+          <div id="bathroom-pass-container" class="space-y-2">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- Hall Pass Card (Indigo Accent) -->
+        <div class="bg-white rounded-3xl p-5 shadow-sm border-l-8 border-l-indigo-700 border-y border-r border-slate-200">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-ticket text-indigo-700 text-lg"></i>
+              <h3 class="text-sm font-extrabold text-slate-800">Hall Passes Out</h3>
+            </div>
+            <span id="dash-hall-count" class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2.5 py-0.5 rounded-full border border-indigo-200">0</span>
+          </div>
+
+          <div id="hall-pass-container" class="space-y-2">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- Class Quick Stats -->
+        <div class="bg-white rounded-3xl p-5 shadow-sm border border-slate-200 flex-1 flex flex-col justify-between">
+          <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-wider mb-3">Today's Class Summary</h3>
+          
+          <div class="grid grid-cols-2 gap-3">
+            <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+              <span class="text-[10px] font-bold text-slate-400 block uppercase">Total Check-Ins</span>
+              <span id="stat-checkins" class="text-xl font-extrabold text-[#0B4F2C]">0</span>
+            </div>
+            <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+              <span class="text-[10px] font-bold text-slate-400 block uppercase">Pass Trips Taken</span>
+              <span id="stat-trips" class="text-xl font-extrabold text-indigo-700">0</span>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+
+      <!-- ================= COLUMN 3: RUNNING ACTIVITY LOG (4 cols) ================= -->
+      <section class="lg:col-span-4 flex flex-col">
+        <div class="bg-white rounded-3xl p-5 shadow-sm border border-slate-200 flex flex-col h-full">
+          
+          <!-- Header & Actions -->
+          <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-clock-rotate-left text-[#0B4F2C] text-base"></i>
+              <h2 class="text-base font-extrabold text-slate-800">Live Activity Feed</h2>
             </div>
             
-            <div class="flex items-center gap-2 flex-wrap">
-              <button onclick="checkOutAll('COA')" title="Check out all Phones, Bathroom Passes, & Hall Passes" class="px-2.5 py-1 bg-red-700 hover:bg-red-800 text-white rounded-xl text-xs font-bold shadow transition flex items-center gap-1">
-                <span>🚪</span> Check Out All
+            <div class="flex items-center gap-1.5">
+              <button id="btn-export-csv" type="button" title="Export Activity to CSV" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition">
+                <i class="fa-solid fa-download"></i>
               </button>
-
-              <div class="bg-slate-100 p-1 rounded-xl border border-slate-200 flex items-center space-x-1">
-                <button onclick="setSortMode('fname')" id="sort-btn-fname" class="px-2 py-0.5 rounded-lg text-[11px] font-bold transition-all duration-150 text-slate-600 hover:text-slate-900">
-                  First
-                </button>
-                <button onclick="setSortMode('lname')" id="sort-btn-lname" class="px-2 py-0.5 rounded-lg text-[11px] font-bold transition-all duration-150 chelan-primary-green text-white shadow-xs">
-                  Last
-                </button>
-                <button onclick="setSortMode('pocket')" id="sort-btn-pocket" class="px-2 py-0.5 rounded-lg text-[11px] font-bold transition-all duration-150 text-slate-600 hover:text-slate-900">
-                  🔢 Pocket #
-                </button>
-              </div>
+              <button id="btn-clear-logs" type="button" title="Clear Logs" class="p-2 rounded-xl bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-700 text-xs font-bold transition">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
             </div>
           </div>
-          
-          <!-- TWO-COLUMN VERTICAL GRID (Top-to-Bottom, First Column then Second Column) -->
-          <div id="in-room-container" class="grid grid-flow-col grid-cols-2 grid-rows-[repeat(15,minmax(0,auto))] gap-2 max-h-[720px] overflow-y-auto pr-1">
-            <p class="text-sm text-slate-400 italic col-span-2 text-center py-6">No students currently checked in.</p>
-          </div>
-        </div>
 
-        <!-- RIGHT SIDE: Bathroom, Hall Pass, Tools + Running Log -->
-        <div class="lg:col-span-7 space-y-6 flex flex-col h-full">
-          
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            
-            <!-- Bathroom Card -->
-            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 relative overflow-hidden flex flex-col justify-between">
-              <div class="absolute top-0 left-0 w-full h-1 bg-red-700"></div>
-              <div>
-                <div class="flex justify-between items-center mb-2 pb-2 border-b">
-                  <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
-                    <span>🚻</span> Bathroom
-                  </h2>
-                  <span id="count-out-room" class="text-[11px] font-bold bg-red-100 text-red-800 px-2 py-0.5 rounded-full">0/1</span>
-                </div>
-                <div id="active-passes" class="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-                  <p class="text-xs text-slate-400 italic">No students out.</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Hall Pass Card -->
-            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 relative overflow-hidden flex flex-col justify-between">
-              <div class="absolute top-0 left-0 w-full h-1 bg-indigo-700"></div>
-              <div>
-                <div class="flex justify-between items-center mb-2 pb-2 border-b">
-                  <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
-                    <span>🎟️</span> Hall Pass
-                  </h2>
-                  <span id="count-hall-pass" class="text-[11px] font-bold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full">0 Out</span>
-                </div>
-                <div id="active-hall-passes" class="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-                  <p class="text-xs text-slate-400 italic">No students out.</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Tools Card -->
-            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between space-y-2 relative overflow-hidden">
-              <div class="absolute top-0 left-0 w-full h-1 chelan-primary-green"></div>
-              <div>
-                <div class="mb-2 pb-1.5 border-b">
-                  <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
-                    <span>🛠️</span> Tools
-                  </h2>
-                </div>
-                
-                <form onsubmit="addStudent(event)" class="space-y-1">
-                  <input type="text" id="r-id" placeholder="ID / Barcode" required 
-                         class="w-full px-2 py-1 border border-slate-300 rounded-lg text-xs font-mono focus:outline-none focus:border-[#0A4D2E]">
-                  <div class="grid grid-cols-2 gap-1">
-                    <input type="text" id="r-fname" placeholder="First" required 
-                           class="w-full px-2 py-1 border border-slate-300 rounded-lg text-xs focus:outline-none focus:border-[#0A4D2E]">
-                    <input type="text" id="r-lname" placeholder="Last" required 
-                           class="w-full px-2 py-1 border border-slate-300 rounded-lg text-xs focus:outline-none focus:border-[#0A4D2E]">
-                  </div>
-                  <button type="submit" class="w-full py-1 chelan-primary-green chelan-green-hover text-white font-bold rounded-lg text-xs transition mt-1">
-                    + Quick Add
-                  </button>
-                </form>
-              </div>
-
-              <div class="space-y-1 pt-1.5 border-t border-slate-100">
-                <button onclick="exportCSV()" class="w-full py-1 bg-emerald-800 hover:bg-emerald-900 text-white font-semibold rounded-lg shadow transition text-[11px] flex items-center justify-center gap-1">
-                  <span>📥</span> CSV Export
-                </button>
-                <div class="grid grid-cols-2 gap-1">
-                  <button onclick="promptClearCSV()" class="w-full py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 font-semibold rounded-lg transition text-[10px] flex items-center justify-center gap-0.5">
-                    <span>🧹</span> Clear CSV
-                  </button>
-                  <button onclick="promptResetSession()" class="w-full py-1 bg-red-50 hover:bg-red-100 text-red-900 border border-red-200/80 font-semibold rounded-lg transition text-[10px] flex items-center justify-center gap-0.5">
-                    <span>🗑️</span> Reset
-                  </button>
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-          <!-- Running Log Table -->
-          <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex-grow flex flex-col">
-            <div class="p-3 bg-slate-50 border-b border-slate-200 font-bold text-slate-800 text-sm flex justify-between items-center gap-2 flex-wrap">
-              <span class="flex items-center gap-2">
-                <span>📋</span> Running Log 
-                <span id="log-count" class="text-xs text-slate-500 font-normal ml-1">0 entries</span>
-              </span>
-              
-              <div class="relative min-w-[200px]">
-                <input type="text" id="search-log" oninput="refreshData()" placeholder="Search logs..." 
-                       class="w-full pl-8 pr-3 py-1 bg-white border border-slate-300 rounded-xl text-xs focus:outline-none focus:border-[#0A4D2E] font-normal">
-                <span class="absolute left-2.5 top-1.5 text-xs text-slate-400 pointer-events-none">🔍</span>
-              </div>
-            </div>
-
-            <div class="overflow-x-auto overflow-y-auto max-h-[380px] flex-grow">
-              <table class="w-full text-left text-xs">
-                <thead class="bg-slate-100 border-b text-slate-600 sticky top-0">
-                  <tr>
-                    <th onclick="toggleLogSort('time')" class="p-2.5 cursor-pointer hover:bg-slate-200 transition select-none">
-                      <div class="flex items-center gap-1 font-semibold">Time <span id="sort-icon-log-time" class="text-[#0A4D2E] font-bold">↓</span></div>
-                    </th>
-                    <th onclick="toggleLogSort('name')" class="p-2.5 cursor-pointer hover:bg-slate-200 transition select-none">
-                      <div class="flex items-center gap-1 font-semibold">Student Name <span id="sort-icon-log-name" class="text-slate-400 font-normal">↕</span></div>
-                    </th>
-                    <th onclick="toggleLogSort('type')" class="p-2.5 cursor-pointer hover:bg-slate-200 transition select-none">
-                      <div class="flex items-center gap-1 font-semibold">Type <span id="sort-icon-log-type" class="text-slate-400 font-normal">↕</span></div>
-                    </th>
-                    <th onclick="toggleLogSort('duration')" class="p-2.5 cursor-pointer hover:bg-slate-200 transition select-none">
-                      <div class="flex items-center gap-1 font-semibold">Duration <span id="sort-icon-log-duration" class="text-slate-400 font-normal">↕</span></div>
-                    </th>
-                    <th onclick="toggleLogSort('details')" class="p-2.5 cursor-pointer hover:bg-slate-200 transition select-none">
-                      <div class="flex items-center gap-1 font-semibold">Description / Details <span id="sort-icon-log-details" class="text-slate-400 font-normal">↕</span></div>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody id="logs-table" class="divide-y divide-slate-100">
-                  <tr><td colspan="5" class="p-4 text-center text-slate-400 italic">No activity logged yet.</td></tr>
-                </tbody>
-              </table>
-            </div>
+          <!-- Log List -->
+          <div id="activity-log-container" class="flex-1 space-y-2.5 overflow-y-auto max-h-[620px] pr-1">
+            <!-- Dynamically populated -->
           </div>
 
         </div>
+      </section>
 
-      </div>
+    </div>
+  </main>
 
-      <!-- Manage Roster View -->
-      <div id="view-roster" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6 items-start flex-grow">
-        
-        <div class="lg:col-span-8 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col h-full min-h-[650px] relative overflow-hidden">
-          <div class="absolute top-0 left-0 w-full h-1 chelan-primary-green"></div>
-          <div class="flex justify-between items-center mb-4 pb-3 border-b gap-3 flex-wrap">
-            <div class="flex items-center gap-3">
-              <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
-                <span>👥</span> Class Roster (<span id="roster-count" class="text-[#0A4D2E] font-bold">0</span> Students)
-              </h3>
-              
-              <div class="relative min-w-[220px]">
-                <input type="text" id="search-roster" oninput="renderRoster()" placeholder="Search roster..." 
-                       class="w-full pl-8 pr-3 py-1 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:outline-none focus:border-[#0A4D2E] font-normal">
-                <span class="absolute left-2.5 top-1.5 text-xs text-slate-400 pointer-events-none">🔍</span>
-              </div>
-            </div>
+  <footer class="text-center py-3 text-xs text-slate-400 font-medium">
+    Chelan High School Classroom Pass System &bull; Powered by Firebase
+  </footer>
 
-            <div id="roster-action-buttons" class="flex items-center gap-2 flex-wrap">
-              <span id="global-save-toast" class="text-xs font-bold text-emerald-900 bg-emerald-100 px-3 py-1 rounded-lg hidden transition-all duration-200">
-                All Changes Saved ✓
-              </span>
-
-              <button onclick="exportRosterCSV()" class="px-3 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold rounded-xl shadow transition flex items-center gap-1">
-                <span>📥</span> Export CSV
-              </button>
-              <button onclick="enableEditAll()" id="btn-edit-all" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow transition">
-                ✏️ Edit All
-              </button>
-              <button onclick="saveEditAll()" id="btn-save-all" class="px-3 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold rounded-xl shadow transition hidden">
-                ✅ Save All Changes
-              </button>
-            </div>
-          </div>
-
-          <div class="overflow-x-auto overflow-y-auto max-h-[650px] border rounded-xl flex-grow">
-            <table class="w-full text-left text-sm">
-              <thead class="bg-slate-50 border-b sticky top-0">
-                <tr>
-                  <th onclick="toggleRosterSort('id')" class="p-3 cursor-pointer hover:bg-slate-100 transition select-none">
-                    <div class="flex items-center gap-1 font-semibold text-slate-700">ID Code <span id="sort-icon-roster-id" class="text-slate-400 font-normal">↕</span></div>
-                  </th>
-                  <th onclick="toggleRosterSort('fname')" class="p-3 cursor-pointer hover:bg-slate-100 transition select-none">
-                    <div class="flex items-center gap-1 font-semibold text-slate-700">First Name <span id="sort-icon-roster-fname" class="text-slate-400 font-normal">↕</span></div>
-                  </th>
-                  <th onclick="toggleRosterSort('lname')" class="p-3 cursor-pointer hover:bg-slate-100 transition select-none">
-                    <div class="flex items-center gap-1 font-semibold text-slate-700">Last Name <span id="sort-icon-roster-lname" class="text-[#0A4D2E] font-bold">↑</span></div>
-                  </th>
-                  <th class="p-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="roster-table" class="divide-y"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="lg:col-span-4 space-y-6">
-          <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-6 relative overflow-hidden">
-            <div class="absolute top-0 left-0 w-full h-1 chelan-primary-green"></div>
-            <div class="border-b pb-3">
-              <h2 class="font-bold text-slate-800 text-lg flex items-center gap-2">
-                <span>🛠️</span> Roster Tools
-              </h2>
-              <p class="text-xs text-slate-500 mt-0.5">Manage and bulk import your Chelan student roster.</p>
-            </div>
-
-            <div class="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
-              <span class="text-xs font-bold text-slate-700 uppercase tracking-wider block">Quick Add Student</span>
-              <form onsubmit="addRosterStudentTab(event)" class="space-y-2">
-                <div>
-                  <label class="text-[11px] font-semibold text-slate-500">ID / Barcode</label>
-                  <input type="text" id="roster-tab-id" placeholder="Student ID" required 
-                         class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-mono focus:outline-none focus:border-[#0A4D2E] bg-white">
-                </div>
-                <div class="grid grid-cols-2 gap-2">
-                  <div>
-                    <label class="text-[11px] font-semibold text-slate-500">First Name</label>
-                    <input type="text" id="roster-tab-fname" placeholder="First Name" required 
-                           class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs focus:outline-none focus:border-[#0A4D2E] bg-white">
-                  </div>
-                  <div>
-                    <label class="text-[11px] font-semibold text-slate-500">Last Name</label>
-                    <input type="text" id="roster-tab-lname" placeholder="Last Name" required 
-                           class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs focus:outline-none focus:border-[#0A4D2E] bg-white">
-                  </div>
-                </div>
-                <button type="submit" class="w-full py-2 chelan-primary-green chelan-green-hover text-white font-bold rounded-lg text-xs transition shadow mt-1">
-                  + Add Student to Roster
-                </button>
-              </form>
-            </div>
-
-            <div class="space-y-3 bg-emerald-50/50 p-4 rounded-xl border border-emerald-200/80">
-              <div>
-                <span class="text-xs font-bold text-emerald-950 uppercase tracking-wider block flex items-center gap-1.5">
-                  <span>🔗</span> Google Sheet CSV Import
-                </span>
-                <p class="text-[11px] text-emerald-800 mt-1">Paste published Google Sheet CSV link to sync class list.</p>
-              </div>
-
-              <input type="text" id="sheet-url" placeholder="https://docs.google.com/.../pub?output=csv" 
-                     class="w-full px-3 py-1.5 border border-emerald-300 rounded-lg bg-white font-mono text-xs focus:outline-none focus:border-[#0A4D2E]">
-
-              <div class="space-y-1.5 bg-white p-2.5 rounded-lg border border-emerald-200/80">
-                <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
-                  <input type="radio" name="sync-mode" value="replace" checked class="w-3.5 h-3.5 text-[#0A4D2E] focus:ring-[#0A4D2E]">
-                  <span>Replace Entire Roster</span>
-                </label>
-                <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
-                  <input type="radio" name="sync-mode" value="append" class="w-3.5 h-3.5 text-[#0A4D2E] focus:ring-[#0A4D2E]">
-                  <span>Add / Merge Students</span>
-                </label>
-              </div>
-
-              <button onclick="processGoogleSheet()" class="w-full py-2 chelan-primary-green chelan-green-hover text-white font-bold rounded-lg text-xs transition shadow flex items-center justify-center gap-1.5">
-                <span>⚡</span> Process Selection
-              </button>
-            </div>
-
-          </div>
-        </div>
-
-      </div>
-
-    </main>
-  </div>
-
-  <script src="teacher.js"></script>
+  <script type="module" src="teacher.js"></script>
 </body>
 </html>
