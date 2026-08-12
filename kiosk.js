@@ -98,15 +98,23 @@ signInAnonymously(auth)
       pocketGrid.innerHTML = '';
       for (let i = 1; i <= 36; i++) {
         const btn = document.createElement('button');
+        const pStr = i.toString().padStart(2, '0');
+        const isOccupied = occupiedPockets.includes(pStr);
+        
         btn.textContent = i;
         btn.id = `pocket-btn-${i}`;
-        btn.className = 'bg-white border border-slate-300 text-slate-700 font-bold py-2 rounded-lg hover:bg-slate-100 transition shadow-sm text-xs';
         
-        btn.addEventListener('click', () => {
-          if (!occupiedPockets.includes(i.toString().padStart(2, '0'))) {
+        if (isOccupied) {
+          // 🚫 OCCUPIED: Gray it out and completely disable clicking
+          btn.className = 'bg-slate-200 border-slate-300 text-slate-400 font-bold py-2 rounded-lg cursor-not-allowed opacity-60 text-xs';
+          btn.disabled = true;
+        } else {
+          // ✅ AVAILABLE: Make it clickable and style normally
+          btn.className = 'bg-white border border-slate-300 text-slate-700 font-bold py-2 rounded-lg hover:bg-slate-100 transition shadow-sm text-xs';
+          btn.addEventListener('click', () => {
             setPocketActive(i);
-          }
-        });
+          });
+        }
         pocketGrid.appendChild(btn);
       }
     }
@@ -115,16 +123,21 @@ signInAnonymously(auth)
       selectedPocket = num.toString().padStart(2, '0');
       selectedPocketNumSpan.textContent = num;
       
+      // Update visual state for all buttons without recreating them
       for (let i = 1; i <= 36; i++) {
         const pBtn = document.getElementById(`pocket-btn-${i}`);
         const pStr = i.toString().padStart(2, '0');
+        
         if (occupiedPockets.includes(pStr)) {
           pBtn.className = 'bg-slate-200 border-slate-300 text-slate-400 font-bold py-2 rounded-lg cursor-not-allowed opacity-60 text-xs';
+          pBtn.disabled = true;
         } else {
           pBtn.className = 'bg-white border border-slate-300 text-slate-700 font-bold py-2 rounded-lg hover:bg-slate-100 transition shadow-sm text-xs';
+          pBtn.disabled = false;
         }
       }
       
+      // Highlight the currently selected one in Dark Forest Green
       const activeBtn = document.getElementById(`pocket-btn-${num}`);
       if (activeBtn) {
         activeBtn.className = 'bg-[#0B4F2C] text-white border-[#0B4F2C] font-bold py-2 rounded-lg transform scale-105 shadow-md transition text-xs';
@@ -139,7 +152,9 @@ signInAnonymously(auth)
           return;
         }
       }
-      selectedPocket = null; // Failsafe if all 36 are full
+      // Failsafe if all 36 are full
+      selectedPocket = null; 
+      selectedPocketNumSpan.textContent = "FULL";
     }
 
     // Listen to Firebase for live occupied pockets
@@ -148,7 +163,10 @@ signInAnonymously(auth)
       if (snapshot.exists()) {
         const data = snapshot.val();
         Object.values(data).forEach(student => {
-          if (student.pocket) occupiedPockets.push(student.pocket);
+          if (student.pocket) {
+            // Force it into a padded string (e.g. "05") to guarantee exact matching
+            occupiedPockets.push(student.pocket.toString().padStart(2, '0'));
+          }
         });
       }
       if (currentMode === 'phone') {
@@ -157,6 +175,7 @@ signInAnonymously(auth)
       }
     });
 
+    // Initial load
     buildPocketGrid();
 
     // 7. Core Database Operations
