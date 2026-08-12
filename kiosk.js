@@ -13,7 +13,6 @@ const KIOSK_CONFIG = {
 
 // Apply Configuration to the UI
 document.getElementById('kiosk-room').innerHTML = `${KIOSK_CONFIG.kioskName} &bull; ROOM ${KIOSK_CONFIG.roomNumber}`;
-document.getElementById('kiosk-version').innerText = KIOSK_CONFIG.version;
 
 // ==========================================
 // 2. FIREBASE INITIALIZATION
