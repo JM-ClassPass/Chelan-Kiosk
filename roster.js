@@ -197,8 +197,20 @@ tableBody.addEventListener('click', async (e) => {
     const newLn = tr.querySelector('.edit-ln').value.trim();
     
     if(newFn && newLn) {
-      await update(ref(db, `classroom_roster/${id}`), { firstName: newFn, lastName: newLn });
-      editingRows.delete(id);
+      try {
+        // 1. Send update to Firebase
+        await update(ref(db, `classroom_roster/${id}`), { firstName: newFn, lastName: newLn });
+        
+        // 2. Remove from active edit list
+        editingRows.delete(id);
+        
+        // 3. Force the table to re-render immediately to show the saved text
+        renderTable(); 
+      } catch (err) {
+        alert("Error saving student data. Please check your connection.");
+      }
+    } else {
+      alert("First and Last name cannot be blank.");
     }
   }
 });
