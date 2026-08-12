@@ -36,7 +36,7 @@
   </div>
 </div>
 
-       <!-- Roster Dark Forest Green Header Bar -->
+<!-- Roster Dark Forest Green Header Bar -->
 <header class="bg-[#0B4F2C] text-white px-6 py-3 shadow-md z-30 relative">
   <div class="flex justify-between items-center">
     <!-- Left: Logo, Title & Version Tag -->
@@ -51,75 +51,39 @@
       </div>
     </div>
 
-    <!-- Middle: Navigation -->
-    <div class="hidden md:flex items-center gap-1 bg-black/15 p-1 rounded-xl border border-black/10">
+    <!-- Center Navigation Tabs (Hidden on Mobile) -->
+    <nav class="hidden md:flex items-center gap-1 bg-[#07381e] p-1.5 rounded-xl border border-emerald-600/30">
       <!-- INACTIVE: Dashboard -->
-      <a href="teacher.html" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-emerald-100 hover:text-white hover:bg-black/20 transition">
-        <i class="fa-solid fa-chart-pie"></i> Live Dashboard
+      <a href="teacher.html" class="px-3.5 py-1.5 rounded-lg text-xs font-bold text-emerald-100 hover:text-white hover:bg-emerald-800/50 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-gauge text-emerald-300"></i> Live Dashboard
       </a>
       
       <!-- ACTIVE: Roster -->
-      <a href="roster.html" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold bg-white text-[#0B4F2C] shadow-sm">
-        <i class="fa-solid fa-users"></i> Manage Roster
+      <a href="roster.html" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-[#0B4F2C] text-white shadow-sm border border-emerald-500/30 flex items-center gap-1.5">
+        <i class="fa-solid fa-users text-emerald-300"></i> Manage Roster
       </a>
       
       <!-- INACTIVE: Kiosk -->
-      <a href="kiosk.html" target="_blank" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-emerald-100 hover:text-white hover:bg-black/20 transition">
-        <i class="fa-solid fa-desktop"></i> Start Kiosk <i class="fa-solid fa-arrow-up-right-from-square text-[10px] opacity-70 ml-1"></i>
-      </a>
-    </div>
-    
-    <!-- Center Navigation Tabs (Hidden on Mobile) -->
-    <nav class="hidden md:flex items-center gap-1 bg-[#07381e] p-1.5 rounded-xl border border-emerald-600/30">
-      <a href="teacher.html" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-[#0B4F2C] text-white shadow-sm border border-emerald-500/30 flex items-center gap-1.5">
-        <i class="fa-solid fa-gauge text-emerald-300"></i> Live Dashboard
-      </a>
-      <a href="roster.html" class="px-3.5 py-1.5 rounded-lg text-xs font-bold text-emerald-100 hover:text-white hover:bg-emerald-800/50 transition flex items-center gap-1.5">
-        <i class="fa-solid fa-users text-emerald-300"></i> Manage Roster
-      </a>
       <a href="index.html" target="_blank" rel="noopener noreferrer" class="px-3.5 py-1.5 rounded-lg text-xs font-bold text-emerald-100 hover:text-white hover:bg-emerald-800/50 transition flex items-center gap-1.5">
         <i class="fa-solid fa-expand text-emerald-300"></i> Kiosk View <i class="fa-solid fa-arrow-up-right-from-square text-[10px] opacity-70"></i>
       </a>
     </nav>
 
-    <!-- Right: Clock & Mobile Menu Toggle -->
+    <!-- Right: Clock, Profile & Mobile Menu Toggle -->
     <div class="flex items-center gap-4">
       <div class="hidden md:flex flex-col justify-center text-right pl-3 border-l border-emerald-700/60">
         <div id="live-clock" class="text-base font-mono font-bold tracking-tight">00:00:00 PM</div>
         <div class="text-[10px] text-emerald-200 font-bold uppercase tracking-wider">TEACHER STATION &bull; ROOM 176</div>
       </div>
        
-        <!-- Teacher Profile & Logout Widget -->
-<div id="user-profile" class="hidden flex items-center gap-3 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-xl">
-  <!-- Displays logged-in Google email -->
-  <span id="user-email" class="text-xs font-bold text-slate-700"></span>
-  
-  <!-- Logout Button -->
-  <button id="logout-btn" class="bg-red-500 hover:bg-red-600 text-white text-xs font-bold px-2.5 py-1 rounded-lg transition shadow-sm">
-    Log Out
-  </button>
-</div>
+      <!-- Teacher Profile & Logout Widget -->
+      <div id="user-profile" class="hidden flex items-center gap-3 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-xl">
+        <span id="user-email" class="text-xs font-bold text-slate-700"></span>
+        <button id="logout-btn" class="bg-red-500 hover:bg-red-600 text-white text-xs font-bold px-2.5 py-1 rounded-lg transition shadow-sm">
+          Log Out
+        </button>
+      </div>
       
-      <!-- Hamburger Button for Mobile -->
-      <button id="mobile-menu-btn" type="button" class="md:hidden text-2xl text-emerald-100 hover:text-white p-2 focus:outline-none ml-2">
-        <i class="fa-solid fa-bars" id="mobile-menu-icon"></i>
-      </button>
-    </div>
-  </div>
-
-  <!-- Mobile Dropdown Navigation Menu (Hidden by default) -->
-  <div id="mobile-menu" class="hidden md:hidden mt-4 pt-3 border-t border-emerald-700/80 flex flex-col gap-2 font-bold text-sm">
-    <a href="teacher.html" class="py-3 px-3 rounded-lg bg-[#0B4F2C] border border-emerald-500/30 text-white flex items-center gap-2">
-      <i class="fa-solid fa-gauge text-emerald-300"></i> Live Dashboard
-    </a>
-    <a href="roster.html" class="py-3 px-3 rounded-lg text-emerald-100 hover:bg-emerald-800/60 transition flex items-center gap-2">
-      <i class="fa-solid fa-users text-emerald-300"></i> Manage Roster
-    </a>
-    <a href="index.html" target="_blank" rel="noopener noreferrer" class="py-3 px-3 rounded-lg text-emerald-100 hover:bg-emerald-800/60 transition flex items-center gap-2">
-      <i class="fa-solid fa-expand text-emerald-300"></i> Kiosk View <i class="fa-solid fa-arrow-up-right-from-square text-[10px] opacity-70 ml-auto"></i>
-    </a>
-  </div>
-</header>
       <!-- Hamburger Button for Mobile -->
       <button id="mobile-menu-btn" type="button" class="md:hidden text-2xl text-emerald-100 hover:text-white p-2 focus:outline-none ml-2">
         <i class="fa-solid fa-bars" id="mobile-menu-icon"></i>
