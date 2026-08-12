@@ -54,7 +54,8 @@ onAuthStateChanged(auth, async (user) => {
   } else {
     if (loginOverlay) loginOverlay.classList.remove("hidden");
     if (userProfile) userProfile.classList.add("hidden");
-    if (loginError) loginError.textContent = "";
+    // DELETE OR COMMENT OUT THIS LINE BELOW:
+    // if (loginError) loginError.textContent = "";
   }
 });
 
