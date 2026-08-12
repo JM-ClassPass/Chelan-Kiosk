@@ -224,6 +224,15 @@ signInAnonymously(auth)
       const hasBathroom = bathroomSnap.exists();
       const hasHall = hallSnap.exists();
 
+      // Helper to calculate duration in minutes/hours
+      const getDuration = (startTimestamp) => {
+        if (!startTimestamp) return '--';
+        const diffMins = Math.floor((Date.now() - startTimestamp) / 60000);
+        if (diffMins < 1) return '<1m';
+        if (diffMins < 60) return `${diffMins}m`;
+        return `${Math.floor(diffMins / 60)}h ${diffMins % 60}m`;
+      };
+
       if (currentMode === 'phone') {
         if (hasPhone) {
           // --- PHONE CHECKOUT LOGIC ---
@@ -236,10 +245,11 @@ signInAnonymously(auth)
 
           const prevData = phoneSnap.val();
           const oldPocket = prevData.pocket;
+          const durationStr = getDuration(prevData.timestamp); // Calculate Duration
 
           await remove(phoneRef);
           await set(push(ref(db, 'system_logs')), {
-            studentId, name: fullName, type: 'Phone', details: 'COS', timestamp: serverTimestamp(), duration: '--'
+            studentId, name: fullName, type: 'Phone', details: 'COS', timestamp: serverTimestamp(), duration: durationStr
           });
 
           showOverlay(`PHONE RETRIEVED`, `${studentData.firstName} removed phone from pocket ${oldPocket}`, 'success');
@@ -271,8 +281,9 @@ signInAnonymously(auth)
       else if (currentMode === 'bathroom') {
         if (hasBathroom) {
           // --- BATHROOM RETURN LOGIC ---
+          const durationStr = getDuration(bathroomSnap.val().timestamp); // Calculate Duration
           await remove(bathroomRef);
-          await set(push(ref(db, 'system_logs')), { studentId, name: fullName, type: 'BP', details: 'BP-I', timestamp: serverTimestamp(), duration: '--' });
+          await set(push(ref(db, 'system_logs')), { studentId, name: fullName, type: 'BP', details: 'BP-I', timestamp: serverTimestamp(), duration: durationStr });
           showOverlay(`WELCOME BACK`, `${studentData.firstName} has returned`, 'success');
         } else {
           // --- BATHROOM OUT LOGIC ---
@@ -305,8 +316,9 @@ signInAnonymously(auth)
       else if (currentMode === 'hall') {
         if (hasHall) {
           // --- HALL RETURN LOGIC ---
+          const durationStr = getDuration(hallSnap.val().timestamp); // Calculate Duration
           await remove(hallRef);
-          await set(push(ref(db, 'system_logs')), { studentId, name: fullName, type: 'HP', details: 'HP-I', timestamp: serverTimestamp(), duration: '--' });
+          await set(push(ref(db, 'system_logs')), { studentId, name: fullName, type: 'HP', details: 'HP-I', timestamp: serverTimestamp(), duration: durationStr });
           showOverlay(`WELCOME BACK`, `${studentData.firstName} has returned`, 'success');
         } else {
           // --- HALL OUT LOGIC ---
@@ -328,7 +340,7 @@ signInAnonymously(auth)
         idInput.value = '';
       }
     }
-
+    
     // 8. Guest & Unrecognized Handlers
     function handleUnrecognized(studentId) {
       unrecognizedAttempts[studentId] = (unrecognizedAttempts[studentId] || 0) + 1;
