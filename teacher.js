@@ -1,49 +1,70 @@
-import { APP_CONFIG } from './config.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getDatabase, ref, set, remove, push, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getDatabase, ref, get, onValue, set, push, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { APP_CONFIG } from "./config.js";
 
-// ==========================================
-// 1. LOCAL AUTH & CLOCK
-// ==========================================
-const TEACHER_PIN = "486200";
+// 1. Initialize Firebase App, Auth & DB
+const app = initializeApp(APP_CONFIG.firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+const provider = new GoogleAuthProvider();
 
-if (localStorage.getItem('chelan_teacher_authorized') === 'true') {
-    document.getElementById('device-lock-screen').classList.add('hidden');
+// Header Profile Elements
+const userProfile = document.getElementById("user-profile");
+const userEmailSpan = document.getElementById("user-email");
+const logoutBtn = document.getElementById("logout-btn");
+
+// Login Elements
+const loginOverlay = document.getElementById("login-overlay");
+const loginBtn = document.getElementById("login-btn");
+const loginError = document.getElementById("login-error");
+
+// 2. Auth Guard & Allowlist Verification
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    if (loginError) loginError.textContent = "Verifying permissions...";
+    
+    const allowlistRef = ref(db, 'allowed_teachers');
+    const snapshot = await get(allowlistRef);
+    
+    let isAllowed = false;
+    if (snapshot.exists()) {
+      const allowedEmails = Object.values(snapshot.val()).map(email => email.toLowerCase());
+      if (allowedEmails.includes(user.email.toLowerCase())) {
+        isAllowed = true;
+      }
+    }
+
+    if (isAllowed) {
+      if (loginOverlay) loginOverlay.classList.add("hidden");
+      if (loginError) loginError.textContent = "";
+      if (userEmailSpan) userEmailSpan.textContent = user.email;
+      if (userProfile) userProfile.classList.remove("hidden");
+
+      console.log(`Teacher authorized on Dashboard: ${user.email}`);
+    } else {
+      if (loginError) loginError.textContent = "Access Denied: Email not on approved teacher list.";
+      if (userProfile) userProfile.classList.add("hidden");
+      signOut(auth);
+    }
+  } else {
+    if (loginOverlay) loginOverlay.classList.remove("hidden");
+    if (userProfile) userProfile.classList.add("hidden");
+    if (loginError) loginError.textContent = "";
+  }
+});
+
+// 3. Auth Buttons
+if (loginBtn) {
+  loginBtn.addEventListener("click", () => signInWithPopup(auth, provider));
 }
 
-window.handlePinSubmit = function(e) {
-    e.preventDefault();
-    if (document.getElementById('pin-input').value === TEACHER_PIN) {
-        localStorage.setItem('chelan_teacher_authorized', 'true');
-        document.getElementById('device-lock-screen').classList.add('hidden');
-    } else {
-        alert("Incorrect PIN");
-    }
-};
-
-setInterval(() => {
-    const clock = document.getElementById('live-clock');
-    if(clock) clock.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-}, 1000);
+if (logoutBtn) {
+  logoutBtn.addEventListener("click", () => signOut(auth));
+}
 
 // ==========================================
-// 2. FIREBASE INITIALIZATION
-// ==========================================
-const firebaseConfig = {
-    apiKey: "AIzaSyDOqjLMzMydaR31WWUA35sr1FrNLfHPxuI",
-    authDomain: "chelan-classroom-pass-a811e.firebaseapp.com",
-    databaseURL: "https://chelan-classroom-pass-a811e-default-rtdb.firebaseio.com",
-    projectId: "chelan-classroom-pass-a811e",
-    storageBucket: "chelan-classroom-pass-a811e.firebasestorage.app",
-    messagingSenderId: "645480807479",
-    appId: "1:645480807479:web:d280d4ef38e8754a9953b2"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-
-// ==========================================
-// 3. STATE VARIABLES
+// 4. STATE VARIABLES
 // ==========================================
 let phonesData = {};
 let bathroomPassesData = {};
@@ -53,7 +74,7 @@ let logsData = {};
 let currentSort = 'last';
 
 // ==========================================
-// 4. UTILITY FUNCTIONS
+// 5. UTILITY FUNCTIONS
 // ==========================================
 function escapeAttr(str) {
     return String(str || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
@@ -69,7 +90,7 @@ function formatDuration(ms) {
 }
 
 // ==========================================
-// 5. GLOBAL DASHBOARD ACTIONS (Attached to Window for HTML access)
+// 6. GLOBAL DASHBOARD ACTIONS (Attached to Window)
 // ==========================================
 window.exportLogsToCSV = () => {
     const keys = Object.keys(logsData).reverse();
@@ -131,9 +152,9 @@ window.setPhoneSort = (sortType) => {
     const activeClass = "bg-chelan text-white px-2 py-0.5 rounded-md";
     const inactiveClass = "px-2 py-0.5 rounded-md hover:text-slate-800";
 
-    btnFirst.className = sortType === 'first' ? activeClass : inactiveClass;
-    btnLast.className = sortType === 'last' ? activeClass : inactiveClass;
-    btnPocket.className = sortType === 'pocket' ? activeClass : inactiveClass;
+    if (btnFirst) btnFirst.className = sortType === 'first' ? activeClass : inactiveClass;
+    if (btnLast) btnLast.className = sortType === 'last' ? activeClass : inactiveClass;
+    if (btnPocket) btnPocket.className = sortType === 'pocket' ? activeClass : inactiveClass;
 
     renderPhones();
 };
@@ -171,7 +192,6 @@ window.clearAllActivity = async () => {
     const now = Date.now();
 
     try {
-        // Clear Phones
         for (const id of phoneKeys) {
             const phone = phonesData[id];
             const studentName = phone ? (phone.studentName || `${phone.firstName || ''} ${phone.lastName || ''}`.trim()) : id;
@@ -183,7 +203,6 @@ window.clearAllActivity = async () => {
         }
         await remove(ref(db, 'active_phones_in_class'));
 
-        // Clear Bathroom Passes
         for (const id of bpKeys) {
             const pass = bathroomPassesData[id];
             const name = pass ? pass.studentName : id;
@@ -195,7 +214,6 @@ window.clearAllActivity = async () => {
         }
         await remove(ref(db, 'active_bathroom_passes'));
 
-        // Clear Hall Passes
         for (const id of hpKeys) {
             const pass = hallPassesData[id];
             const name = pass ? pass.studentName : id;
@@ -288,7 +306,7 @@ window.handleLogSearch = () => {
 };
 
 // ==========================================
-// 6. QUICK ADD FORM LISTENER
+// 7. QUICK ADD FORM LISTENER
 // ==========================================
 const form = document.getElementById('quick-add-form');
 if (form) {
@@ -336,7 +354,7 @@ if (form) {
 }
 
 // ==========================================
-// 7. FIREBASE REALTIME LISTENERS
+// 8. FIREBASE REALTIME LISTENERS
 // ==========================================
 onValue(ref(db, 'active_phones_in_class'), s => {
     phonesData = s.val() || {};
@@ -363,7 +381,7 @@ onValue(ref(db, 'system_logs'), s => {
 });
 
 // ==========================================
-// 8. RENDER FUNCTIONS
+// 9. RENDER FUNCTIONS
 // ==========================================
 function updateStatsOverview() {
     const todayStr = new Date().toDateString();
@@ -411,9 +429,13 @@ function updateStatsOverview() {
         peakText = `${formattedHour}:00 ${ampm}`;
     }
 
-    document.getElementById('stat-checkins').textContent = checkinCount;
-    document.getElementById('stat-passes').textContent = passCount;
-    document.getElementById('stat-peak').textContent = peakText;
+    const statCheckins = document.getElementById('stat-checkins');
+    const statPasses = document.getElementById('stat-passes');
+    const statPeak = document.getElementById('stat-peak');
+
+    if (statCheckins) statCheckins.textContent = checkinCount;
+    if (statPasses) statPasses.textContent = passCount;
+    if (statPeak) statPeak.textContent = peakText;
 }
 
 function renderPendingApprovals() {
@@ -421,6 +443,8 @@ function renderPendingApprovals() {
     const list = document.getElementById('pending-approvals-list');
     const badge = document.getElementById('pending-count-badge');
     
+    if (!card || !list || !badge) return;
+
     const keys = Object.keys(pendingApprovalsData);
     badge.textContent = keys.length;
 
@@ -455,8 +479,11 @@ function renderPendingApprovals() {
 
 function renderPhones() {
     const list = document.getElementById('active-phones-list');
+    if (!list) return;
+
     const keys = Object.keys(phonesData);
-    document.getElementById('dash-phone-count').textContent = `${keys.length} Students`;
+    const countEl = document.getElementById('dash-phone-count');
+    if (countEl) countEl.textContent = `${keys.length} Students`;
     
     if (keys.length === 0) {
         list.innerHTML = '<p class="text-xs text-slate-400 italic col-span-2">No phones currently checked in.</p>';
@@ -525,21 +552,32 @@ function renderPhones() {
 function renderPasses(type, data) {
     const keys = Object.keys(data);
     if(type === 'b') {
-        document.getElementById('dash-pass-count').textContent = `${keys.length}/1 Out`;
+        const passCount = document.getElementById('dash-pass-count');
+        if (passCount) passCount.textContent = `${keys.length}/1 Out`;
         const d = document.getElementById('bathroom-status-detail');
-        d.innerHTML = keys.length ? `<div class="w-full flex justify-between items-center"><span class="font-bold text-slate-800 not-italic">${data[keys[0]].studentName}</span><button onclick="forceClearPass('bathroom', '${keys[0]}')" class="text-xs bg-red-100 hover:bg-red-200 text-red-700 px-2 py-0.5 rounded font-bold not-italic transition">Return</button></div>` : 'No students out.';
+        if (d) {
+            d.innerHTML = keys.length ? `<div class="w-full flex justify-between items-center"><span class="font-bold text-slate-800 not-italic">${data[keys[0]].studentName}</span><button onclick="forceClearPass('bathroom', '${keys[0]}')" class="text-xs bg-red-100 hover:bg-red-200 text-red-700 px-2 py-0.5 rounded font-bold not-italic transition">Return</button></div>` : 'No students out.';
+        }
     } else {
-        document.getElementById('dash-hall-count').textContent = `${keys.length} Out`;
+        const hallCount = document.getElementById('dash-hall-count');
+        if (hallCount) hallCount.textContent = `${keys.length} Out`;
         const d = document.getElementById('hallpass-status-detail');
-        d.innerHTML = keys.length ? keys.map(k => `<div class="w-full flex justify-between items-center mb-1"><span class="font-bold text-slate-800 not-italic">${data[k].studentName}</span><button onclick="forceClearPass('hall', '${k}')" class="text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-2 py-0.5 rounded font-bold not-italic transition">Return</button></div>`).join('') : 'No students out.';
+        if (d) {
+            d.innerHTML = keys.length ? keys.map(k => `<div class="w-full flex justify-between items-center mb-1"><span class="font-bold text-slate-800 not-italic">${data[k].studentName}</span><button onclick="forceClearPass('hall', '${k}')" class="text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-2 py-0.5 rounded font-bold not-italic transition">Return</button></div>`).join('') : 'No students out.';
+        }
     }
 }
 
 function renderLogs(data) {
+    const tableBody = document.getElementById('logs-table-body');
+    const logCount = document.getElementById('log-count');
+    if (!tableBody) return;
+
     const keys = Object.keys(data).reverse();
-    document.getElementById('log-count').textContent = `${keys.length}`;
+    if (logCount) logCount.textContent = `${keys.length}`;
+    
     if (keys.length === 0) {
-        document.getElementById('logs-table-body').innerHTML = '<tr><td colspan="5" class="px-3 py-4 text-center text-slate-400 text-xs italic">No activity logged yet.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="5" class="px-3 py-4 text-center text-slate-400 text-xs italic">No activity logged yet.</td></tr>';
         return;
     }
     
@@ -556,11 +594,11 @@ function renderLogs(data) {
     });
 
     if (filteredKeys.length === 0) {
-        document.getElementById('logs-table-body').innerHTML = '<tr><td colspan="5" class="px-3 py-4 text-center text-slate-400 text-xs italic">No matching records found.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="5" class="px-3 py-4 text-center text-slate-400 text-xs italic">No matching records found.</td></tr>';
         return;
     }
 
-    document.getElementById('logs-table-body').innerHTML = filteredKeys.map(k => {
+    tableBody.innerHTML = filteredKeys.map(k => {
         const l = data[k];
         const timeStr = l.timestamp ? new Date(l.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--';
         const name = l.name || l.studentId || 'Unknown';
@@ -597,7 +635,7 @@ function renderLogs(data) {
 }
 
 // ==========================================
-// CONFIG VERSION UPDATE
+// 10. VERSION TAG & MOBILE MENU
 // ==========================================
 function updateVersionTag() {
     const versionEl = document.getElementById('version');
@@ -606,15 +644,6 @@ function updateVersionTag() {
     }
 }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', updateVersionTag);
-} else {
-    updateVersionTag();
-}
-
-// ==========================================
-// MOBILE MENU TOGGLE LOGIC
-// ==========================================
 function initMobileMenu() {
     const menuBtn = document.getElementById('mobile-menu-btn');
     const mobileMenu = document.getElementById('mobile-menu');
@@ -623,21 +652,19 @@ function initMobileMenu() {
     if (menuBtn && mobileMenu) {
         menuBtn.addEventListener('click', () => {
             mobileMenu.classList.toggle('hidden');
-            
             if (menuIcon) {
-                if (mobileMenu.classList.contains('hidden')) {
-                    menuIcon.className = "fa-solid fa-bars";
-                } else {
-                    menuIcon.className = "fa-solid fa-xmark";
-                }
+                menuIcon.className = mobileMenu.classList.contains('hidden') ? "fa-solid fa-bars" : "fa-solid fa-xmark";
             }
         });
     }
 }
 
-// Ensure event listener connects whether the page is loading or already loaded
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initMobileMenu);
+    document.addEventListener('DOMContentLoaded', () => {
+        updateVersionTag();
+        initMobileMenu();
+    });
 } else {
+    updateVersionTag();
     initMobileMenu();
 }
