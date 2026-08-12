@@ -1,3 +1,4 @@
+import { APP_CONFIG } from './config.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getDatabase, ref, set, remove, push, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
@@ -593,4 +594,20 @@ function renderLogs(data) {
             </tr>
         `;
     }).join('');
+}
+
+// ==========================================
+// CONFIG VERSION UPDATE
+// ==========================================
+function updateVersionTag() {
+    const versionEl = document.getElementById('version');
+    if (versionEl && typeof APP_CONFIG !== 'undefined') {
+        versionEl.textContent = APP_CONFIG.version;
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', updateVersionTag);
+} else {
+    updateVersionTag();
 }
