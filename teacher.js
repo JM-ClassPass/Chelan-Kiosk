@@ -611,3 +611,25 @@ if (document.readyState === 'loading') {
 } else {
     updateVersionTag();
 }
+
+// ==========================================
+// MOBILE MENU TOGGLE
+// ==========================================
+const menuBtn = document.getElementById('mobile-menu-btn');
+const mobileMenu = document.getElementById('mobile-menu');
+const menuIcon = document.getElementById('mobile-menu-icon');
+
+if (menuBtn && mobileMenu) {
+  menuBtn.addEventListener('click', () => {
+    mobileMenu.classList.toggle('hidden');
+    
+    // Toggle icon between bars and 'X'
+    if (mobileMenu.classList.contains('hidden')) {
+      menuIcon.classList.remove('fa-xmark');
+      menuIcon.classList.add('fa-bars');
+    } else {
+      menuIcon.classList.remove('fa-bars');
+      menuIcon.classList.add('fa-xmark');
+    }
+  });
+}
