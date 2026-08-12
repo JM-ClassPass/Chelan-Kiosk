@@ -74,6 +74,17 @@
         <div id="live-clock" class="text-base font-mono font-bold tracking-tight">00:00:00 PM</div>
         <div class="text-[10px] text-emerald-200 font-bold uppercase tracking-wider">TEACHER STATION &bull; ROOM 176</div>
       </div>
+       
+        <!-- Teacher Profile & Logout Widget -->
+<div id="user-profile" class="hidden flex items-center gap-3 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-xl">
+  <!-- Displays logged-in Google email -->
+  <span id="user-email" class="text-xs font-bold text-slate-700"></span>
+  
+  <!-- Logout Button -->
+  <button id="logout-btn" class="bg-red-500 hover:bg-red-600 text-white text-xs font-bold px-2.5 py-1 rounded-lg transition shadow-sm">
+    Log Out
+  </button>
+</div>
       <!-- Hamburger Button for Mobile -->
       <button id="mobile-menu-btn" type="button" class="md:hidden text-2xl text-emerald-100 hover:text-white p-2 focus:outline-none ml-2">
         <i class="fa-solid fa-bars" id="mobile-menu-icon"></i>
