@@ -1,3 +1,4 @@
+import { APP_CONFIG } from './config.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
 import { getDatabase, ref, onValue, set, remove, get, update } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 
@@ -465,4 +466,14 @@ btnExport.addEventListener('click', () => {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+});
+
+// ==========================================
+// 10. CONFIG VERSION UPDATE
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+    const versionEl = document.getElementById('version');
+    if (versionEl) {
+        versionEl.textContent = APP_CONFIG.version;
+    }
 });
