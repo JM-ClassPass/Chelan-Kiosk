@@ -25,6 +25,7 @@ let sortCol = 'lastName';
 let sortDesc = false;
 let searchQuery = '';
 let isEditAllMode = false;
+let editingRows = new Set(); // Tracks individual rows being edited
 let csvFileToImport = null;
 
 // ==========================================
@@ -35,6 +36,7 @@ const tableBody = document.getElementById('roster-table-body');
 const countEl = document.getElementById('roster-count');
 const searchInput = document.getElementById('search-input');
 const btnEditAll = document.getElementById('btn-edit-all');
+const btnSaveAll = document.getElementById('btn-save-all');
 const btnCancelEdit = document.getElementById('btn-cancel-edit');
 const btnExport = document.getElementById('btn-export-roster');
 const formAddStudent = document.getElementById('form-add-student');
@@ -95,15 +97,20 @@ function renderTable() {
 
   filtered.forEach(student => {
     const tr = document.createElement('tr');
-    tr.className = "hover:bg-slate-50/50 transition group";
+    tr.className = "hover:bg-slate-50/50 transition";
     
-    if (isEditAllMode) {
+    // Check if THIS specific row, or ALL rows are being edited
+    const isEditing = isEditAllMode || editingRows.has(student.id);
+
+    if (isEditing) {
       tr.innerHTML = `
         <td class="py-3 px-3 border-t border-slate-100 font-mono text-slate-500">${student.id}</td>
-        <td class="py-3 px-3 border-t border-slate-100"><input type="text" value="${student.firstName}" class="edit-fn w-full border border-slate-300 rounded px-2 py-1 text-xs focus:border-[#0B4F2C] focus:outline-none" /></td>
-        <td class="py-3 px-3 border-t border-slate-100"><input type="text" value="${student.lastName}" class="edit-ln w-full border border-slate-300 rounded px-2 py-1 text-xs focus:border-[#0B4F2C] focus:outline-none" /></td>
+        <td class="py-3 px-3 border-t border-slate-100"><input type="text" value="${student.firstName}" class="edit-fn w-full border border-slate-300 rounded px-2 py-1.5 text-xs font-bold text-slate-800 focus:border-[#0B4F2C] focus:outline-none" /></td>
+        <td class="py-3 px-3 border-t border-slate-100"><input type="text" value="${student.lastName}" class="edit-ln w-full border border-slate-300 rounded px-2 py-1.5 text-xs font-bold text-slate-800 focus:border-[#0B4F2C] focus:outline-none" /></td>
         <td class="py-3 px-3 border-t border-slate-100 text-right">
-          <button data-id="${student.id}" class="btn-save text-emerald-600 hover:text-emerald-800 font-bold mr-2"><i class="fa-solid fa-check"></i> Save</button>
+          <button data-id="${student.id}" class="btn-save inline-flex items-center gap-1.5 text-emerald-700 hover:text-emerald-900 bg-emerald-100 hover:bg-emerald-200 px-3 py-1.5 rounded-lg font-bold transition shadow-sm text-xs">
+            <i class="fa-solid fa-check"></i> Save
+          </button>
         </td>
       `;
     } else {
@@ -111,8 +118,15 @@ function renderTable() {
         <td class="py-3 px-3 border-t border-slate-100 font-mono text-slate-500">${student.id}</td>
         <td class="py-3 px-3 border-t border-slate-100">${student.firstName}</td>
         <td class="py-3 px-3 border-t border-slate-100">${student.lastName}</td>
-        <td class="py-3 px-3 border-t border-slate-100 text-right opacity-0 group-hover:opacity-100 transition-opacity">
-          <button data-id="${student.id}" class="btn-delete text-rose-500 hover:text-rose-700 bg-rose-50 px-2 py-1 rounded shadow-sm"><i class="fa-solid fa-trash-can"></i></button>
+        <td class="py-3 px-3 border-t border-slate-100 text-right space-x-1.5">
+          <!-- Edit button always visible -->
+          <button data-id="${student.id}" class="btn-edit text-amber-600 hover:text-amber-700 bg-amber-50 hover:bg-amber-100 px-2.5 py-1.5 rounded-lg shadow-sm transition">
+            <i class="fa-solid fa-pen"></i>
+          </button>
+          <!-- Delete button always visible -->
+          <button data-id="${student.id}" class="btn-delete text-rose-500 hover:text-rose-600 bg-rose-50 hover:bg-rose-100 px-2.5 py-1.5 rounded-lg shadow-sm transition">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
         </td>
       `;
     }
@@ -134,6 +148,12 @@ tableBody.addEventListener('click', async (e) => {
     }
   }
 
+  // Individual Row Edit Action
+  if (target.classList.contains('btn-edit')) {
+    editingRows.add(id);
+    renderTable();
+  }
+
   // Save Inline Edit Action
   if (target.classList.contains('btn-save')) {
     const tr = target.closest('tr');
@@ -142,8 +162,8 @@ tableBody.addEventListener('click', async (e) => {
     
     if(newFn && newLn) {
       await update(ref(db, `classroom_roster/${id}`), { firstName: newFn, lastName: newLn });
-      target.innerHTML = `<i class="fa-solid fa-check-double text-emerald-500"></i>`;
-      setTimeout(() => renderTable(), 500); // Visual feedback pause
+      editingRows.delete(id); // Remove from active edit list
+      // Note: Firebase real-time listener will auto-refresh the table visually
     }
   }
 });
@@ -181,15 +201,53 @@ document.querySelectorAll('.sort-header').forEach(th => {
   });
 });
 
+// Enter "Edit All" Mode
 btnEditAll.addEventListener('click', () => {
   isEditAllMode = true;
+  editingRows.clear(); // Clear any individual edits so all rows flip
   btnEditAll.classList.add('hidden');
+  btnSaveAll.classList.remove('hidden');
   btnCancelEdit.classList.remove('hidden');
   renderTable();
 });
 
+// Save All Inputs at Once
+btnSaveAll.addEventListener('click', async () => {
+  const updates = {};
+  
+  // Grab all inputs from the current table view
+  document.querySelectorAll('#roster-table-body tr').forEach(tr => {
+    const saveBtn = tr.querySelector('.btn-save');
+    if (saveBtn) {
+      const id = saveBtn.getAttribute('data-id');
+      const fn = tr.querySelector('.edit-fn').value.trim();
+      const ln = tr.querySelector('.edit-ln').value.trim();
+      
+      if (fn && ln) {
+        updates[`classroom_roster/${id}/firstName`] = fn;
+        updates[`classroom_roster/${id}/lastName`] = ln;
+      }
+    }
+  });
+  
+  // Send single bulk update to Firebase
+  if (Object.keys(updates).length > 0) {
+    await update(ref(db), updates);
+  }
+  
+  // Reset modes
+  isEditAllMode = false;
+  editingRows.clear();
+  btnSaveAll.classList.add('hidden');
+  btnCancelEdit.classList.add('hidden');
+  btnEditAll.classList.remove('hidden');
+});
+
+// Cancel Edits without saving
 btnCancelEdit.addEventListener('click', () => {
   isEditAllMode = false;
+  editingRows.clear();
+  btnSaveAll.classList.add('hidden');
   btnCancelEdit.classList.add('hidden');
   btnEditAll.classList.remove('hidden');
   renderTable();
@@ -270,7 +328,6 @@ btnProcessImport.addEventListener('click', () => {
     const text = e.target.result;
     const lines = text.split('\n').filter(line => line.trim() !== '');
     
-    // Check mode
     const mode = document.querySelector('input[name="import-mode"]:checked').value;
     
     if (mode === 'replace') {
@@ -280,9 +337,7 @@ btnProcessImport.addEventListener('click', () => {
 
     let importedCount = 0;
 
-    // Start at 1 if your CSV has a header row (ID, FirstName, LastName)
     for (let i = 1; i < lines.length; i++) {
-      // Handles basic CSV parsing (ignoring complex quotes for simplicity)
       const parts = lines[i].split(',').map(p => p.trim());
       if (parts.length >= 3) {
         const sid = parts[0].replace(/[^a-zA-Z0-9]/g, '');
@@ -300,7 +355,7 @@ btnProcessImport.addEventListener('click', () => {
     csvFileToImport = null;
     dropZoneText.textContent = "Drag & Drop CSV File Here";
     dropZoneText.classList.remove('text-[#0B4F2C]');
-    csvInput.value = ''; // Reset input
+    csvInput.value = ''; 
   };
   
   reader.readAsText(csvFileToImport);
@@ -314,7 +369,6 @@ btnExport.addEventListener('click', () => {
   
   let csvContent = "ID,First Name,Last Name\n";
   
-  // Sort alphabetically by last name before export
   const exportData = [...rosterData].sort((a, b) => a.lastName.localeCompare(b.lastName));
   
   exportData.forEach(s => {
