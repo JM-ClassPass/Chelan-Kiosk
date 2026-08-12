@@ -25,7 +25,9 @@ let sortCol = 'lastName';
 let sortDesc = false;
 let searchQuery = '';
 let isEditAllMode = false;
-let editingRows = new Set(); // Tracks individual rows being edited
+let editingRows = new Set(); 
+let selectedRows = new Set(); // Tracks rows checked for bulk deletion
+let currentFilteredRoster = []; // Keeps track of what's currently visible
 let csvFileToImport = null;
 
 // ==========================================
@@ -39,6 +41,9 @@ const btnEditAll = document.getElementById('btn-edit-all');
 const btnSaveAll = document.getElementById('btn-save-all');
 const btnCancelEdit = document.getElementById('btn-cancel-edit');
 const btnExport = document.getElementById('btn-export-roster');
+const btnBulkDelete = document.getElementById('btn-bulk-delete');
+const bulkDeleteCount = document.getElementById('bulk-delete-count');
+const cbSelectAll = document.getElementById('cb-select-all');
 const formAddStudent = document.getElementById('form-add-student');
 
 const dropZone = document.getElementById('drop-zone');
@@ -64,6 +69,13 @@ onValue(rosterRef, (snapshot) => {
       rosterData.push({ id, firstName: info.firstName, lastName: info.lastName });
     }
   }
+  
+  // Clean up selectedRows in case someone was deleted elsewhere
+  const existingIds = new Set(rosterData.map(s => s.id));
+  for (let id of selectedRows) {
+    if (!existingIds.has(id)) selectedRows.delete(id);
+  }
+  
   renderTable();
 });
 
@@ -72,14 +84,14 @@ onValue(rosterRef, (snapshot) => {
 // ==========================================
 function renderTable() {
   // Filter
-  let filtered = rosterData.filter(s => 
+  currentFilteredRoster = rosterData.filter(s => 
     s.id.toLowerCase().includes(searchQuery) ||
     s.firstName.toLowerCase().includes(searchQuery) ||
     s.lastName.toLowerCase().includes(searchQuery)
   );
 
   // Sort
-  filtered.sort((a, b) => {
+  currentFilteredRoster.sort((a, b) => {
     let valA = a[sortCol].toLowerCase();
     let valB = b[sortCol].toLowerCase();
     if (valA < valB) return sortDesc ? 1 : -1;
@@ -87,23 +99,36 @@ function renderTable() {
     return 0;
   });
 
-  countEl.textContent = filtered.length;
+  countEl.textContent = currentFilteredRoster.length;
   tableBody.innerHTML = '';
 
-  if (filtered.length === 0) {
-    tableBody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-slate-400">No students found.</td></tr>`;
+  // Update Select All Checkbox state
+  if (currentFilteredRoster.length > 0 && selectedRows.size === currentFilteredRoster.length) {
+    cbSelectAll.checked = true;
+  } else {
+    cbSelectAll.checked = false;
+  }
+
+  updateBulkDeleteUI();
+
+  if (currentFilteredRoster.length === 0) {
+    tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-slate-400">No students found.</td></tr>`;
     return;
   }
 
-  filtered.forEach(student => {
+  currentFilteredRoster.forEach(student => {
     const tr = document.createElement('tr');
     tr.className = "hover:bg-slate-50/50 transition";
     
-    // Check if THIS specific row, or ALL rows are being edited
     const isEditing = isEditAllMode || editingRows.has(student.id);
+    const isSelected = selectedRows.has(student.id);
+    
+    // The checkbox HTML
+    const checkboxHtml = `<td class="py-3 px-3 border-t border-slate-100 text-center"><input type="checkbox" class="row-checkbox accent-[#0B4F2C] w-4 h-4 rounded cursor-pointer" data-id="${student.id}" ${isSelected ? 'checked' : ''}></td>`;
 
     if (isEditing) {
       tr.innerHTML = `
+        ${checkboxHtml}
         <td class="py-3 px-3 border-t border-slate-100 font-mono text-slate-500">${student.id}</td>
         <td class="py-3 px-3 border-t border-slate-100"><input type="text" value="${student.firstName}" class="edit-fn w-full border border-slate-300 rounded px-2 py-1.5 text-xs font-bold text-slate-800 focus:border-[#0B4F2C] focus:outline-none" /></td>
         <td class="py-3 px-3 border-t border-slate-100"><input type="text" value="${student.lastName}" class="edit-ln w-full border border-slate-300 rounded px-2 py-1.5 text-xs font-bold text-slate-800 focus:border-[#0B4F2C] focus:outline-none" /></td>
@@ -115,15 +140,14 @@ function renderTable() {
       `;
     } else {
       tr.innerHTML = `
+        ${checkboxHtml}
         <td class="py-3 px-3 border-t border-slate-100 font-mono text-slate-500">${student.id}</td>
         <td class="py-3 px-3 border-t border-slate-100">${student.firstName}</td>
         <td class="py-3 px-3 border-t border-slate-100">${student.lastName}</td>
         <td class="py-3 px-3 border-t border-slate-100 text-right space-x-1.5">
-          <!-- Edit button always visible -->
           <button data-id="${student.id}" class="btn-edit text-amber-600 hover:text-amber-700 bg-amber-50 hover:bg-amber-100 px-2.5 py-1.5 rounded-lg shadow-sm transition">
             <i class="fa-solid fa-pen"></i>
           </button>
-          <!-- Delete button always visible -->
           <button data-id="${student.id}" class="btn-delete text-rose-500 hover:text-rose-600 bg-rose-50 hover:bg-rose-100 px-2.5 py-1.5 rounded-lg shadow-sm transition">
             <i class="fa-solid fa-trash-can"></i>
           </button>
@@ -134,17 +158,29 @@ function renderTable() {
   });
 }
 
-// Event Delegation for Table Actions
+function updateBulkDeleteUI() {
+  if (selectedRows.size > 0) {
+    btnBulkDelete.classList.remove('hidden');
+    btnBulkDelete.classList.add('inline-flex');
+    bulkDeleteCount.textContent = selectedRows.size;
+  } else {
+    btnBulkDelete.classList.add('hidden');
+    btnBulkDelete.classList.remove('inline-flex');
+  }
+}
+
+// Event Delegation for Table Actions (Clicks & Changes)
 tableBody.addEventListener('click', async (e) => {
   const target = e.target.closest('button');
   if (!target) return;
 
   const id = target.getAttribute('data-id');
 
-  // Delete Action
+  // Single Delete Action
   if (target.classList.contains('btn-delete')) {
     if(confirm(`Are you sure you want to remove student ID ${id}?`)) {
       await remove(ref(db, `classroom_roster/${id}`));
+      selectedRows.delete(id);
     }
   }
 
@@ -162,8 +198,49 @@ tableBody.addEventListener('click', async (e) => {
     
     if(newFn && newLn) {
       await update(ref(db, `classroom_roster/${id}`), { firstName: newFn, lastName: newLn });
-      editingRows.delete(id); // Remove from active edit list
-      // Note: Firebase real-time listener will auto-refresh the table visually
+      editingRows.delete(id);
+    }
+  }
+});
+
+// Handle Checkbox Toggles
+tableBody.addEventListener('change', (e) => {
+  if (e.target.classList.contains('row-checkbox')) {
+    const id = e.target.getAttribute('data-id');
+    if (e.target.checked) {
+      selectedRows.add(id);
+    } else {
+      selectedRows.delete(id);
+    }
+    renderTable();
+  }
+});
+
+cbSelectAll.addEventListener('change', (e) => {
+  if (e.target.checked) {
+    currentFilteredRoster.forEach(student => selectedRows.add(student.id));
+  } else {
+    selectedRows.clear();
+  }
+  renderTable();
+});
+
+// Bulk Delete Action
+btnBulkDelete.addEventListener('click', async () => {
+  if (selectedRows.size === 0) return;
+  
+  if (confirm(`Are you sure you want to delete ${selectedRows.size} selected students? This cannot be undone.`)) {
+    const updates = {};
+    selectedRows.forEach(id => {
+      updates[`classroom_roster/${id}`] = null; // null deletes the node
+    });
+    
+    try {
+      await update(ref(db), updates);
+      selectedRows.clear();
+      renderTable();
+    } catch (err) {
+      alert("Error deleting students.");
     }
   }
 });
@@ -180,19 +257,17 @@ document.querySelectorAll('.sort-header').forEach(th => {
   th.addEventListener('click', () => {
     const col = th.getAttribute('data-sort');
     if (sortCol === col) {
-      sortDesc = !sortDesc; // Toggle direction
+      sortDesc = !sortDesc;
     } else {
       sortCol = col;
       sortDesc = false;
     }
     
-    // Reset all icons
     document.querySelectorAll('[id^="sort-icon-"]').forEach(icon => {
       icon.textContent = '↑↓';
       icon.className = 'ml-0.5 text-slate-400';
     });
 
-    // Update active icon
     const activeIcon = document.getElementById(`sort-icon-${col}`);
     activeIcon.textContent = sortDesc ? '↓' : '↑';
     activeIcon.className = 'ml-0.5 text-[#0B4F2C]';
@@ -201,21 +276,18 @@ document.querySelectorAll('.sort-header').forEach(th => {
   });
 });
 
-// Enter "Edit All" Mode
 btnEditAll.addEventListener('click', () => {
   isEditAllMode = true;
-  editingRows.clear(); // Clear any individual edits so all rows flip
+  editingRows.clear(); 
   btnEditAll.classList.add('hidden');
   btnSaveAll.classList.remove('hidden');
   btnCancelEdit.classList.remove('hidden');
   renderTable();
 });
 
-// Save All Inputs at Once
 btnSaveAll.addEventListener('click', async () => {
   const updates = {};
   
-  // Grab all inputs from the current table view
   document.querySelectorAll('#roster-table-body tr').forEach(tr => {
     const saveBtn = tr.querySelector('.btn-save');
     if (saveBtn) {
@@ -230,12 +302,10 @@ btnSaveAll.addEventListener('click', async () => {
     }
   });
   
-  // Send single bulk update to Firebase
   if (Object.keys(updates).length > 0) {
     await update(ref(db), updates);
   }
   
-  // Reset modes
   isEditAllMode = false;
   editingRows.clear();
   btnSaveAll.classList.add('hidden');
@@ -243,7 +313,6 @@ btnSaveAll.addEventListener('click', async () => {
   btnEditAll.classList.remove('hidden');
 });
 
-// Cancel Edits without saving
 btnCancelEdit.addEventListener('click', () => {
   isEditAllMode = false;
   editingRows.clear();
