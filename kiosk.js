@@ -9,7 +9,6 @@ import { getDatabase, ref, get, set, push, onValue, serverTimestamp, remove } fr
 const KIOSK_CONFIG = {
   roomNumber: "176",
   kioskName: "STUDENT KIOSK",
-  version: "v1.1.13" // Bumped version to reflect strict data contract
 };
 
 // Apply Configuration to the UI
