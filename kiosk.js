@@ -1,3 +1,4 @@
+import { APP_CONFIG } from './config.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
 import { getDatabase, ref, get, set, push, onValue, serverTimestamp, remove } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 
@@ -392,4 +393,20 @@ function showOverlay(titleText, subtitleText, type) {
     if (currentMode === 'phone') autoSelectLowestPocket();
     idInput.focus();
   }, 2000); 
+}
+
+// ==========================================
+// CONFIG VERSION UPDATE
+// ==========================================
+function updateVersionTag() {
+    const versionEl = document.getElementById('version');
+    if (versionEl && typeof APP_CONFIG !== 'undefined') {
+        versionEl.textContent = APP_CONFIG.version;
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', updateVersionTag);
+} else {
+    updateVersionTag();
 }
