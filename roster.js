@@ -485,23 +485,31 @@ if (document.readyState === 'loading') {
 }
 
 // ==========================================
-// MOBILE MENU TOGGLE
+// MOBILE MENU TOGGLE LOGIC
 // ==========================================
-const menuBtn = document.getElementById('mobile-menu-btn');
-const mobileMenu = document.getElementById('mobile-menu');
-const menuIcon = document.getElementById('mobile-menu-icon');
+function initMobileMenu() {
+    const menuBtn = document.getElementById('mobile-menu-btn');
+    const mobileMenu = document.getElementById('mobile-menu');
+    const menuIcon = document.getElementById('mobile-menu-icon');
 
-if (menuBtn && mobileMenu) {
-  menuBtn.addEventListener('click', () => {
-    mobileMenu.classList.toggle('hidden');
-    
-    // Toggle icon between bars and 'X'
-    if (mobileMenu.classList.contains('hidden')) {
-      menuIcon.classList.remove('fa-xmark');
-      menuIcon.classList.add('fa-bars');
-    } else {
-      menuIcon.classList.remove('fa-bars');
-      menuIcon.classList.add('fa-xmark');
+    if (menuBtn && mobileMenu) {
+        menuBtn.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+            
+            if (menuIcon) {
+                if (mobileMenu.classList.contains('hidden')) {
+                    menuIcon.className = "fa-solid fa-bars";
+                } else {
+                    menuIcon.className = "fa-solid fa-xmark";
+                }
+            }
+        });
     }
-  });
+}
+
+// Ensure event listener connects whether the page is loading or already loaded
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initMobileMenu);
+} else {
+    initMobileMenu();
 }
