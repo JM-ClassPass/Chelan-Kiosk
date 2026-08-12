@@ -67,9 +67,9 @@ setInterval(() => {
 
 // 6. Tab UI Switching Logic
 const tabConfigs = {
-  phone: { badge: 'Phone Storage Mode Active', title: 'Scan/Enter ID to Store Phone', subtitle: 'Scan/Enter ID to check in your mobile device into a classroom pocket.' },
-  bathroom: { badge: 'Bathroom Pass Mode Active', title: 'Scan/Enter ID for Bathroom', subtitle: 'Scan/Enter ID to sign out for the restroom.' },
-  hall: { badge: 'Hall Pass Mode Active', title: 'Scan/Enter ID for Hallway', subtitle: 'Scan/Enter ID to request a general hall pass.' }
+  phone: { badge: 'Phone Storage Mode Active', title: 'Phone Storage', subtitle: 'Scan/Enter your student ID to check your mobile device in/out of a pocket.' },
+  bathroom: { badge: 'Bathroom Pass Mode Active', title: 'Bathroom Pass', subtitle: 'Scan/Enter ID to sign out/in for the restroom.' },
+  hall: { badge: 'Hall Pass Mode Active', title: 'Hall Pass', subtitle: 'Scan/Enter ID to sign out/in with a hall pass.' }
 };
 
 tabs.forEach(tab => {
