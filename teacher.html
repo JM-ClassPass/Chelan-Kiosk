@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Dashboard - Chelan High</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .bg-chelan { background-color: #0d5235; }
@@ -30,24 +33,28 @@
         </div>
     </div>
 
-    <header class="bg-chelan text-white shadow-md py-3 px-6 flex justify-between items-center">
-        <div class="flex items-center gap-3">
-            <img src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" alt="Logo" class="h-10">
-            <div class="flex items-center gap-2">
-                <h1 class="text-xl font-bold tracking-wide">Chelan High</h1>
-                <span class="bg-green-800/80 text-green-200 text-xs px-2.5 py-0.5 rounded-full font-semibold border border-green-700/50">Teacher Dashboard v1.4</span>
+    <header class="bg-chelan text-white shadow-md py-3 px-6 flex justify-between items-center border-b-4 border-green-900">
+        <div class="flex items-center gap-4">
+            <img src="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png" alt="Chelan Logo" class="h-10 drop-shadow-sm">
+            <div class="flex flex-col justify-center">
+                <div class="flex items-center gap-2">
+                    <h1 class="text-xl font-black tracking-wide leading-none">Chelan High</h1>
+                    <span class="bg-green-800 text-green-100 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold border border-green-700">v1.4</span>
+                </div>
+                <span class="text-xs text-green-300 font-semibold tracking-wide">Teacher Dashboard &bull; Medical Sciences</span>
             </div>
         </div>
         <div class="flex items-center gap-6">
-            <div class="text-right hidden sm:block">
-                <span id="live-clock" class="text-lg font-mono font-bold block leading-none">--:--:-- --</span>
-                <span class="text-[10px] text-green-300 uppercase tracking-widest font-bold">MEDICAL SCIENCES</span>
+            <!-- Live Clock -->
+            <div class="text-right hidden md:block bg-green-900/50 px-3 py-1.5 rounded-lg border border-green-800/50">
+                <span id="live-clock" class="text-lg font-mono font-bold block leading-none text-green-50">--:--:-- --</span>
             </div>
-            <div class="flex gap-2">
-                <a href="teacher.html" class="bg-white text-chelan font-bold text-sm px-4 py-2 rounded-lg shadow">Live Dashboard</a>
-                <a href="roster.html" class="bg-green-900/60 hover:bg-green-900 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition-all border border-green-700/60 flex items-center">Manage Roster</a>
-                <a href="index.html" class="bg-green-900/60 hover:bg-green-900 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition-all border border-green-700/60 flex items-center">Kiosk View</a>
-            </div>
+            <!-- Navigation -->
+            <nav class="flex gap-2">
+                <a href="teacher.html" class="bg-white text-chelan hover:bg-slate-100 font-black text-xs uppercase tracking-wide px-4 py-2.5 rounded-lg shadow transition-all border border-transparent">Dashboard</a>
+                <a href="roster.html" class="bg-green-800 hover:bg-green-700 text-white font-bold text-xs uppercase tracking-wide px-4 py-2.5 rounded-lg transition-all border border-green-600 shadow-sm">Roster</a>
+                <a href="index.html" class="bg-green-800 hover:bg-green-700 text-white font-bold text-xs uppercase tracking-wide px-4 py-2.5 rounded-lg transition-all border border-green-600 shadow-sm">Kiosk</a>
+            </nav>
         </div>
     </header>
 
