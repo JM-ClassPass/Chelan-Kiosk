@@ -8,7 +8,7 @@ import { getDatabase, ref, get, set, push, onValue, serverTimestamp, remove } fr
 const KIOSK_CONFIG = {
   roomNumber: "176",
   kioskName: "STUDENT KIOSK",
-  version: "v1.1.12"
+  version: "v1.1.13" // Bumped version to reflect strict data contract
 };
 
 // Apply Configuration to the UI
@@ -212,7 +212,6 @@ async function processAction(studentId, studentData) {
   if (currentMode === 'phone') {
     if (hasPhone) {
       // --- PHONE CHECKOUT LOGIC ---
-      // SPECIFIC PASS TYPE WARNING: Identifies which pass needs returning
       if (hasBathroom || hasHall) {
         const passType = hasBathroom ? "bathroom" : "hall";
         showOverlay('ACTION DENIED', `Please return your ${passType} pass before retrieving your phone.`, 'error');
@@ -224,8 +223,9 @@ async function processAction(studentId, studentData) {
       const oldPocket = prevData.pocket;
 
       await remove(phoneRef);
+      // FIXED CONTRACT: type: 'Phone', details: 'COS'
       await set(push(ref(db, 'system_logs')), {
-        studentId, name: fullName, type: `CO-${oldPocket}`, details: `Checked out phone from pocket ${oldPocket}`, timestamp: serverTimestamp()
+        studentId, name: fullName, type: 'Phone', details: 'COS', timestamp: serverTimestamp(), duration: '--'
       });
 
       showOverlay(`PHONE RETRIEVED`, `${studentData.firstName} removed phone from pocket ${oldPocket}`, 'success');
@@ -246,8 +246,9 @@ async function processAction(studentId, studentData) {
         timestamp: serverTimestamp()
       });
 
+      // FIXED CONTRACT: type: 'Phone', details: `CI-${pocketToUse}`
       await set(push(ref(db, 'system_logs')), {
-        studentId, name: fullName, type: `CI-${pocketToUse}`, details: `Checked in phone to pocket ${pocketToUse}`, timestamp: serverTimestamp()
+        studentId, name: fullName, type: 'Phone', details: `CI-${pocketToUse}`, timestamp: serverTimestamp(), duration: '--'
       });
 
       showOverlay(`PHONE STORED`, `${studentData.firstName} secured phone in pocket ${pocketToUse}`, 'success');
@@ -258,7 +259,8 @@ async function processAction(studentId, studentData) {
     if (hasBathroom) {
       // --- BATHROOM RETURN LOGIC ---
       await remove(bathroomRef);
-      await set(push(ref(db, 'system_logs')), { studentId, name: fullName, type: 'BP-I', details: 'Bathroom pass returned', timestamp: serverTimestamp() });
+      // FIXED CONTRACT: type: 'BP', details: 'BP-I'
+      await set(push(ref(db, 'system_logs')), { studentId, name: fullName, type: 'BP', details: 'BP-I', timestamp: serverTimestamp(), duration: '--' });
       showOverlay(`WELCOME BACK`, `${studentData.firstName} has returned`, 'success');
     } else {
       // --- BATHROOM OUT LOGIC ---
@@ -283,7 +285,8 @@ async function processAction(studentId, studentData) {
       }
 
       await set(bathroomRef, { studentName: fullName, timestamp: serverTimestamp() });
-      await set(push(ref(db, 'system_logs')), { studentId, name: fullName, type: 'BP-O', details: 'Bathroom pass out', timestamp: serverTimestamp() });
+      // FIXED CONTRACT: type: 'BP', details: 'BP-O'
+      await set(push(ref(db, 'system_logs')), { studentId, name: fullName, type: 'BP', details: 'BP-O', timestamp: serverTimestamp(), duration: '--' });
       showOverlay(`PASS CREATED`, `${studentData.firstName} signed out for bathroom`, 'success');
     }
     idInput.value = '';
@@ -292,7 +295,8 @@ async function processAction(studentId, studentData) {
     if (hasHall) {
       // --- HALL RETURN LOGIC ---
       await remove(hallRef);
-      await set(push(ref(db, 'system_logs')), { studentId, name: fullName, type: 'HP-I', details: 'Hall pass returned', timestamp: serverTimestamp() });
+      // FIXED CONTRACT: type: 'HP', details: 'HP-I'
+      await set(push(ref(db, 'system_logs')), { studentId, name: fullName, type: 'HP', details: 'HP-I', timestamp: serverTimestamp(), duration: '--' });
       showOverlay(`WELCOME BACK`, `${studentData.firstName} has returned`, 'success');
     } else {
       // --- HALL OUT LOGIC ---
@@ -308,7 +312,8 @@ async function processAction(studentId, studentData) {
       }
 
       await set(hallRef, { studentName: fullName, timestamp: serverTimestamp() });
-      await set(push(ref(db, 'system_logs')), { studentId, name: fullName, type: 'HP-O', details: 'Hall pass out', timestamp: serverTimestamp() });
+      // FIXED CONTRACT: type: 'HP', details: 'HP-O'
+      await set(push(ref(db, 'system_logs')), { studentId, name: fullName, type: 'HP', details: 'HP-O', timestamp: serverTimestamp(), duration: '--' });
       showOverlay(`PASS CREATED`, `${studentData.firstName} signed out for hallway`, 'success');
     }
     idInput.value = '';
