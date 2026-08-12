@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CHS Pass Roster</title>
+  <title>CHS ClassPass Roster Manager</title>
   
   <!-- Mountain Goat Favicon -->
   <link rel="icon" type="image/png" href="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png">
@@ -182,16 +182,19 @@
                 />
               </div>
 
-              <!-- Edit All Mode Toggle -->
+            <!-- Edit All Mode Toggle -->
               <button id="btn-edit-all" type="button" class="bg-amber-100 hover:bg-amber-200 text-amber-900 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
                 <i class="fa-solid fa-pen-to-square"></i> Edit All
               </button>
 
-              <!-- Cancel Bulk Edit Button (Hidden by default) -->
+              <!-- Save All & Cancel Bulk Edit Buttons (Hidden by default) -->
+              <button id="btn-save-all" type="button" class="hidden bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition shadow-sm flex items-center gap-1.5">
+                <i class="fa-solid fa-check-double"></i> Save All
+              </button>
               <button id="btn-cancel-edit" type="button" class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded-xl text-xs font-bold transition">
                 Cancel
               </button>
-
+              
               <!-- CSV Export Button -->
               <button id="btn-export-roster" type="button" class="bg-[#0B4F2C] hover:bg-[#07381e] text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
                 <i class="fa-solid fa-file-csv text-emerald-300"></i> Export CSV
