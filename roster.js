@@ -469,11 +469,17 @@ btnExport.addEventListener('click', () => {
 });
 
 // ==========================================
-// 10. CONFIG VERSION UPDATE
+// CONFIG VERSION UPDATE
 // ==========================================
-document.addEventListener('DOMContentLoaded', () => {
+function updateVersionTag() {
     const versionEl = document.getElementById('version');
-    if (versionEl) {
+    if (versionEl && typeof APP_CONFIG !== 'undefined') {
         versionEl.textContent = APP_CONFIG.version;
     }
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', updateVersionTag);
+} else {
+    updateVersionTag();
+}
