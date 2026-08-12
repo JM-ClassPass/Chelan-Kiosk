@@ -163,26 +163,31 @@
       <section class="lg:col-span-7">
         <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 flex flex-col h-full min-h-[620px]">
           
-          <!-- Table Header Controls -->
+        <!-- Table Header Controls -->
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-100 pb-4 mb-4">
             <h2 class="text-base font-extrabold text-slate-800 flex items-center gap-2">
               <i class="fa-solid fa-users text-[#0B4F2C]"></i>
               Class Roster ( <span id="roster-count" class="text-[#0B4F2C]">0</span> Students )
             </h2>
 
-            <div class="flex items-center gap-2 w-full sm:w-auto">
+            <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
               <!-- Search Box -->
-              <div class="relative flex-1 sm:w-48">
+              <div class="relative flex-1 sm:w-48 min-w-[150px]">
                 <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
                 <input 
-                  type="text" 
-                  id="search-input" 
-                  placeholder="Search roster..." 
-                  class="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:border-[#0B4F2C] focus:outline-none bg-slate-50"
+                   type="text" 
+                   id="search-input" 
+                   placeholder="Search roster..." 
+                   class="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:border-[#0B4F2C] focus:outline-none bg-slate-50"
                 />
               </div>
 
-            <!-- Edit All Mode Toggle -->
+              <!-- Bulk Delete Button (Hidden by default) -->
+              <button id="btn-bulk-delete" type="button" class="hidden bg-rose-100 hover:bg-rose-200 text-rose-700 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+                <i class="fa-solid fa-trash-can"></i> Delete (<span id="bulk-delete-count">0</span>)
+              </button>
+
+              <!-- Edit All Mode Toggle -->
               <button id="btn-edit-all" type="button" class="bg-amber-100 hover:bg-amber-200 text-amber-900 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
                 <i class="fa-solid fa-pen-to-square"></i> Edit All
               </button>
@@ -194,7 +199,7 @@
               <button id="btn-cancel-edit" type="button" class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded-xl text-xs font-bold transition">
                 Cancel
               </button>
-              
+
               <!-- CSV Export Button -->
               <button id="btn-export-roster" type="button" class="bg-[#0B4F2C] hover:bg-[#07381e] text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
                 <i class="fa-solid fa-file-csv text-emerald-300"></i> Export CSV
@@ -207,6 +212,9 @@
             <table class="w-full text-left border-collapse">
               <thead>
                 <tr class="border-b border-slate-200 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50/50">
+                  <th class="py-3 px-3 w-10 text-center">
+                    <input type="checkbox" id="cb-select-all" class="accent-[#0B4F2C] w-4 h-4 rounded cursor-pointer transition">
+                  </th>
                   <th data-sort="id" class="sort-header py-3 px-3 cursor-pointer select-none hover:text-[#0B4F2C]">
                     ID Code <span id="sort-icon-id" class="ml-0.5 text-slate-400">↑↓</span>
                   </th>
