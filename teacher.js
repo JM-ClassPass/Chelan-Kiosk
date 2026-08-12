@@ -50,8 +50,6 @@ onAuthStateChanged(auth, async (user) => {
   } else {
     if (loginOverlay) loginOverlay.classList.remove("hidden");
     if (userProfile) userProfile.classList.add("hidden");
-    // DELETE OR COMMENT OUT THIS LINE BELOW:
-    // if (loginError) loginError.textContent = "";
   }
 });
 
@@ -90,6 +88,30 @@ function formatDuration(ms) {
     return `${minutes}m ${seconds}s`;
 }
 
+function parseDurationToDecimalMinutes(durationStr) {
+    if (!durationStr || durationStr === '--') return '--';
+    if (durationStr === '<1m') return '0.5';
+
+    let totalMinutes = 0;
+    let foundMatch = false;
+
+    // Extract hours
+    const hourMatch = durationStr.match(/(\d+)h/);
+    if (hourMatch) { totalMinutes += parseInt(hourMatch[1], 10) * 60; foundMatch = true; }
+
+    // Extract minutes
+    const minMatch = durationStr.match(/(\d+)m/);
+    if (minMatch) { totalMinutes += parseInt(minMatch[1], 10); foundMatch = true; }
+    
+    // Extract seconds (from dashboard manual checkouts)
+    const secMatch = durationStr.match(/(\d+)s/);
+    if (secMatch) { totalMinutes += parseInt(secMatch[1], 10) / 60; foundMatch = true; }
+
+    if (!foundMatch) return durationStr; // Fallback for plain text
+
+    return totalMinutes.toFixed(1);
+}
+
 // ==========================================
 // 6. GLOBAL DASHBOARD ACTIONS (Attached to Window)
 // ==========================================
@@ -101,7 +123,7 @@ window.exportLogsToCSV = () => {
     }
     
     let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "Date,Time,Student,Action,Code,Duration\n";
+    csvContent += "Date,Time,Student,Action,Code,Duration (Minutes)\n";
     
     keys.forEach(k => {
         const l = logsData[k];
@@ -112,7 +134,11 @@ window.exportLogsToCSV = () => {
         const name = `"${escapeAttr(l.name || l.studentId || 'Unknown')}"`;
         const actionType = `"${escapeAttr(l.type || 'Phone')}"`;
         const detailsCode = `"${escapeAttr(l.details || l.action || '--')}"`;
-        const duration = `"${escapeAttr(l.duration || '--')}"`;
+        
+        // Parse the duration string to decimal before exporting
+        const rawDuration = l.duration || '--';
+        const parsedDuration = parseDurationToDecimalMinutes(rawDuration);
+        const duration = `"${escapeAttr(parsedDuration)}"`;
         
         csvContent += `${dateStr},${timeStr},${name},${actionType},${detailsCode},${duration}\n`;
     });
