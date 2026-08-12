@@ -1,25 +1,73 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getDatabase, ref, onValue, set, remove, get, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 import { APP_CONFIG } from './config.js';
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
-import { getDatabase, ref, onValue, set, remove, get, update } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 
 // ==========================================
-// 1. FIREBASE CONFIGURATION
+// 1. FIREBASE INITIALIZATION & AUTH SETUP
 // ==========================================
-const firebaseConfig = {
-  apiKey: "AIzaSyDOqjLMzMydaR31WWUA35sr1FrNLfHPxuI",
-  authDomain: "chelan-classroom-pass-a811e.firebaseapp.com",
-  databaseURL: "https://chelan-classroom-pass-a811e-default-rtdb.firebaseio.com",
-  projectId: "chelan-classroom-pass-a811e",
-  storageBucket: "chelan-classroom-pass-a811e.firebasestorage.app",
-  messagingSenderId: "645480807479",
-  appId: "1:645480807479:web:d280d4ef38e8754a9953b2"
-};
-
-const app = initializeApp(firebaseConfig);
+const app = initializeApp(APP_CONFIG.firebaseConfig);
+const auth = getAuth(app);
 const db = getDatabase(app);
+const provider = new GoogleAuthProvider();
+
+// Header Profile Elements
+const userProfile = document.getElementById("user-profile");
+const userEmailSpan = document.getElementById("user-email");
+const logoutBtn = document.getElementById("logout-btn");
+
+// Login Overlay Elements
+const loginOverlay = document.getElementById("login-overlay");
+const loginBtn = document.getElementById("login-btn");
+const loginError = document.getElementById("login-error");
 
 // ==========================================
-// 2. STATE VARIABLES
+// 2. AUTH GUARD & ALLOWLIST VERIFICATION
+// ==========================================
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    if (loginError) loginError.textContent = "Verifying permissions...";
+    
+    const allowlistRef = ref(db, 'allowed_teachers');
+    const snapshot = await get(allowlistRef);
+    
+    let isAllowed = false;
+    if (snapshot.exists()) {
+      const allowedEmails = Object.values(snapshot.val()).map(email => email.toLowerCase());
+      if (allowedEmails.includes(user.email.toLowerCase())) {
+        isAllowed = true;
+      }
+    }
+
+    if (isAllowed) {
+      if (loginOverlay) loginOverlay.classList.add("hidden");
+      if (loginError) loginError.textContent = "";
+      if (userEmailSpan) userEmailSpan.textContent = user.email;
+      if (userProfile) userProfile.classList.remove("hidden");
+
+      console.log(`Teacher authorized on Roster: ${user.email}`);
+    } else {
+      if (loginError) loginError.textContent = "Access Denied: Email not on approved teacher list.";
+      if (userProfile) userProfile.classList.add("hidden");
+      signOut(auth);
+    }
+  } else {
+    if (loginOverlay) loginOverlay.classList.remove("hidden");
+    if (userProfile) userProfile.classList.add("hidden");
+    if (loginError) loginError.textContent = "";
+  }
+});
+
+if (loginBtn) {
+  loginBtn.addEventListener("click", () => signInWithPopup(auth, provider));
+}
+
+if (logoutBtn) {
+  logoutBtn.addEventListener("click", () => signOut(auth));
+}
+
+// ==========================================
+// 3. STATE VARIABLES
 // ==========================================
 let rosterData = [];
 let sortCol = 'lastName';
@@ -32,7 +80,7 @@ let currentFilteredRoster = []; // Keeps track of what's currently visible
 let csvFileToImport = null;
 
 // ==========================================
-// 3. UI ELEMENT REFERENCES
+// 4. UI ELEMENT REFERENCES
 // ==========================================
 const clockEl = document.getElementById('roster-clock');
 const tableBody = document.getElementById('roster-table-body');
@@ -54,10 +102,12 @@ const btnBrowse = document.getElementById('btn-browse-file');
 const btnProcessImport = document.getElementById('btn-process-import');
 
 // ==========================================
-// 4. CLOCK & INITIALIZATION
+// 5. CLOCK & INITIALIZATION
 // ==========================================
 setInterval(() => {
-  clockEl.textContent = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+  if (clockEl) {
+    clockEl.textContent = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+  }
 }, 1000);
 
 // Load data in real-time
@@ -81,9 +131,11 @@ onValue(rosterRef, (snapshot) => {
 });
 
 // ==========================================
-// 5. TABLE RENDERING & LOGIC
+// 6. TABLE RENDERING & LOGIC
 // ==========================================
 function renderTable() {
+  if (!tableBody) return;
+
   // Filter
   currentFilteredRoster = rosterData.filter(s => 
     s.id.toLowerCase().includes(searchQuery) ||
@@ -100,14 +152,12 @@ function renderTable() {
     return 0;
   });
 
-  countEl.textContent = currentFilteredRoster.length;
+  if (countEl) countEl.textContent = currentFilteredRoster.length;
   tableBody.innerHTML = '';
 
   // Update Select All Checkbox state
-  if (currentFilteredRoster.length > 0 && selectedRows.size === currentFilteredRoster.length) {
-    cbSelectAll.checked = true;
-  } else {
-    cbSelectAll.checked = false;
+  if (cbSelectAll) {
+    cbSelectAll.checked = currentFilteredRoster.length > 0 && selectedRows.size === currentFilteredRoster.length;
   }
 
   updateBulkDeleteUI();
@@ -124,7 +174,6 @@ function renderTable() {
     const isEditing = isEditAllMode || editingRows.has(student.id);
     const isSelected = selectedRows.has(student.id);
     
-    // The checkbox HTML
     const checkboxHtml = `<td class="py-3 px-3 border-t border-slate-100 text-center"><input type="checkbox" class="row-checkbox accent-[#0B4F2C] w-4 h-4 rounded cursor-pointer" data-id="${student.id}" ${isSelected ? 'checked' : ''}></td>`;
 
     if (isEditing) {
@@ -160,6 +209,8 @@ function renderTable() {
 }
 
 function updateBulkDeleteUI() {
+  if (!btnBulkDelete || !bulkDeleteCount) return;
+
   if (selectedRows.size > 0) {
     btnBulkDelete.classList.remove('hidden');
     btnBulkDelete.classList.add('inline-flex');
@@ -170,101 +221,99 @@ function updateBulkDeleteUI() {
   }
 }
 
-// Event Delegation for Table Actions (Clicks & Changes)
-tableBody.addEventListener('click', async (e) => {
-  const target = e.target.closest('button');
-  if (!target) return;
+// Event Delegation for Table Actions
+if (tableBody) {
+  tableBody.addEventListener('click', async (e) => {
+    const target = e.target.closest('button');
+    if (!target) return;
 
-  const id = target.getAttribute('data-id');
+    const id = target.getAttribute('data-id');
 
-  // Single Delete Action
-  if (target.classList.contains('btn-delete')) {
-    if(confirm(`Are you sure you want to remove student ID ${id}?`)) {
-      await remove(ref(db, `classroom_roster/${id}`));
-      selectedRows.delete(id);
-    }
-  }
-
-  // Individual Row Edit Action
-  if (target.classList.contains('btn-edit')) {
-    editingRows.add(id);
-    renderTable();
-  }
-
-  // Save Inline Edit Action
-  if (target.classList.contains('btn-save')) {
-    const tr = target.closest('tr');
-    const newFn = tr.querySelector('.edit-fn').value.trim();
-    const newLn = tr.querySelector('.edit-ln').value.trim();
-    
-    if(newFn && newLn) {
-      try {
-        // 1. Send update to Firebase
-        await update(ref(db, `classroom_roster/${id}`), { firstName: newFn, lastName: newLn });
-        
-        // 2. Remove from active edit list
-        editingRows.delete(id);
-        
-        // 3. Force the table to re-render immediately to show the saved text
-        renderTable(); 
-      } catch (err) {
-        alert("Error saving student data. Please check your connection.");
+    if (target.classList.contains('btn-delete')) {
+      if(confirm(`Are you sure you want to remove student ID ${id}?`)) {
+        await remove(ref(db, `classroom_roster/${id}`));
+        selectedRows.delete(id);
       }
-    } else {
-      alert("First and Last name cannot be blank.");
     }
-  }
-});
 
-// Handle Checkbox Toggles
-tableBody.addEventListener('change', (e) => {
-  if (e.target.classList.contains('row-checkbox')) {
-    const id = e.target.getAttribute('data-id');
+    if (target.classList.contains('btn-edit')) {
+      editingRows.add(id);
+      renderTable();
+    }
+
+    if (target.classList.contains('btn-save')) {
+      const tr = target.closest('tr');
+      const newFn = tr.querySelector('.edit-fn').value.trim();
+      const newLn = tr.querySelector('.edit-ln').value.trim();
+      
+      if(newFn && newLn) {
+        try {
+          await update(ref(db, `classroom_roster/${id}`), { firstName: newFn, lastName: newLn });
+          editingRows.delete(id);
+          renderTable(); 
+        } catch (err) {
+          alert("Error saving student data. Please check your connection.");
+        }
+      } else {
+        alert("First and Last name cannot be blank.");
+      }
+    }
+  });
+
+  tableBody.addEventListener('change', (e) => {
+    if (e.target.classList.contains('row-checkbox')) {
+      const id = e.target.getAttribute('data-id');
+      if (e.target.checked) {
+        selectedRows.add(id);
+      } else {
+        selectedRows.delete(id);
+      }
+      renderTable();
+    }
+  });
+}
+
+if (cbSelectAll) {
+  cbSelectAll.addEventListener('change', (e) => {
     if (e.target.checked) {
-      selectedRows.add(id);
+      currentFilteredRoster.forEach(student => selectedRows.add(student.id));
     } else {
-      selectedRows.delete(id);
+      selectedRows.clear();
     }
     renderTable();
-  }
-});
+  });
+}
 
-cbSelectAll.addEventListener('change', (e) => {
-  if (e.target.checked) {
-    currentFilteredRoster.forEach(student => selectedRows.add(student.id));
-  } else {
-    selectedRows.clear();
-  }
-  renderTable();
-});
-
-// Bulk Delete Action
-btnBulkDelete.addEventListener('click', async () => {
-  if (selectedRows.size === 0) return;
-  
-  if (confirm(`Are you sure you want to delete ${selectedRows.size} selected students? This cannot be undone.`)) {
-    const updates = {};
-    selectedRows.forEach(id => {
-      updates[`classroom_roster/${id}`] = null; // null deletes the node
-    });
+if (btnBulkDelete) {
+  btnBulkDelete.addEventListener('click', async () => {
+    if (selectedRows.size === 0) return;
     
-    try {
-      await update(ref(db), updates);
-      selectedRows.clear();
-      renderTable();
-    } catch (err) {
-      alert("Error deleting students.");
+    if (confirm(`Are you sure you want to delete ${selectedRows.size} selected students? This cannot be undone.`)) {
+      const updates = {};
+      selectedRows.forEach(id => {
+        updates[`classroom_roster/${id}`] = null;
+      });
+      
+      try {
+        await update(ref(db), updates);
+        selectedRows.clear();
+        renderTable();
+      } catch (err) {
+        alert("Error deleting students.");
+      }
     }
-  }
-});
+  });
+}
 
 // ==========================================
-// 6. UI CONTROLS (Search, Sort, Edit Modes)
+// 7. UI CONTROLS (Search, Sort, Edit Modes)
 // ==========================================
-searchInput.addEventListener('input', (e) => {
-  searchQuery = e.target.value.toLowerCase();
-  renderTable();
-});
+if (searchInput) {
+  searchInput.addEventListener('input', (e) => {
+    searchQuery = e.target.value.toLowerCase();
+    renderTable();
+  });
+}
 
 document.querySelectorAll('.sort-header').forEach(th => {
   th.addEventListener('click', () => {
@@ -282,194 +331,219 @@ document.querySelectorAll('.sort-header').forEach(th => {
     });
 
     const activeIcon = document.getElementById(`sort-icon-${col}`);
-    activeIcon.textContent = sortDesc ? '↓' : '↑';
-    activeIcon.className = 'ml-0.5 text-[#0B4F2C]';
+    if (activeIcon) {
+      activeIcon.textContent = sortDesc ? '↓' : '↑';
+      activeIcon.className = 'ml-0.5 text-[#0B4F2C]';
+    }
 
     renderTable();
   });
 });
 
-btnEditAll.addEventListener('click', () => {
-  isEditAllMode = true;
-  editingRows.clear(); 
-  btnEditAll.classList.add('hidden');
-  btnSaveAll.classList.remove('hidden');
-  btnCancelEdit.classList.remove('hidden');
-  renderTable();
-});
-
-btnSaveAll.addEventListener('click', async () => {
-  const updates = {};
-  
-  document.querySelectorAll('#roster-table-body tr').forEach(tr => {
-    const saveBtn = tr.querySelector('.btn-save');
-    if (saveBtn) {
-      const id = saveBtn.getAttribute('data-id');
-      const fn = tr.querySelector('.edit-fn').value.trim();
-      const ln = tr.querySelector('.edit-ln').value.trim();
-      
-      if (fn && ln) {
-        updates[`classroom_roster/${id}/firstName`] = fn;
-        updates[`classroom_roster/${id}/lastName`] = ln;
-      }
-    }
+if (btnEditAll) {
+  btnEditAll.addEventListener('click', () => {
+    isEditAllMode = true;
+    editingRows.clear(); 
+    btnEditAll.classList.add('hidden');
+    if (btnSaveAll) btnSaveAll.classList.remove('hidden');
+    if (btnCancelEdit) btnCancelEdit.classList.remove('hidden');
+    renderTable();
   });
-  
-  if (Object.keys(updates).length > 0) {
-    await update(ref(db), updates);
-  }
-  
-  isEditAllMode = false;
-  editingRows.clear();
-  btnSaveAll.classList.add('hidden');
-  btnCancelEdit.classList.add('hidden');
-  btnEditAll.classList.remove('hidden');
-});
+}
 
-btnCancelEdit.addEventListener('click', () => {
-  isEditAllMode = false;
-  editingRows.clear();
-  btnSaveAll.classList.add('hidden');
-  btnCancelEdit.classList.add('hidden');
-  btnEditAll.classList.remove('hidden');
-  renderTable();
-});
-
-// ==========================================
-// 7. ADD SINGLE STUDENT
-// ==========================================
-formAddStudent.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  
-  const idInput = document.getElementById('input-id');
-  const fnInput = document.getElementById('input-firstname');
-  const lnInput = document.getElementById('input-lastname');
-  
-  const studentId = idInput.value.trim().replace(/[^a-zA-Z0-9]/g, '');
-  const firstName = fnInput.value.trim();
-  const lastName = lnInput.value.trim();
-
-  if (!studentId || !firstName || !lastName) return;
-
-  try {
-    await set(ref(db, `classroom_roster/${studentId}`), { firstName, lastName });
-    idInput.value = '';
-    fnInput.value = '';
-    lnInput.value = '';
-    idInput.focus();
-  } catch (error) {
-    alert("Error adding student. Check permissions.");
-  }
-});
-
-// ==========================================
-// 8. CSV IMPORT LOGIC
-// ==========================================
-btnBrowse.addEventListener('click', () => csvInput.click());
-
-csvInput.addEventListener('change', (e) => {
-  if (e.target.files.length > 0) {
-    csvFileToImport = e.target.files[0];
-    dropZoneText.textContent = `Selected: ${csvFileToImport.name}`;
-    dropZoneText.classList.add('text-[#0B4F2C]');
-  }
-});
-
-dropZone.addEventListener('dragover', (e) => {
-  e.preventDefault();
-  dropZone.classList.add('bg-emerald-100/50');
-});
-
-dropZone.addEventListener('dragleave', () => {
-  dropZone.classList.remove('bg-emerald-100/50');
-});
-
-dropZone.addEventListener('drop', (e) => {
-  e.preventDefault();
-  dropZone.classList.remove('bg-emerald-100/50');
-  
-  if (e.dataTransfer.files.length > 0) {
-    csvFileToImport = e.dataTransfer.files[0];
-    if (csvFileToImport.name.endsWith('.csv')) {
-      dropZoneText.textContent = `Ready: ${csvFileToImport.name}`;
-      dropZoneText.classList.add('text-[#0B4F2C]');
-    } else {
-      alert("Please upload a valid .csv file.");
-      csvFileToImport = null;
-    }
-  }
-});
-
-btnProcessImport.addEventListener('click', () => {
-  if (!csvFileToImport) {
-    return alert("Please select or drop a CSV file first.");
-  }
-
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    const text = e.target.result;
-    const lines = text.split('\n').filter(line => line.trim() !== '');
+if (btnSaveAll) {
+  btnSaveAll.addEventListener('click', async () => {
+    const updates = {};
     
-    const mode = document.querySelector('input[name="import-mode"]:checked').value;
-    
-    if (mode === 'replace') {
-      if(!confirm("WARNING: This will delete your entire existing roster before importing. Continue?")) return;
-      await remove(ref(db, 'classroom_roster'));
-    }
-
-    let importedCount = 0;
-
-    for (let i = 1; i < lines.length; i++) {
-      const parts = lines[i].split(',').map(p => p.trim());
-      if (parts.length >= 3) {
-        const sid = parts[0].replace(/[^a-zA-Z0-9]/g, '');
-        const fn = parts[1];
-        const ln = parts[2];
+    document.querySelectorAll('#roster-table-body tr').forEach(tr => {
+      const saveBtn = tr.querySelector('.btn-save');
+      if (saveBtn) {
+        const id = saveBtn.getAttribute('data-id');
+        const fn = tr.querySelector('.edit-fn').value.trim();
+        const ln = tr.querySelector('.edit-ln').value.trim();
         
-        if (sid && fn && ln) {
-          await set(ref(db, `classroom_roster/${sid}`), { firstName: fn, lastName: ln });
-          importedCount++;
+        if (fn && ln) {
+          updates[`classroom_roster/${id}/firstName`] = fn;
+          updates[`classroom_roster/${id}/lastName`] = ln;
         }
       }
+    });
+    
+    if (Object.keys(updates).length > 0) {
+      await update(ref(db), updates);
     }
     
-    alert(`Successfully processed ${importedCount} students!`);
-    csvFileToImport = null;
-    dropZoneText.textContent = "Drag & Drop CSV File Here";
-    dropZoneText.classList.remove('text-[#0B4F2C]');
-    csvInput.value = ''; 
-  };
-  
-  reader.readAsText(csvFileToImport);
-});
+    isEditAllMode = false;
+    editingRows.clear();
+    btnSaveAll.classList.add('hidden');
+    if (btnCancelEdit) btnCancelEdit.classList.add('hidden');
+    if (btnEditAll) btnEditAll.classList.remove('hidden');
+  });
+}
+
+if (btnCancelEdit) {
+  btnCancelEdit.addEventListener('click', () => {
+    isEditAllMode = false;
+    editingRows.clear();
+    if (btnSaveAll) btnSaveAll.classList.add('hidden');
+    btnCancelEdit.classList.add('hidden');
+    if (btnEditAll) btnEditAll.classList.remove('hidden');
+    renderTable();
+  });
+}
 
 // ==========================================
-// 9. CSV EXPORT LOGIC
+// 8. ADD SINGLE STUDENT
 // ==========================================
-btnExport.addEventListener('click', () => {
-  if (rosterData.length === 0) return alert("Roster is empty.");
-  
-  let csvContent = "ID,First Name,Last Name\n";
-  
-  const exportData = [...rosterData].sort((a, b) => a.lastName.localeCompare(b.lastName));
-  
-  exportData.forEach(s => {
-    csvContent += `"${s.id}","${s.firstName}","${s.lastName}"\n`;
+if (formAddStudent) {
+  formAddStudent.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const idInput = document.getElementById('input-id');
+    const fnInput = document.getElementById('input-firstname');
+    const lnInput = document.getElementById('input-lastname');
+    
+    const studentId = idInput.value.trim().replace(/[^a-zA-Z0-9]/g, '');
+    const firstName = fnInput.value.trim();
+    const lastName = lnInput.value.trim();
+
+    if (!studentId || !firstName || !lastName) return;
+
+    try {
+      await set(ref(db, `classroom_roster/${studentId}`), { firstName, lastName });
+      idInput.value = '';
+      fnInput.value = '';
+      lnInput.value = '';
+      idInput.focus();
+    } catch (error) {
+      alert("Error adding student. Check permissions.");
+    }
+  });
+}
+
+// ==========================================
+// 9. CSV IMPORT LOGIC
+// ==========================================
+if (btnBrowse && csvInput) {
+  btnBrowse.addEventListener('click', () => csvInput.click());
+
+  csvInput.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+      csvFileToImport = e.target.files[0];
+      if (dropZoneText) {
+        dropZoneText.textContent = `Selected: ${csvFileToImport.name}`;
+        dropZoneText.classList.add('text-[#0B4F2C]');
+      }
+    }
+  });
+}
+
+if (dropZone) {
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('bg-emerald-100/50');
   });
 
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.setAttribute("href", url);
-  link.setAttribute("download", `Chelan_Roster_${new Date().toISOString().split('T')[0]}.csv`);
-  link.style.visibility = 'hidden';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-});
+  dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('bg-emerald-100/50');
+  });
+
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('bg-emerald-100/50');
+    
+    if (e.dataTransfer.files.length > 0) {
+      csvFileToImport = e.dataTransfer.files[0];
+      if (csvFileToImport.name.endsWith('.csv')) {
+        if (dropZoneText) {
+          dropZoneText.textContent = `Ready: ${csvFileToImport.name}`;
+          dropZoneText.classList.add('text-[#0B4F2C]');
+        }
+      } else {
+        alert("Please upload a valid .csv file.");
+        csvFileToImport = null;
+      }
+    }
+  });
+}
+
+if (btnProcessImport) {
+  btnProcessImport.addEventListener('click', () => {
+    if (!csvFileToImport) {
+      return alert("Please select or drop a CSV file first.");
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const text = e.target.result;
+      const lines = text.split('\n').filter(line => line.trim() !== '');
+      
+      const modeEl = document.querySelector('input[name="import-mode"]:checked');
+      const mode = modeEl ? modeEl.value : 'append';
+      
+      if (mode === 'replace') {
+        if(!confirm("WARNING: This will delete your entire existing roster before importing. Continue?")) return;
+        await remove(ref(db, 'classroom_roster'));
+      }
+
+      let importedCount = 0;
+
+      for (let i = 1; i < lines.length; i++) {
+        const parts = lines[i].split(',').map(p => p.trim());
+        if (parts.length >= 3) {
+          const sid = parts[0].replace(/[^a-zA-Z0-9]/g, '');
+          const fn = parts[1];
+          const ln = parts[2];
+          
+          if (sid && fn && ln) {
+            await set(ref(db, `classroom_roster/${sid}`), { firstName: fn, lastName: ln });
+            importedCount++;
+          }
+        }
+      }
+      
+      alert(`Successfully processed ${importedCount} students!`);
+      csvFileToImport = null;
+      if (dropZoneText) {
+        dropZoneText.textContent = "Drag & Drop CSV File Here";
+        dropZoneText.classList.remove('text-[#0B4F2C]');
+      }
+      if (csvInput) csvInput.value = ''; 
+    };
+    
+    reader.readAsText(csvFileToImport);
+  });
+}
 
 // ==========================================
-// CONFIG VERSION UPDATE
+// 10. CSV EXPORT LOGIC
+// ==========================================
+if (btnExport) {
+  btnExport.addEventListener('click', () => {
+    if (rosterData.length === 0) return alert("Roster is empty.");
+    
+    let csvContent = "ID,First Name,Last Name\n";
+    
+    const exportData = [...rosterData].sort((a, b) => a.lastName.localeCompare(b.lastName));
+    
+    exportData.forEach(s => {
+      csvContent += `"${s.id}","${s.firstName}","${s.lastName}"\n`;
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Chelan_Roster_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  });
+}
+
+// ==========================================
+// 11. VERSION TAG & MOBILE MENU
 // ==========================================
 function updateVersionTag() {
     const versionEl = document.getElementById('version');
@@ -478,15 +552,6 @@ function updateVersionTag() {
     }
 }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', updateVersionTag);
-} else {
-    updateVersionTag();
-}
-
-// ==========================================
-// MOBILE MENU TOGGLE LOGIC
-// ==========================================
 function initMobileMenu() {
     const menuBtn = document.getElementById('mobile-menu-btn');
     const mobileMenu = document.getElementById('mobile-menu');
@@ -495,21 +560,19 @@ function initMobileMenu() {
     if (menuBtn && mobileMenu) {
         menuBtn.addEventListener('click', () => {
             mobileMenu.classList.toggle('hidden');
-            
             if (menuIcon) {
-                if (mobileMenu.classList.contains('hidden')) {
-                    menuIcon.className = "fa-solid fa-bars";
-                } else {
-                    menuIcon.className = "fa-solid fa-xmark";
-                }
+                menuIcon.className = mobileMenu.classList.contains('hidden') ? "fa-solid fa-bars" : "fa-solid fa-xmark";
             }
         });
     }
 }
 
-// Ensure event listener connects whether the page is loading or already loaded
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initMobileMenu);
+    document.addEventListener('DOMContentLoaded', () => {
+        updateVersionTag();
+        initMobileMenu();
+    });
 } else {
+    updateVersionTag();
     initMobileMenu();
 }
