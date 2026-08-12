@@ -1,10 +1,10 @@
 /**
- * Chelan High School - Classroom Pass & Phone Tracker
- * Configuration & Firebase Central Module (v1.1.10)
+ * CHS ClassPass Phone & Pass Tracking
+ * Configuration & Firebase Central Module
  */
 
 export const APP_CONFIG = {
-  version: "v1.1.10",
+  version: "v1.5.01",
   schoolName: "Chelan High",
   department: "ROOM 176",
   security: {
