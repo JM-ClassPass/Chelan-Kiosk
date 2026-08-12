@@ -1,445 +1,333 @@
-/**
- * Chelan High School - Student Roster Engine (roster.js)
- */
-
-import { APP_CONFIG, formatTime } from './config.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
-import { 
-  getDatabase, ref, onValue, set, remove, update 
-} from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
+import { getDatabase, ref, onValue, set, remove, get, update } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 
-// Initialize Firebase
-const app = initializeApp(APP_CONFIG.firebaseConfig);
+// ==========================================
+// 1. FIREBASE CONFIGURATION
+// ==========================================
+const firebaseConfig = {
+  apiKey: "AIzaSyDOqjLMzMydaR31WWUA35sr1FrNLfHPxuI",
+  authDomain: "chelan-classroom-pass-a811e.firebaseapp.com",
+  databaseURL: "https://chelan-classroom-pass-a811e-default-rtdb.firebaseio.com",
+  projectId: "chelan-classroom-pass-a811e",
+  storageBucket: "chelan-classroom-pass-a811e.firebasestorage.app",
+  messagingSenderId: "645480807479",
+  appId: "1:645480807479:web:d280d4ef38e8754a9953b2"
+};
+
+const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// State
-let rosterData = {};
-let searchQuery = "";
-let selectedFile = null;
-
-// Sorting State
-let sortColumn = "lastName";
-let sortDirection = "asc"; // "asc" | "desc"
-
-// Bulk Edit State
+// ==========================================
+// 2. STATE VARIABLES
+// ==========================================
+let rosterData = [];
+let sortCol = 'lastName';
+let sortDesc = false;
+let searchQuery = '';
 let isEditAllMode = false;
+let csvFileToImport = null;
 
-document.addEventListener("DOMContentLoaded", () => {
-  initClock();
-  setupAddForm();
-  setupDragAndDrop();
-  setupSearch();
-  setupExport();
-  setupSorting();
-  setupEditAll();
-  attachFirebaseListeners();
+// ==========================================
+// 3. UI ELEMENT REFERENCES
+// ==========================================
+const clockEl = document.getElementById('roster-clock');
+const tableBody = document.getElementById('roster-table-body');
+const countEl = document.getElementById('roster-count');
+const searchInput = document.getElementById('search-input');
+const btnEditAll = document.getElementById('btn-edit-all');
+const btnCancelEdit = document.getElementById('btn-cancel-edit');
+const btnExport = document.getElementById('btn-export-roster');
+const formAddStudent = document.getElementById('form-add-student');
+
+const dropZone = document.getElementById('drop-zone');
+const dropZoneText = document.getElementById('drop-zone-text');
+const csvInput = document.getElementById('csv-file-input');
+const btnBrowse = document.getElementById('btn-browse-file');
+const btnProcessImport = document.getElementById('btn-process-import');
+
+// ==========================================
+// 4. CLOCK & INITIALIZATION
+// ==========================================
+setInterval(() => {
+  clockEl.textContent = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+}, 1000);
+
+// Load data in real-time
+const rosterRef = ref(db, 'classroom_roster');
+onValue(rosterRef, (snapshot) => {
+  rosterData = [];
+  if (snapshot.exists()) {
+    const data = snapshot.val();
+    for (const [id, info] of Object.entries(data)) {
+      rosterData.push({ id, firstName: info.firstName, lastName: info.lastName });
+    }
+  }
+  renderTable();
 });
 
-// Live Clock
-function initClock() {
-  const clockEl = document.getElementById("roster-clock");
-  if (!clockEl) return;
-  const updateClock = () => {
-    clockEl.textContent = formatTime(new Date());
-  };
-  setInterval(updateClock, 1000);
-  updateClock();
-}
+// ==========================================
+// 5. TABLE RENDERING & LOGIC
+// ==========================================
+function renderTable() {
+  // Filter
+  let filtered = rosterData.filter(s => 
+    s.id.toLowerCase().includes(searchQuery) ||
+    s.firstName.toLowerCase().includes(searchQuery) ||
+    s.lastName.toLowerCase().includes(searchQuery)
+  );
 
-// Realtime Firebase Listener
-function attachFirebaseListeners() {
-  onValue(ref(db, "roster"), (snapshot) => {
-    rosterData = snapshot.exists() ? snapshot.val() : {};
-    renderRosterTable();
+  // Sort
+  filtered.sort((a, b) => {
+    let valA = a[sortCol].toLowerCase();
+    let valB = b[sortCol].toLowerCase();
+    if (valA < valB) return sortDesc ? 1 : -1;
+    if (valA > valB) return sortDesc ? -1 : 1;
+    return 0;
   });
-}
 
-// Setup Column Header Sorting
-function setupSorting() {
-  document.querySelectorAll(".sort-header").forEach(th => {
-    th.onclick = () => {
-      const col = th.getAttribute("data-sort");
-      if (sortColumn === col) {
-        sortDirection = sortDirection === "asc" ? "desc" : "asc";
-      } else {
-        sortColumn = col;
-        sortDirection = "asc";
-      }
-      updateSortIcons();
-      renderRosterTable();
-    };
-  });
-}
-
-function updateSortIcons() {
-  ["id", "firstName", "lastName"].forEach(col => {
-    const icon = document.getElementById(`sort-icon-${col}`);
-    if (!icon) return;
-    if (col === sortColumn) {
-      icon.textContent = sortDirection === "asc" ? "↑" : "↓";
-      icon.className = "ml-0.5 text-[#0B4F2C] font-black";
-    } else {
-      icon.textContent = "↑↓";
-      icon.className = "ml-0.5 text-slate-300";
-    }
-  });
-}
-
-// Render Table
-function renderRosterTable() {
-  const tbody = document.getElementById("roster-table-body");
-  const countEl = document.getElementById("roster-count");
-  if (!tbody) return;
-
-  const entries = Object.entries(rosterData);
-  if (countEl) countEl.textContent = entries.length;
-
-  if (entries.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="4" class="text-center py-12 text-slate-400 italic">
-          No students currently in roster. Add one using Roster Tools on the left.
-        </td>
-      </tr>
-    `;
-    return;
-  }
-
-  // Filter Search
-  const filtered = entries.filter(([id, student]) => {
-    const q = searchQuery.toLowerCase();
-    const studentId = id.toString().toLowerCase();
-    const first = (student.firstName || "").toLowerCase();
-    const last = (student.lastName || "").toLowerCase();
-
-    return studentId.includes(q) || first.includes(q) || last.includes(q);
-  });
+  countEl.textContent = filtered.length;
+  tableBody.innerHTML = '';
 
   if (filtered.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="4" class="text-center py-8 text-slate-400 italic">
-          No students found matching "${searchQuery}".
-        </td>
-      </tr>
-    `;
+    tableBody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-slate-400">No students found.</td></tr>`;
     return;
   }
 
-  // Sort Logic
-  filtered.sort(([idA, studentA], [idB, studentB]) => {
-    let valA = "";
-    let valB = "";
-
-    if (sortColumn === "id") {
-      valA = idA.toLowerCase();
-      valB = idB.toLowerCase();
-    } else if (sortColumn === "firstName") {
-      valA = (studentA.firstName || "").toLowerCase();
-      valB = (studentB.firstName || "").toLowerCase();
+  filtered.forEach(student => {
+    const tr = document.createElement('tr');
+    tr.className = "hover:bg-slate-50/50 transition group";
+    
+    if (isEditAllMode) {
+      tr.innerHTML = `
+        <td class="py-3 px-3 border-t border-slate-100 font-mono text-slate-500">${student.id}</td>
+        <td class="py-3 px-3 border-t border-slate-100"><input type="text" value="${student.firstName}" class="edit-fn w-full border border-slate-300 rounded px-2 py-1 text-xs focus:border-[#0B4F2C] focus:outline-none" /></td>
+        <td class="py-3 px-3 border-t border-slate-100"><input type="text" value="${student.lastName}" class="edit-ln w-full border border-slate-300 rounded px-2 py-1 text-xs focus:border-[#0B4F2C] focus:outline-none" /></td>
+        <td class="py-3 px-3 border-t border-slate-100 text-right">
+          <button data-id="${student.id}" class="btn-save text-emerald-600 hover:text-emerald-800 font-bold mr-2"><i class="fa-solid fa-check"></i> Save</button>
+        </td>
+      `;
     } else {
-      valA = (studentA.lastName || "").toLowerCase();
-      valB = (studentB.lastName || "").toLowerCase();
+      tr.innerHTML = `
+        <td class="py-3 px-3 border-t border-slate-100 font-mono text-slate-500">${student.id}</td>
+        <td class="py-3 px-3 border-t border-slate-100">${student.firstName}</td>
+        <td class="py-3 px-3 border-t border-slate-100">${student.lastName}</td>
+        <td class="py-3 px-3 border-t border-slate-100 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+          <button data-id="${student.id}" class="btn-delete text-rose-500 hover:text-rose-700 bg-rose-50 px-2 py-1 rounded shadow-sm"><i class="fa-solid fa-trash-can"></i></button>
+        </td>
+      `;
     }
-
-    const comparison = valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' });
-    return sortDirection === "asc" ? comparison : -comparison;
+    tableBody.appendChild(tr);
   });
+}
 
-  // Render Rows based on mode (Normal vs Edit All)
-  if (isEditAllMode) {
-    tbody.innerHTML = filtered.map(([id, student]) => `
-      <tr class="bg-amber-50/40 hover:bg-amber-100/40 transition border-b border-amber-100">
-        <td class="py-2 px-3 font-mono text-[#0B4F2C] font-black">${id}</td>
-        <td class="py-2 px-3">
-          <input type="text" data-edit-id="${id}" data-field="firstName" value="${student.firstName || ''}" 
-            class="w-full text-xs font-bold py-1 px-2 rounded-lg border border-amber-300 focus:border-[#0B4F2C] focus:outline-none bg-white">
-        </td>
-        <td class="py-2 px-3">
-          <input type="text" data-edit-id="${id}" data-field="lastName" value="${student.lastName || ''}" 
-            class="w-full text-xs font-bold py-1 px-2 rounded-lg border border-amber-300 focus:border-[#0B4F2C] focus:outline-none bg-white">
-        </td>
-        <td class="py-2 px-3 text-right">
-          <button data-delete="${id}" class="btn-delete-student px-2 py-1 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold text-[11px] transition">
-            Delete
-          </button>
-        </td>
-      </tr>
-    `).join('');
-  } else {
-    tbody.innerHTML = filtered.map(([id, student]) => `
-      <tr class="hover:bg-slate-50 transition">
-        <td class="py-3 px-3 font-mono text-[#0B4F2C] font-black">${id}</td>
-        <td class="py-3 px-3 text-slate-800">${student.firstName || ''}</td>
-        <td class="py-3 px-3 text-slate-800">${student.lastName || ''}</td>
-        <td class="py-3 px-3 text-right">
-          <div class="flex items-center justify-end gap-1.5">
-            <button data-edit="${id}" class="btn-edit-student px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-[11px] transition">
-              Edit
-            </button>
-            <button data-delete="${id}" class="btn-delete-student px-2.5 py-1 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold text-[11px] transition">
-              Delete
-            </button>
-          </div>
-        </td>
-      </tr>
-    `).join('');
+// Event Delegation for Table Actions
+tableBody.addEventListener('click', async (e) => {
+  const target = e.target.closest('button');
+  if (!target) return;
+
+  const id = target.getAttribute('data-id');
+
+  // Delete Action
+  if (target.classList.contains('btn-delete')) {
+    if(confirm(`Are you sure you want to remove student ID ${id}?`)) {
+      await remove(ref(db, `classroom_roster/${id}`));
+    }
   }
 
-  attachRowHandlers();
-}
-
-function attachRowHandlers() {
-  // Delete Button
-  document.querySelectorAll(".btn-delete-student").forEach(btn => {
-    btn.onclick = async (e) => {
-      const id = e.currentTarget.getAttribute("data-delete");
-      const student = rosterData[id];
-      if (id && confirm(`Delete ${student?.firstName || ''} ${student?.lastName || ''} (ID: ${id}) from the roster?`)) {
-        await remove(ref(db, `roster/${id}`));
-      }
-    };
-  });
-
-  // Single Edit Button (When not in Edit All mode)
-  document.querySelectorAll(".btn-edit-student").forEach(btn => {
-    btn.onclick = async (e) => {
-      const id = e.currentTarget.getAttribute("data-edit");
-      const student = rosterData[id];
-      if (!id || !student) return;
-
-      const newFirst = prompt("Edit First Name:", student.firstName);
-      if (newFirst === null) return;
-
-      const newLast = prompt("Edit Last Name:", student.lastName);
-      if (newLast === null) return;
-
-      await set(ref(db, `roster/${id}`), {
-        firstName: newFirst.trim() || student.firstName,
-        lastName: newLast.trim() || student.lastName
-      });
-    };
-  });
-}
-
-// Bulk Edit All Toggle & Save
-function setupEditAll() {
-  const btnEditAll = document.getElementById("btn-edit-all");
-  const btnCancel = document.getElementById("btn-cancel-edit");
-  if (!btnEditAll || !btnCancel) return;
-
-  btnEditAll.onclick = async () => {
-    if (!isEditAllMode) {
-      // Enter Edit All Mode
-      isEditAllMode = true;
-      btnEditAll.className = "bg-[#0B4F2C] hover:bg-[#07381e] text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm";
-      btnEditAll.innerHTML = `<i class="fa-solid fa-floppy-disk text-amber-300"></i> Save All`;
-      btnCancel.classList.remove("hidden");
-      renderRosterTable();
-    } else {
-      // Save All Mode Executed
-      const updates = {};
-      const inputs = document.querySelectorAll("input[data-edit-id]");
-      
-      inputs.forEach(input => {
-        const id = input.getAttribute("data-edit-id");
-        const field = input.getAttribute("data-field");
-        const val = input.value.trim();
-
-        if (!updates[`roster/${id}`]) {
-          updates[`roster/${id}`] = { ...rosterData[id] };
-        }
-        updates[`roster/${id}`][field] = val;
-      });
-
-      if (Object.keys(updates).length > 0) {
-        await update(ref(db), updates);
-      }
-
-      // Exit Edit All Mode
-      isEditAllMode = false;
-      btnEditAll.className = "bg-amber-100 hover:bg-amber-200 text-amber-900 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm";
-      btnEditAll.innerHTML = `<i class="fa-solid fa-pen-to-square"></i> Edit All`;
-      btnCancel.classList.add("hidden");
-      renderRosterTable();
+  // Save Inline Edit Action
+  if (target.classList.contains('btn-save')) {
+    const tr = target.closest('tr');
+    const newFn = tr.querySelector('.edit-fn').value.trim();
+    const newLn = tr.querySelector('.edit-ln').value.trim();
+    
+    if(newFn && newLn) {
+      await update(ref(db, `classroom_roster/${id}`), { firstName: newFn, lastName: newLn });
+      target.innerHTML = `<i class="fa-solid fa-check-double text-emerald-500"></i>`;
+      setTimeout(() => renderTable(), 500); // Visual feedback pause
     }
-  };
+  }
+});
 
-  btnCancel.onclick = () => {
-    isEditAllMode = false;
-    btnEditAll.className = "bg-amber-100 hover:bg-amber-200 text-amber-900 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm";
-    btnEditAll.innerHTML = `<i class="fa-solid fa-pen-to-square"></i> Edit All`;
-    btnCancel.classList.add("hidden");
-    renderRosterTable();
-  };
-}
+// ==========================================
+// 6. UI CONTROLS (Search, Sort, Edit Modes)
+// ==========================================
+searchInput.addEventListener('input', (e) => {
+  searchQuery = e.target.value.toLowerCase();
+  renderTable();
+});
 
-// Quick Add Student
-function setupAddForm() {
-  const form = document.getElementById("form-add-student");
-  if (!form) return;
-
-  form.onsubmit = async (e) => {
-    e.preventDefault();
-
-    const idInput = document.getElementById("input-id");
-    const firstInput = document.getElementById("input-firstname");
-    const lastInput = document.getElementById("input-lastname");
-
-    const id = idInput.value.trim();
-    const firstName = firstInput.value.trim();
-    const lastName = lastInput.value.trim();
-
-    if (!id || !firstName || !lastName) return;
-
-    await set(ref(db, `roster/${id}`), {
-      firstName: firstName,
-      lastName: lastName
+document.querySelectorAll('.sort-header').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.getAttribute('data-sort');
+    if (sortCol === col) {
+      sortDesc = !sortDesc; // Toggle direction
+    } else {
+      sortCol = col;
+      sortDesc = false;
+    }
+    
+    // Reset all icons
+    document.querySelectorAll('[id^="sort-icon-"]').forEach(icon => {
+      icon.textContent = '↑↓';
+      icon.className = 'ml-0.5 text-slate-400';
     });
 
-    idInput.value = "";
-    firstInput.value = "";
-    lastInput.value = "";
+    // Update active icon
+    const activeIcon = document.getElementById(`sort-icon-${col}`);
+    activeIcon.textContent = sortDesc ? '↓' : '↑';
+    activeIcon.className = 'ml-0.5 text-[#0B4F2C]';
+
+    renderTable();
+  });
+});
+
+btnEditAll.addEventListener('click', () => {
+  isEditAllMode = true;
+  btnEditAll.classList.add('hidden');
+  btnCancelEdit.classList.remove('hidden');
+  renderTable();
+});
+
+btnCancelEdit.addEventListener('click', () => {
+  isEditAllMode = false;
+  btnCancelEdit.classList.add('hidden');
+  btnEditAll.classList.remove('hidden');
+  renderTable();
+});
+
+// ==========================================
+// 7. ADD SINGLE STUDENT
+// ==========================================
+formAddStudent.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const idInput = document.getElementById('input-id');
+  const fnInput = document.getElementById('input-firstname');
+  const lnInput = document.getElementById('input-lastname');
+  
+  const studentId = idInput.value.trim().replace(/[^a-zA-Z0-9]/g, '');
+  const firstName = fnInput.value.trim();
+  const lastName = lnInput.value.trim();
+
+  if (!studentId || !firstName || !lastName) return;
+
+  try {
+    await set(ref(db, `classroom_roster/${studentId}`), { firstName, lastName });
+    idInput.value = '';
+    fnInput.value = '';
+    lnInput.value = '';
     idInput.focus();
-  };
-}
+  } catch (error) {
+    alert("Error adding student. Check permissions.");
+  }
+});
 
-// Drag & Drop CSV Uploader
-function setupDragAndDrop() {
-  const dropZone = document.getElementById("drop-zone");
-  const fileInput = document.getElementById("csv-file-input");
-  const browseBtn = document.getElementById("btn-browse-file");
-  const processBtn = document.getElementById("btn-process-import");
-  const dropText = document.getElementById("drop-zone-text");
+// ==========================================
+// 8. CSV IMPORT LOGIC
+// ==========================================
+btnBrowse.addEventListener('click', () => csvInput.click());
 
-  if (!dropZone || !fileInput) return;
+csvInput.addEventListener('change', (e) => {
+  if (e.target.files.length > 0) {
+    csvFileToImport = e.target.files[0];
+    dropZoneText.textContent = `Selected: ${csvFileToImport.name}`;
+    dropZoneText.classList.add('text-[#0B4F2C]');
+  }
+});
 
-  browseBtn.onclick = (e) => {
-    e.stopPropagation();
-    fileInput.click();
-  };
+dropZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  dropZone.classList.add('bg-emerald-100/50');
+});
 
-  dropZone.onclick = () => fileInput.click();
+dropZone.addEventListener('dragleave', () => {
+  dropZone.classList.remove('bg-emerald-100/50');
+});
 
-  fileInput.onchange = (e) => {
-    if (e.target.files.length > 0) {
-      selectedFile = e.target.files[0];
-      dropText.textContent = `Selected: ${selectedFile.name}`;
-      dropZone.classList.add("bg-emerald-100/50", "border-emerald-600");
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('bg-emerald-100/50');
+  
+  if (e.dataTransfer.files.length > 0) {
+    csvFileToImport = e.dataTransfer.files[0];
+    if (csvFileToImport.name.endsWith('.csv')) {
+      dropZoneText.textContent = `Ready: ${csvFileToImport.name}`;
+      dropZoneText.classList.add('text-[#0B4F2C]');
+    } else {
+      alert("Please upload a valid .csv file.");
+      csvFileToImport = null;
     }
-  };
+  }
+});
 
-  dropZone.addEventListener("dragover", (e) => {
-    e.preventDefault();
-    dropZone.classList.add("bg-emerald-100/60", "border-emerald-600");
-  });
-
-  dropZone.addEventListener("dragleave", () => {
-    if (!selectedFile) {
-      dropZone.classList.remove("bg-emerald-100/60", "border-emerald-600");
-    }
-  });
-
-  dropZone.addEventListener("drop", (e) => {
-    e.preventDefault();
-    if (e.dataTransfer.files.length > 0) {
-      selectedFile = e.dataTransfer.files[0];
-      fileInput.files = e.dataTransfer.files;
-      dropText.textContent = `Selected: ${selectedFile.name}`;
-      dropZone.classList.add("bg-emerald-100/50", "border-emerald-600");
-    }
-  });
-
-  processBtn.onclick = () => {
-    if (!selectedFile) {
-      alert("Please select or drop a CSV file first.");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
-      await processCSV(evt.target.result);
-      selectedFile = null;
-      fileInput.value = "";
-      dropText.textContent = "Drag & Drop CSV File Here";
-      dropZone.classList.remove("bg-emerald-100/50", "border-emerald-600");
-    };
-    reader.readAsText(selectedFile);
-  };
-}
-
-// CSV Processing
-async function processCSV(csvContent) {
-  const mode = document.querySelector('input[name="import-mode"]:checked')?.value || "merge";
-  const lines = csvContent.split(/\r?\n/);
-
-  if (lines.length < 2) {
-    alert("CSV file is empty or missing data.");
-    return;
+btnProcessImport.addEventListener('click', () => {
+  if (!csvFileToImport) {
+    return alert("Please select or drop a CSV file first.");
   }
 
-  if (mode === "replace") {
-    if (!confirm("Warning: REPLACE ENTIRE ROSTER will erase all current roster entries. Continue?")) {
-      return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const text = e.target.result;
+    const lines = text.split('\n').filter(line => line.trim() !== '');
+    
+    // Check mode
+    const mode = document.querySelector('input[name="import-mode"]:checked').value;
+    
+    if (mode === 'replace') {
+      if(!confirm("WARNING: This will delete your entire existing roster before importing. Continue?")) return;
+      await remove(ref(db, 'classroom_roster'));
     }
-    await remove(ref(db, "roster"));
-  }
 
-  let count = 0;
+    let importedCount = 0;
 
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-
-    const parts = line.split(",").map(p => p.trim().replace(/^["']|["']$/g, ''));
-    if (parts.length >= 3) {
-      const [id, firstName, lastName] = parts;
-      if (id) {
-        await set(ref(db, `roster/${id}`), {
-          firstName: firstName || "Student",
-          lastName: lastName || ""
-        });
-        count++;
+    // Start at 1 if your CSV has a header row (ID, FirstName, LastName)
+    for (let i = 1; i < lines.length; i++) {
+      // Handles basic CSV parsing (ignoring complex quotes for simplicity)
+      const parts = lines[i].split(',').map(p => p.trim());
+      if (parts.length >= 3) {
+        const sid = parts[0].replace(/[^a-zA-Z0-9]/g, '');
+        const fn = parts[1];
+        const ln = parts[2];
+        
+        if (sid && fn && ln) {
+          await set(ref(db, `classroom_roster/${sid}`), { firstName: fn, lastName: ln });
+          importedCount++;
+        }
       }
     }
-  }
-
-  alert(`Imported ${count} student records into the roster!`);
-}
-
-// Search Filter
-function setupSearch() {
-  const searchInput = document.getElementById("search-input");
-  if (!searchInput) return;
-
-  searchInput.oninput = (e) => {
-    searchQuery = e.target.value.trim();
-    renderRosterTable();
+    
+    alert(`Successfully processed ${importedCount} students!`);
+    csvFileToImport = null;
+    dropZoneText.textContent = "Drag & Drop CSV File Here";
+    dropZoneText.classList.remove('text-[#0B4F2C]');
+    csvInput.value = ''; // Reset input
   };
-}
+  
+  reader.readAsText(csvFileToImport);
+});
 
-// Export CSV
-function setupExport() {
-  const btnExport = document.getElementById("btn-export-roster");
-  if (!btnExport) return;
+// ==========================================
+// 9. CSV EXPORT LOGIC
+// ==========================================
+btnExport.addEventListener('click', () => {
+  if (rosterData.length === 0) return alert("Roster is empty.");
+  
+  let csvContent = "ID,First Name,Last Name\n";
+  
+  // Sort alphabetically by last name before export
+  const exportData = [...rosterData].sort((a, b) => a.lastName.localeCompare(b.lastName));
+  
+  exportData.forEach(s => {
+    csvContent += `"${s.id}","${s.firstName}","${s.lastName}"\n`;
+  });
 
-  btnExport.onclick = () => {
-    const entries = Object.entries(rosterData);
-    if (entries.length === 0) {
-      alert("No roster entries to export.");
-      return;
-    }
-
-    let csv = "ID Code,First Name,Last Name\n";
-    entries.forEach(([id, s]) => {
-      csv += `"${id}","${s.firstName || ''}","${s.lastName || ''}"\n`;
-    });
-
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `Chelan_Class_Roster_${new Date().toISOString().slice(0,10)}.csv`;
-    a.click();
-  };
-}
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", `Chelan_Roster_${new Date().toISOString().split('T')[0]}.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+});
