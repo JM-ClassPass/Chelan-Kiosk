@@ -51,6 +51,24 @@
       </div>
     </div>
 
+    <!-- Middle: Navigation -->
+    <div class="hidden md:flex items-center gap-1 bg-black/15 p-1 rounded-xl border border-black/10">
+      <!-- INACTIVE: Dashboard -->
+      <a href="teacher.html" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-emerald-100 hover:text-white hover:bg-black/20 transition">
+        <i class="fa-solid fa-chart-pie"></i> Live Dashboard
+      </a>
+      
+      <!-- ACTIVE: Roster -->
+      <a href="roster.html" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold bg-white text-[#0B4F2C] shadow-sm">
+        <i class="fa-solid fa-users"></i> Manage Roster
+      </a>
+      
+      <!-- INACTIVE: Kiosk -->
+      <a href="kiosk.html" target="_blank" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-emerald-100 hover:text-white hover:bg-black/20 transition">
+        <i class="fa-solid fa-desktop"></i> Start Kiosk <i class="fa-solid fa-arrow-up-right-from-square text-[10px] opacity-70 ml-1"></i>
+      </a>
+    </div>
+    
     <!-- Center Navigation Tabs (Hidden on Mobile) -->
     <nav class="hidden md:flex items-center gap-1 bg-[#07381e] p-1.5 rounded-xl border border-emerald-600/30">
       <a href="teacher.html" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-[#0B4F2C] text-white shadow-sm border border-emerald-500/30 flex items-center gap-1.5">
