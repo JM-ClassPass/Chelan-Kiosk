@@ -96,7 +96,7 @@ signInAnonymously(auth)
     // 6. Build Pocket Grid & Listen for Occupancy
     function buildPocketGrid() {
       pocketGrid.innerHTML = '';
-      for (let i = 1; i <= 36; i++) {
+      for (let i = 1; i <= 35; i++) {
         const btn = document.createElement('button');
         const pStr = i.toString().padStart(2, '0');
         const isOccupied = occupiedPockets.includes(pStr);
@@ -124,7 +124,7 @@ signInAnonymously(auth)
       selectedPocketNumSpan.textContent = num;
       
       // Update visual state for all buttons without recreating them
-      for (let i = 1; i <= 36; i++) {
+      for (let i = 1; i <= 35; i++) {
         const pBtn = document.getElementById(`pocket-btn-${i}`);
         const pStr = i.toString().padStart(2, '0');
         
@@ -146,13 +146,13 @@ signInAnonymously(auth)
     }
 
     function autoSelectLowestPocket() {
-      for (let i = 1; i <= 36; i++) {
+      for (let i = 1; i <= 35; i++) {
         if (!occupiedPockets.includes(i.toString().padStart(2, '0'))) {
           setPocketActive(i);
           return;
         }
       }
-      // Failsafe if all 36 are full
+      // Failsafe if all 35 are full
       selectedPocket = null; 
       selectedPocketNumSpan.textContent = "FULL";
     }
