@@ -27,17 +27,10 @@ const loginError = document.getElementById("login-error");
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     if (loginError) loginError.textContent = "Verifying permissions...";
-    
-    const allowlistRef = ref(db, 'allowed_teachers');
-    const snapshot = await get(allowlistRef);
-    
-    let isAllowed = false;
-    if (snapshot.exists()) {
-      const allowedEmails = Object.values(snapshot.val()).map(email => email.toLowerCase());
-      if (allowedEmails.includes(user.email.toLowerCase())) {
-        isAllowed = true;
-      }
-    }
+
+    const allowRef = ref(db, `allowed_teachers/${user.uid}`);
+    const snapshot = await get(allowRef);
+    const isAllowed = snapshot.exists() && snapshot.val() === true;
 
     if (isAllowed) {
       if (loginOverlay) loginOverlay.classList.add("hidden");
@@ -47,7 +40,7 @@ onAuthStateChanged(auth, async (user) => {
 
       console.log(`Teacher authorized on Roster: ${user.email}`);
     } else {
-      if (loginError) loginError.textContent = "Access Denied: Email not on approved teacher list.";
+      if (loginError) loginError.textContent = "Access Denied: this account isn't on the approved teacher list. Ask an admin to add your UID.";
       if (userProfile) userProfile.classList.add("hidden");
       signOut(auth);
     }
