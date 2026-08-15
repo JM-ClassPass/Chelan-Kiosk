@@ -48,3 +48,17 @@ export function formatTime(dateObj = new Date()) {
 export function formatDate(dateObj = new Date()) {
   return dateObj.toLocaleDateString("en-US");
 }
+
+// Escapes untrusted text (student names, guest-request names, etc.) so it can be
+// safely inserted into innerHTML — as text content OR inside a quoted attribute
+// like value="..." or title="...". Use this anywhere a name/ID that a person
+// typed is being template-strung into HTML. Do NOT use for CSV building — CSV
+// quoting rules are different (see escapeAttr in teacher.js).
+export function escapeHtml(str) {
+  return String(str ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
