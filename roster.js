@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getDatabase, ref, onValue, set, remove, get, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-import { APP_CONFIG } from './config.js';
+import { APP_CONFIG, escapeHtml } from './config.js';
 
 // ==========================================
 // 1. FIREBASE INITIALIZATION & AUTH SETUP
@@ -175,14 +175,18 @@ function renderTable() {
     const isEditing = isEditAllMode || editingRows.has(student.id);
     const isSelected = selectedRows.has(student.id);
     
+    const safeId = escapeHtml(student.id);
+    const safeFirst = escapeHtml(student.firstName);
+    const safeLast = escapeHtml(student.lastName);
+
     const checkboxHtml = `<td class="py-3 px-3 border-t border-slate-100 text-center"><input type="checkbox" class="row-checkbox accent-[#0B4F2C] w-4 h-4 rounded cursor-pointer" data-id="${student.id}" ${isSelected ? 'checked' : ''}></td>`;
 
     if (isEditing) {
       tr.innerHTML = `
         ${checkboxHtml}
-        <td class="py-3 px-3 border-t border-slate-100 font-mono text-slate-500">${student.id}</td>
-        <td class="py-3 px-3 border-t border-slate-100"><input type="text" value="${student.firstName}" class="edit-fn w-full border border-slate-300 rounded px-2 py-1.5 text-xs font-bold text-slate-800 focus:border-[#0B4F2C] focus:outline-none" /></td>
-        <td class="py-3 px-3 border-t border-slate-100"><input type="text" value="${student.lastName}" class="edit-ln w-full border border-slate-300 rounded px-2 py-1.5 text-xs font-bold text-slate-800 focus:border-[#0B4F2C] focus:outline-none" /></td>
+        <td class="py-3 px-3 border-t border-slate-100 font-mono text-slate-500">${safeId}</td>
+        <td class="py-3 px-3 border-t border-slate-100"><input type="text" value="${safeFirst}" class="edit-fn w-full border border-slate-300 rounded px-2 py-1.5 text-xs font-bold text-slate-800 focus:border-[#0B4F2C] focus:outline-none" /></td>
+        <td class="py-3 px-3 border-t border-slate-100"><input type="text" value="${safeLast}" class="edit-ln w-full border border-slate-300 rounded px-2 py-1.5 text-xs font-bold text-slate-800 focus:border-[#0B4F2C] focus:outline-none" /></td>
         <td class="py-3 px-3 border-t border-slate-100 text-right">
           <button data-id="${student.id}" class="btn-save inline-flex items-center gap-1.5 text-emerald-700 hover:text-emerald-900 bg-emerald-100 hover:bg-emerald-200 px-3 py-1.5 rounded-lg font-bold transition shadow-sm text-xs">
             <i class="fa-solid fa-check"></i> Save
@@ -192,9 +196,9 @@ function renderTable() {
     } else {
       tr.innerHTML = `
         ${checkboxHtml}
-        <td class="py-3 px-3 border-t border-slate-100 font-mono text-slate-500">${student.id}</td>
-        <td class="py-3 px-3 border-t border-slate-100">${student.firstName}</td>
-        <td class="py-3 px-3 border-t border-slate-100">${student.lastName}</td>
+        <td class="py-3 px-3 border-t border-slate-100 font-mono text-slate-500">${safeId}</td>
+        <td class="py-3 px-3 border-t border-slate-100">${safeFirst}</td>
+        <td class="py-3 px-3 border-t border-slate-100">${safeLast}</td>
         <td class="py-3 px-3 border-t border-slate-100 text-right space-x-1.5">
           <button data-id="${student.id}" class="btn-edit text-amber-600 hover:text-amber-700 bg-amber-50 hover:bg-amber-100 px-2.5 py-1.5 rounded-lg shadow-sm transition">
             <i class="fa-solid fa-pen"></i>
