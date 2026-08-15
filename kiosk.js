@@ -11,10 +11,11 @@ const db = getDatabase(app);
 // 2. Authenticate the Kiosk Silently
 signInAnonymously(auth)
   .then(() => {
-    console.log(`Kiosk connected securely for ${APP_CONFIG.department}`);
+    console.log(`Kiosk connected securely for ${APP_CONFIG.roomId}`);
     
     // ==========================================
     // 1. KIOSK CONFIGURATION
+    // Other teachers can easily update their room details below.
     // ==========================================
     const KIOSK_CONFIG = {
       roomNumber: "176",
@@ -38,6 +39,8 @@ signInAnonymously(auth)
     const pocketContainer = document.getElementById('phone-pocket-container');
     const pocketGrid = document.getElementById('pocket-grid');
 
+    // Drive the pocket grid's column count from config, so rows/cols can be
+    // changed in one place (APP_CONFIG.pocketLayout) without touching layout CSS.
     pocketGrid.style.gridTemplateColumns = `repeat(${APP_CONFIG.pocketLayout.cols}, minmax(0, 1fr))`;
 
     const selectedPocketNumSpan = document.getElementById('selected-pocket-num');
@@ -107,9 +110,11 @@ signInAnonymously(auth)
         btn.id = `pocket-btn-${i}`;
         
         if (isOccupied) {
+          // 🚫 OCCUPIED: Gray it out and completely disable clicking
           btn.className = 'bg-slate-200 border-slate-300 text-slate-400 font-bold py-2 rounded-lg cursor-not-allowed opacity-60 text-xs';
           btn.disabled = true;
         } else {
+          // ✅ AVAILABLE: Make it clickable and style normally
           btn.className = 'bg-white border border-slate-300 text-slate-700 font-bold py-2 rounded-lg hover:bg-slate-100 transition shadow-sm text-xs';
           btn.addEventListener('click', () => {
             setPocketActive(i);
@@ -123,6 +128,7 @@ signInAnonymously(auth)
       selectedPocket = num.toString().padStart(2, '0');
       selectedPocketNumSpan.textContent = num;
       
+      // Update visual state for all buttons without recreating them
       for (let i = 1; i <= APP_CONFIG.pocketsAvailable; i++) {
         const pBtn = document.getElementById(`pocket-btn-${i}`);
         const pStr = i.toString().padStart(2, '0');
@@ -136,6 +142,7 @@ signInAnonymously(auth)
         }
       }
       
+      // Highlight the currently selected one in Dark Forest Green
       const activeBtn = document.getElementById(`pocket-btn-${num}`);
       if (activeBtn) {
         activeBtn.className = 'bg-[#0B4F2C] text-white border-[#0B4F2C] font-bold py-2 rounded-lg transform scale-105 shadow-md transition text-xs';
@@ -150,6 +157,7 @@ signInAnonymously(auth)
           return;
         }
       }
+      // Failsafe if all 35 are full
       selectedPocket = null; 
       selectedPocketNumSpan.textContent = "FULL";
     }
@@ -161,6 +169,7 @@ signInAnonymously(auth)
         const data = snapshot.val();
         Object.values(data).forEach(student => {
           if (student.pocket) {
+            // Force it into a padded string (e.g. "05") to guarantee exact matching
             occupiedPockets.push(student.pocket.toString().padStart(2, '0'));
           }
         });
@@ -169,8 +178,6 @@ signInAnonymously(auth)
         buildPocketGrid();
         autoSelectLowestPocket();
       }
-    }, (error) => {
-      console.error("Firebase Read Blocked:", error);
     });
 
     // Initial load
@@ -199,14 +206,15 @@ signInAnonymously(auth)
           handleUnrecognized(studentId);
         }
       } catch (err) {
-        console.error("Firebase Write Error:", err);
         showOverlay('SYSTEM ERROR', 'Check connection.', 'error');
       }
     }
 
+    // MULTI-STATE CHECKS & LIMITS
     async function processAction(studentId, studentData) {
       const fullName = `${studentData.firstName} ${studentData.lastName}`;
 
+      // Grab all three potential active states simultaneously
       const phoneRef = ref(db, `active_phones_in_class/${studentId}`);
       const bathroomRef = ref(db, `active_bathroom_passes/${studentId}`);
       const hallRef = ref(db, `active_hall_passes/${studentId}`);
@@ -221,6 +229,7 @@ signInAnonymously(auth)
       const hasBathroom = bathroomSnap.exists();
       const hasHall = hallSnap.exists();
 
+      // Helper to calculate duration in minutes/hours
       const getDuration = (startTimestamp) => {
         if (!startTimestamp) return '--';
         const diffMins = Math.floor((Date.now() - startTimestamp) / 60000);
@@ -231,6 +240,7 @@ signInAnonymously(auth)
 
       if (currentMode === 'phone') {
         if (hasPhone) {
+          // --- PHONE CHECKOUT LOGIC ---
           if (hasBathroom || hasHall) {
             const passType = hasBathroom ? "bathroom" : "hall";
             showOverlay('ACTION DENIED', `Please return your ${passType} pass before retrieving your phone.`, 'error');
@@ -240,7 +250,7 @@ signInAnonymously(auth)
 
           const prevData = phoneSnap.val();
           const oldPocket = prevData.pocket;
-          const durationStr = getDuration(prevData.timestamp); 
+          const durationStr = getDuration(prevData.timestamp); // Calculate Duration
 
           await remove(phoneRef);
           await set(push(ref(db, 'system_logs')), {
@@ -250,6 +260,7 @@ signInAnonymously(auth)
           showOverlay(`PHONE RETRIEVED`, `${studentData.firstName} removed phone from pocket ${oldPocket}`, 'success');
           idInput.value = '';
         } else {
+          // --- PHONE CHECK-IN LOGIC ---
           if (!selectedPocket) {
             return showOverlay('ERROR', 'No pocket selected. (All full?)', 'error');
           }
@@ -274,11 +285,13 @@ signInAnonymously(auth)
       } 
       else if (currentMode === 'bathroom') {
         if (hasBathroom) {
-          const durationStr = getDuration(bathroomSnap.val().timestamp);
+          // --- BATHROOM RETURN LOGIC ---
+          const durationStr = getDuration(bathroomSnap.val().timestamp); // Calculate Duration
           await remove(bathroomRef);
           await set(push(ref(db, 'system_logs')), { studentId, name: fullName, type: 'BP', details: 'BP-I', timestamp: serverTimestamp(), duration: durationStr });
           showOverlay(`WELCOME BACK`, `${studentData.firstName} has returned`, 'success');
         } else {
+          // --- BATHROOM OUT LOGIC ---
           if (!hasPhone) {
             showOverlay('ACTION DENIED', 'You must check in your phone first.', 'error');
             idInput.value = '';
@@ -290,6 +303,7 @@ signInAnonymously(auth)
             return;
           }
           
+          // STRICT RULE: Only 1 bathroom pass at a time globally
           const allBathroomRef = ref(db, 'active_bathroom_passes');
           const allBathroomSnap = await get(allBathroomRef);
           if (allBathroomSnap.exists() && Object.keys(allBathroomSnap.val()).length >= 1) {
@@ -306,11 +320,13 @@ signInAnonymously(auth)
       } 
       else if (currentMode === 'hall') {
         if (hasHall) {
-          const durationStr = getDuration(hallSnap.val().timestamp);
+          // --- HALL RETURN LOGIC ---
+          const durationStr = getDuration(hallSnap.val().timestamp); // Calculate Duration
           await remove(hallRef);
           await set(push(ref(db, 'system_logs')), { studentId, name: fullName, type: 'HP', details: 'HP-I', timestamp: serverTimestamp(), duration: durationStr });
           showOverlay(`WELCOME BACK`, `${studentData.firstName} has returned`, 'success');
         } else {
+          // --- HALL OUT LOGIC ---
           if (!hasPhone) {
             showOverlay('ACTION DENIED', 'You must check in your phone first.', 'error');
             idInput.value = '';
