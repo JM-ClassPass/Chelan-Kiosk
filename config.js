@@ -7,7 +7,10 @@ export const APP_CONFIG = {
   version: "v2.1.1",
   schoolName: "Chelan High",
   department: "ROOM 176",
-  pocketsAvailable: 35,             // Total phone pocket slots available
+  pocketLayout: {
+    rows: 5,                          // Rows in the phone pocket grid
+    cols: 7                           // Columns in the phone pocket grid
+  },
   maxBathroomPasses: 1,             // Max active bathroom passes allowed
   firebaseConfig: {
     apiKey: "AIzaSyDOqjLMzMydaR31WWUA35sr1FrNLfHPxuI",
@@ -19,6 +22,12 @@ export const APP_CONFIG = {
     appId: "1:645480807479:web:d280d4ef38e8754a9953b2"
   }
 };
+
+// Total selectable pockets — always derived from pocketLayout above, so this
+// number can never drift out of sync with the grid the way it did before
+// (config used to say 30 while the kiosk grid actually rendered 35).
+// To change pocket count, edit pocketLayout.rows / pocketLayout.cols only.
+APP_CONFIG.pocketsAvailable = APP_CONFIG.pocketLayout.rows * APP_CONFIG.pocketLayout.cols;
 
 /**
  * Shared Helper Functions
