@@ -38,6 +38,11 @@ signInAnonymously(auth)
     const tabs = document.querySelectorAll('.kiosk-tab');
     const pocketContainer = document.getElementById('phone-pocket-container');
     const pocketGrid = document.getElementById('pocket-grid');
+
+    // Drive the pocket grid's column count from config, so rows/cols can be
+    // changed in one place (APP_CONFIG.pocketLayout) without touching layout CSS.
+    pocketGrid.style.gridTemplateColumns = `repeat(${APP_CONFIG.pocketLayout.cols}, minmax(0, 1fr))`;
+
     const selectedPocketNumSpan = document.getElementById('selected-pocket-num');
     const badge = document.getElementById('screen-badge');
     const title = document.getElementById('screen-title');
@@ -96,7 +101,7 @@ signInAnonymously(auth)
     // 6. Build Pocket Grid & Listen for Occupancy
     function buildPocketGrid() {
       pocketGrid.innerHTML = '';
-      for (let i = 1; i <= 35; i++) {
+      for (let i = 1; i <= APP_CONFIG.pocketsAvailable; i++) {
         const btn = document.createElement('button');
         const pStr = i.toString().padStart(2, '0');
         const isOccupied = occupiedPockets.includes(pStr);
@@ -124,7 +129,7 @@ signInAnonymously(auth)
       selectedPocketNumSpan.textContent = num;
       
       // Update visual state for all buttons without recreating them
-      for (let i = 1; i <= 35; i++) {
+      for (let i = 1; i <= APP_CONFIG.pocketsAvailable; i++) {
         const pBtn = document.getElementById(`pocket-btn-${i}`);
         const pStr = i.toString().padStart(2, '0');
         
@@ -146,7 +151,7 @@ signInAnonymously(auth)
     }
 
     function autoSelectLowestPocket() {
-      for (let i = 1; i <= 35; i++) {
+      for (let i = 1; i <= APP_CONFIG.pocketsAvailable; i++) {
         if (!occupiedPockets.includes(i.toString().padStart(2, '0'))) {
           setPocketActive(i);
           return;
