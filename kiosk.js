@@ -441,3 +441,47 @@ signInAnonymously(auth)
     console.error("Kiosk failed to connect to Firebase:", error.code, error.message);
     alert("Connection error. Please tell the teacher.");
   });
+
+// Listen to Firebase for live occupied pockets
+    onValue(ref(db, 'active_phones_in_class'), (snapshot) => {
+      occupiedPockets = [];
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        Object.values(data).forEach(student => {
+          if (student.pocket) {
+            // Force it into a padded string (e.g. "05") to guarantee exact matching
+            occupiedPockets.push(student.pocket.toString().padStart(2, '0'));
+          }
+        });
+      }
+      if (currentMode === 'phone') {
+        buildPocketGrid();
+        autoSelectLowestPocket();
+      }
+    }, (error) => {
+      // 🚨 THIS WILL CATCH ANY READ REJECTIONS
+      console.error("Firebase Read Blocked:", error);
+    });
+
+async function handleIdSubmit() {
+      const rawId = idInput.value.trim();
+      if (!rawId) return;
+      const studentId = rawId.replace(/[^a-zA-Z0-9]/g, '');
+
+      try {
+        const rosterRef = ref(db, `classroom_roster/${studentId}`);
+        const snapshot = await get(rosterRef);
+
+        if (snapshot.exists()) {
+          const studentData = snapshot.val();
+          unrecognizedAttempts[studentId] = 0;
+          await processAction(studentId, studentData);
+        } else {
+          handleUnrecognized(studentId);
+        }
+      } catch (err) {
+        // 🚨 THIS WILL CATCH ANY WRITE OR VALIDATION REJECTIONS
+        console.error("Firebase Write or Logic Error:", err);
+        showOverlay('SYSTEM ERROR', 'Check connection.', 'error');
+      }
+    }
