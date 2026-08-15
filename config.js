@@ -4,7 +4,7 @@
  */
 
 export const APP_CONFIG = {
-  version: "v1.5.5",
+  version: "v2.1.1",
   schoolName: "Chelan High",
   department: "ROOM 176",
   security: {
