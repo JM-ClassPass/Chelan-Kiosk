@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getDatabase, ref, get, onValue, set, push, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-import { APP_CONFIG } from "./config.js";
+import { APP_CONFIG, escapeHtml } from "./config.js";
 
 // 1. Initialize Firebase App, Auth & DB
 const app = initializeApp(APP_CONFIG.firebaseConfig);
@@ -75,6 +75,8 @@ let currentSort = 'last';
 // ==========================================
 // 5. UTILITY FUNCTIONS
 // ==========================================
+// CSV-cell escaping only (used by exportLogsToCSV below). This does NOT make
+// text safe to insert into innerHTML — use escapeHtml() from config.js for that.
 function escapeAttr(str) {
     return String(str || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
 }
@@ -485,13 +487,16 @@ function renderPendingApprovals() {
     list.innerHTML = keys.map(id => {
         const item = pendingApprovalsData[id];
         const safeId = escapeAttr(id);
+        const displayId = escapeHtml(id);
+        const displayFirst = escapeHtml(item.firstName || '');
+        const displayLast = escapeHtml(item.lastName || '');
 
         return `
             <div class="flex items-center justify-between bg-white p-2 rounded-xl border border-amber-200 shadow-sm text-xs">
                 <div class="flex items-center gap-1.5">
-                    <span class="font-mono font-bold bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded border border-amber-300">${id}</span>
+                    <span class="font-mono font-bold bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded border border-amber-300">${displayId}</span>
                     <div class="flex flex-col">
-                        <span class="font-bold text-slate-800 leading-tight">${item.firstName || ''} ${item.lastName || ''}</span>
+                        <span class="font-bold text-slate-800 leading-tight">${displayFirst} ${displayLast}</span>
                         ${item.pocket !== undefined ? `<span class="text-[10px] text-green-700 font-bold">Pocket #${item.pocket}</span>` : ''}
                     </div>
                 </div>
@@ -559,7 +564,8 @@ function renderPhones() {
             passTag = `<span class="text-[9px] bg-indigo-600 text-white font-black px-1 py-0.5 rounded uppercase">HP</span>`;
         }
 
-        const displayName = item.studentName || `${item.firstName || ''} ${item.lastName || ''}`.trim() || 'Student';
+        const displayNameRaw = item.studentName || `${item.firstName || ''} ${item.lastName || ''}`.trim() || 'Student';
+        const displayName = escapeHtml(displayNameRaw);
 
         return `
             <div class="flex items-center justify-between border ${containerClass} rounded-xl px-2.5 py-2 transition text-xs">
@@ -583,14 +589,14 @@ function renderPasses(type, data) {
         if (passCount) passCount.textContent = `${keys.length}/1 Out`;
         const d = document.getElementById('bathroom-status-detail');
         if (d) {
-            d.innerHTML = keys.length ? `<div class="w-full flex justify-between items-center"><span class="font-bold text-slate-800 not-italic">${data[keys[0]].studentName}</span><button onclick="forceClearPass('bathroom', '${keys[0]}')" class="text-xs bg-red-100 hover:bg-red-200 text-red-700 px-2 py-0.5 rounded font-bold not-italic transition">Return</button></div>` : 'No students out.';
+            d.innerHTML = keys.length ? `<div class="w-full flex justify-between items-center"><span class="font-bold text-slate-800 not-italic">${escapeHtml(data[keys[0]].studentName)}</span><button onclick="forceClearPass('bathroom', '${keys[0]}')" class="text-xs bg-red-100 hover:bg-red-200 text-red-700 px-2 py-0.5 rounded font-bold not-italic transition">Return</button></div>` : 'No students out.';
         }
     } else {
         const hallCount = document.getElementById('dash-hall-count');
         if (hallCount) hallCount.textContent = `${keys.length} Out`;
         const d = document.getElementById('hallpass-status-detail');
         if (d) {
-            d.innerHTML = keys.length ? keys.map(k => `<div class="w-full flex justify-between items-center mb-1"><span class="font-bold text-slate-800 not-italic">${data[k].studentName}</span><button onclick="forceClearPass('hall', '${k}')" class="text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-2 py-0.5 rounded font-bold not-italic transition">Return</button></div>`).join('') : 'No students out.';
+            d.innerHTML = keys.length ? keys.map(k => `<div class="w-full flex justify-between items-center mb-1"><span class="font-bold text-slate-800 not-italic">${escapeHtml(data[k].studentName)}</span><button onclick="forceClearPass('hall', '${k}')" class="text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-2 py-0.5 rounded font-bold not-italic transition">Return</button></div>`).join('') : 'No students out.';
         }
     }
 }
@@ -628,7 +634,7 @@ function renderLogs(data) {
     tableBody.innerHTML = filteredKeys.map(k => {
         const l = data[k];
         const timeStr = l.timestamp ? new Date(l.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--';
-        const name = l.name || l.studentId || 'Unknown';
+        const name = escapeHtml(l.name || l.studentId || 'Unknown');
         
         let actionType = l.type || 'Phone';
         let detailsCode = l.details || l.action || '--';
