@@ -7,13 +7,8 @@ export const APP_CONFIG = {
   version: "v2.1.1",
   schoolName: "Chelan High",
   department: "ROOM 176",
-  security: {
-    kioskPin: "486200",             // 6-digit PIN for Kiosk setup/exit
-    teacherPassword: "Dizzyskunk68!" // Teacher dashboard access password
-  },
-  pocketsAvailable: 30,             // Total phone pocket slots available
+  pocketsAvailable: 35,             // Total phone pocket slots available
   maxBathroomPasses: 1,             // Max active bathroom passes allowed
-  maxHallPasses: 2,                  // Max active hall passes allowed
   firebaseConfig: {
     apiKey: "AIzaSyDOqjLMzMydaR31WWUA35sr1FrNLfHPxuI",
     authDomain: "chelan-classroom-pass-a811e.firebaseapp.com",
