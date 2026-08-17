@@ -162,6 +162,35 @@ signInAnonymously(auth)
       selectedPocketNumSpan.textContent = "FULL";
     }
 
+    // ==========================================
+    // Self-Healing: recover from a stale auth/connection
+    // ==========================================
+    // A kiosk left open all day can have its anonymous auth token go stale
+    // (background tab throttling, a brief network drop, etc.). Once that
+    // happens every read/write starts failing with PERMISSION_DENIED and
+    // nothing fixes itself — the SDK doesn't automatically recover a broken
+    // connection's auth context. A full reload re-authenticates cleanly, so
+    // that's the most reliable fix for a device nobody is actively watching.
+    // Guarded so a genuinely broken rules/config issue shows an error
+    // instead of reload-looping forever.
+    function attemptRecovery(reason) {
+      const lastReload = Number(sessionStorage.getItem('kiosk_last_recovery') || 0);
+      const now = Date.now();
+
+      if (now - lastReload < 30000) {
+        // We already tried this recently and it's still failing — this is
+        // not a stale-token blip, something is actually wrong. Don't loop.
+        console.error(`Recovery already attempted recently, not reloading again. Reason: ${reason}`);
+        showOverlay('SYSTEM ERROR', 'Persistent connection issue — please tell the teacher.', 'error');
+        return;
+      }
+
+      console.warn(`Recovering from: ${reason}. Reloading in 1.5s...`);
+      sessionStorage.setItem('kiosk_last_recovery', String(now));
+      showOverlay('RECONNECTING', 'Refreshing the kiosk, one moment...', 'error');
+      setTimeout(() => location.reload(), 1500);
+    }
+
     // Listen to Firebase for live occupied pockets
     onValue(ref(db, 'active_phones_in_class'), (snapshot) => {
       occupiedPockets = [];
@@ -183,6 +212,9 @@ signInAnonymously(auth)
       // never auto-advance — that silently-broken state is exactly what a
       // permission-denied error on this listener looks like from the UI.
       console.error("Pocket occupancy listener failed:", err.code || err.name, err.message);
+      if (err.code === 'PERMISSION_DENIED') {
+        attemptRecovery('pocket listener permission-denied');
+      }
     });
 
     // Initial load
@@ -212,7 +244,11 @@ signInAnonymously(auth)
         }
       } catch (err) {
         console.error("handleIdSubmit failed:", err.code || err.name, err.message);
-        showOverlay('SYSTEM ERROR', err.code === 'PERMISSION_DENIED' ? 'Not authorized. Tell the teacher.' : 'Check connection.', 'error');
+        if (err.code === 'PERMISSION_DENIED') {
+          attemptRecovery('handleIdSubmit permission-denied');
+        } else {
+          showOverlay('SYSTEM ERROR', 'Check connection.', 'error');
+        }
       }
     }
 
