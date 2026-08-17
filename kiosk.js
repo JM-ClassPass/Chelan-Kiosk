@@ -178,6 +178,11 @@ signInAnonymously(auth)
         buildPocketGrid();
         autoSelectLowestPocket();
       }
+    }, (err) => {
+      // If this fires, the grid will never show occupied pockets and will
+      // never auto-advance — that silently-broken state is exactly what a
+      // permission-denied error on this listener looks like from the UI.
+      console.error("Pocket occupancy listener failed:", err.code || err.name, err.message);
     });
 
     // Initial load
@@ -206,7 +211,8 @@ signInAnonymously(auth)
           handleUnrecognized(studentId);
         }
       } catch (err) {
-        showOverlay('SYSTEM ERROR', 'Check connection.', 'error');
+        console.error("handleIdSubmit failed:", err.code || err.name, err.message);
+        showOverlay('SYSTEM ERROR', err.code === 'PERMISSION_DENIED' ? 'Not authorized. Tell the teacher.' : 'Check connection.', 'error');
       }
     }
 
