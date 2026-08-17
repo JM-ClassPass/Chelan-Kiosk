@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getDatabase, ref, onValue, get, set, push, remove, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 import { APP_CONFIG } from "./config.js";
 
@@ -8,10 +8,10 @@ const app = initializeApp(APP_CONFIG.firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
-// 2. Authenticate the Kiosk Silently
-signInAnonymously(auth)
+// 2. Authenticate the Kiosk
+signInWithEmailAndPassword(auth, APP_CONFIG.kioskAuth.email, APP_CONFIG.kioskAuth.password)
   .then(() => {
-    console.log(`Kiosk connected securely for ${APP_CONFIG.roomId}`);
+    console.log(`Kiosk connected securely for ${APP_CONFIG.department}`);
     
     // ==========================================
     // 1. KIOSK CONFIGURATION
@@ -188,7 +188,12 @@ signInAnonymously(auth)
       console.warn(`Recovering from: ${reason}. Reloading in 1.5s...`);
       sessionStorage.setItem('kiosk_last_recovery', String(now));
       showOverlay('RECONNECTING', 'Refreshing the kiosk, one moment...', 'error');
-      setTimeout(() => location.reload(), 1500);
+      // Sign out explicitly before reloading so the next load performs a
+      // fresh, fully server-validated sign-in rather than assuming
+      // whatever's cached is still good.
+      signOut(auth).finally(() => {
+        setTimeout(() => location.reload(), 1500);
+      });
     }
 
     // Listen to Firebase for live occupied pockets
