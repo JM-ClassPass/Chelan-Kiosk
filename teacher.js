@@ -28,8 +28,31 @@ onAuthStateChanged(auth, async (user) => {
     // The security rules only let a user read their own entry, so this
     // is also the most this client is *able* to check — actual
     // enforcement happens in the rules, not here.
+    //
+    // This read can transiently fail right after a page load / tab switch,
+    // because the Realtime Database connection can take a beat to pick up
+    // the just-restored auth token. We do NOT want to treat that hiccup as
+    // "not authorized" and sign the person out — only a definitive answer
+    // (the read succeeded and the entry genuinely isn't true) should do that.
     const allowRef = ref(db, `allowed_teachers/${user.uid}`);
-    const snapshot = await get(allowRef);
+    let snapshot;
+    try {
+      snapshot = await get(allowRef);
+    } catch (err) {
+      console.warn("Allowlist check failed, retrying once:", err.code || err.message);
+      try {
+        // One short retry gives the DB connection a moment to catch up.
+        await new Promise(resolve => setTimeout(resolve, 700));
+        snapshot = await get(allowRef);
+      } catch (err2) {
+        console.error("Allowlist check failed again:", err2.code || err2.message);
+        if (loginError) loginError.textContent = "Couldn't verify your access — check your connection and try again.";
+        if (loginOverlay) loginOverlay.classList.remove("hidden");
+        if (userProfile) userProfile.classList.add("hidden");
+        return; // do NOT sign out — this was a connection problem, not a denial
+      }
+    }
+
     const isAllowed = snapshot.exists() && snapshot.val() === true;
 
     if (isAllowed) {
@@ -189,18 +212,38 @@ window.forceRemovePhone = async (id) => {
     const phone = phonesData[id];
     const studentName = phone ? (phone.studentName || `${phone.firstName || ''} ${phone.lastName || ''}`.trim()) : id;
     const now = Date.now();
-    const duration = formatDuration(now - (phone.timestamp || now));
 
     try {
-        await remove(ref(db, `active_phones_in_class/${id}`));
-        await push(ref(db, 'system_logs'), {
-            studentId: id,
-            name: studentName,
-            type: 'Phone',
-            details: 'COT',
-            timestamp: now,
-            duration: duration
-        });
+        // Phone
+        if (phone) {
+            const duration = formatDuration(now - (phone.timestamp || now));
+            await remove(ref(db, `active_phones_in_class/${id}`));
+            await push(ref(db, 'system_logs'), {
+                studentId: id, name: studentName, type: 'Phone', details: 'COT', timestamp: now, duration: duration
+            });
+        }
+
+        // Also close out any bathroom pass this student still has open —
+        // "Check Out" for a student should mean fully checked out, not just
+        // their phone, same as what Check Out All does across everyone.
+        const bathroomPass = bathroomPassesData[id];
+        if (bathroomPass) {
+            const duration = formatDuration(now - (bathroomPass.timestamp || now));
+            await remove(ref(db, `active_bathroom_passes/${id}`));
+            await push(ref(db, 'system_logs'), {
+                studentId: id, name: studentName, type: 'BP', details: 'BP-I', timestamp: now, duration: duration
+            });
+        }
+
+        // Same for an open hall pass.
+        const hallPass = hallPassesData[id];
+        if (hallPass) {
+            const duration = formatDuration(now - (hallPass.timestamp || now));
+            await remove(ref(db, `active_hall_passes/${id}`));
+            await push(ref(db, 'system_logs'), {
+                studentId: id, name: studentName, type: 'HP', details: 'HP-I', timestamp: now, duration: duration
+            });
+        }
     } catch (err) {
         console.error("Checkout error:", err);
     }
