@@ -12,6 +12,16 @@ export const APP_CONFIG = {
     cols: 7                           // Columns in the phone pocket grid
   },
   maxBathroomPasses: 1,             // Max active bathroom passes allowed
+  // Dedicated permanent sign-in used by the kiosk (not a real mailbox).
+  // Replaces anonymous auth so the kiosk has one stable, named identity
+  // instead of a session that looks like disposable clutter in the
+  // Firebase Users list and can go stale in ways that are hard to trace.
+  // This is public the same way everything else in this file is public —
+  // access control comes from database.rules.json, not from hiding this.
+  kioskAuth: {
+    email: "classpass@chelanschools.net",
+    password: "Goatkiosk2026!"
+  },
   firebaseConfig: {
     apiKey: "AIzaSyDOqjLMzMydaR31WWUA35sr1FrNLfHPxuI",
     authDomain: "chelan-classroom-pass-a811e.firebaseapp.com",
