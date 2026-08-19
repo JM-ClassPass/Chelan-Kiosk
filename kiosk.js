@@ -196,42 +196,55 @@ signInWithEmailAndPassword(auth, APP_CONFIG.kioskAuth.email, APP_CONFIG.kioskAut
       });
     }
 
-    // Listen to Firebase for live occupied pockets
-    onValue(ref(db, 'active_phones_in_class'), (snapshot) => {
-      occupiedPockets = [];
-      if (snapshot.exists()) {
-        const data = snapshot.val();
-        Object.values(data).forEach(student => {
-          if (student.pocket) {
-            // Force it into a padded string (e.g. "05") to guarantee exact matching
-            occupiedPockets.push(student.pocket.toString().padStart(2, '0'));
-          }
-        });
-      }
-      if (currentMode === 'phone') {
-        buildPocketGrid();
-        autoSelectLowestPocket();
-      }
-    }, (err) => {
-      // If this fires, the grid will never show occupied pockets and will
-      // never auto-advance — that silently-broken state is exactly what a
-      // permission-denied error on this listener looks like from the UI.
-      console.error("Pocket occupancy listener failed:", err.code || err.name, err.message);
-      if (err.code === 'PERMISSION_DENIED') {
-        attemptRecovery('pocket listener permission-denied');
-      }
-    });
+    // Listen to Firebase for live occupied pockets. Wrapped in a function so
+    // it can be re-attached on a retry without duplicating this logic.
+    let pocketListenerRetried = false;
+    function subscribePocketOccupancy() {
+      onValue(ref(db, 'active_phones_in_class'), (snapshot) => {
+        pocketListenerRetried = false; // a successful read resets the retry budget
+        occupiedPockets = [];
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          Object.values(data).forEach(student => {
+            if (student.pocket) {
+              // Force it into a padded string (e.g. "05") to guarantee exact matching
+              occupiedPockets.push(student.pocket.toString().padStart(2, '0'));
+            }
+          });
+        }
+        if (currentMode === 'phone') {
+          buildPocketGrid();
+          autoSelectLowestPocket();
+        }
+      }, (err) => {
+        console.error("Pocket occupancy listener failed:", err.code || err.name, err.message);
+        if (err.code === 'PERMISSION_DENIED' && !pocketListenerRetried) {
+          // Most likely a startup race: the sign-in resolved, but the
+          // database connection hadn't finished attaching that auth token
+          // yet when this listener was first attached. One short-delayed
+          // re-attach almost always clears it without needing a reload.
+          pocketListenerRetried = true;
+          console.warn("Retrying pocket listener in 1s...");
+          setTimeout(subscribePocketOccupancy, 1000);
+        } else if (err.code === 'PERMISSION_DENIED') {
+          // Already retried once and it's still denied — this is no longer
+          // a startup timing issue, fall back to the full recovery reload.
+          attemptRecovery('pocket listener permission-denied (after retry)');
+        }
+      });
+    }
+    subscribePocketOccupancy();
 
     // Initial load
     buildPocketGrid();
 
     // 7. Core Database Operations
-    submitIdBtn.addEventListener('click', handleIdSubmit);
+    submitIdBtn.addEventListener('click', () => handleIdSubmit());
     idInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') handleIdSubmit();
     });
 
-    async function handleIdSubmit() {
+    async function handleIdSubmit(isRetry = false) {
       const rawId = idInput.value.trim();
       if (!rawId) return;
       const studentId = rawId.replace(/[^a-zA-Z0-9]/g, '');
@@ -249,8 +262,15 @@ signInWithEmailAndPassword(auth, APP_CONFIG.kioskAuth.email, APP_CONFIG.kioskAut
         }
       } catch (err) {
         console.error("handleIdSubmit failed:", err.code || err.name, err.message);
-        if (err.code === 'PERMISSION_DENIED') {
-          attemptRecovery('handleIdSubmit permission-denied');
+        if (err.code === 'PERMISSION_DENIED' && !isRetry) {
+          // Same likely cause as the pocket listener: a startup race where
+          // sign-in resolved but the database connection hadn't finished
+          // attaching that auth token yet. One short-delayed retry usually
+          // clears it without the student ever seeing an error.
+          console.warn("Retrying submission in 1s...");
+          setTimeout(() => handleIdSubmit(true), 1000);
+        } else if (err.code === 'PERMISSION_DENIED') {
+          attemptRecovery('handleIdSubmit permission-denied (after retry)');
         } else {
           showOverlay('SYSTEM ERROR', 'Check connection.', 'error');
         }
