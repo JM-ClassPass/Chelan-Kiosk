@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, signOut, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getDatabase, ref, onValue, get, set, push, remove, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 import { APP_CONFIG } from "./config.js";
 
@@ -9,7 +9,16 @@ const auth = getAuth(app);
 const db = getDatabase(app);
 
 // 2. Authenticate the Kiosk
-signInWithEmailAndPassword(auth, APP_CONFIG.kioskAuth.email, APP_CONFIG.kioskAuth.password)
+// IMPORTANT: use tab-scoped (session) persistence, not the default
+// browserLocalPersistence. The default persistence syncs the "current
+// signed-in user" across every tab of the same origin — which means a
+// teacher signing into teacher.html/roster.html in another tab of the
+// SAME browser would silently overwrite this kiosk's session (and vice
+// versa) the moment either tab regains focus. That cross-tab stomping is
+// what caused the intermittent permission-denied errors. Session
+// persistence keeps this kiosk's identity confined to this one tab.
+setPersistence(auth, browserSessionPersistence)
+  .then(() => signInWithEmailAndPassword(auth, APP_CONFIG.kioskAuth.email, APP_CONFIG.kioskAuth.password))
   .then(() => {
     console.log(`Kiosk connected securely for ${APP_CONFIG.department}`);
     
