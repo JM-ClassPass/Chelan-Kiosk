@@ -29,21 +29,28 @@ onAuthStateChanged(auth, async (user) => {
     if (loginError) loginError.textContent = "Verifying permissions...";
 
     const allowRef = ref(db, `allowed_teachers/${user.uid}`);
-    let snapshot;
-    try {
-      snapshot = await get(allowRef);
-    } catch (err) {
-      console.warn("Allowlist check failed, retrying once:", err.code || err.message);
+    const delays = [0, 500, 1200, 2500]; // a few attempts, backing off
+    let snapshot = null;
+    let lastErr = null;
+
+    for (let i = 0; i < delays.length; i++) {
+      if (delays[i] > 0) await new Promise(resolve => setTimeout(resolve, delays[i]));
       try {
-        await new Promise(resolve => setTimeout(resolve, 700));
         snapshot = await get(allowRef);
-      } catch (err2) {
-        console.error("Allowlist check failed again:", err2.code || err2.message);
-        if (loginError) loginError.textContent = "Couldn't verify your access — check your connection and try again.";
-        if (loginOverlay) loginOverlay.classList.remove("hidden");
-        if (userProfile) userProfile.classList.add("hidden");
-        return; // do NOT sign out — this was a connection problem, not a denial
+        lastErr = null;
+        break;
+      } catch (err) {
+        lastErr = err;
+        console.warn(`Allowlist check attempt ${i + 1} failed:`, err.code || err.message);
       }
+    }
+
+    if (lastErr) {
+      console.error("Allowlist check failed after all retries:", lastErr.code || lastErr.message);
+      if (loginError) loginError.textContent = "Couldn't verify your access — check your connection and try again.";
+      if (loginOverlay) loginOverlay.classList.remove("hidden");
+      if (userProfile) userProfile.classList.add("hidden");
+      return; // do NOT sign out — this was a connection problem, not a denial
     }
 
     const isAllowed = snapshot.exists() && snapshot.val() === true;
