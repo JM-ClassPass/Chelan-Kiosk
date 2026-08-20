@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kiosk Device Compatibility Check</title>
+</head>
+<body style="font-family: -apple-system, sans-serif; padding: 20px; font-size: 16px; line-height: 1.6;">
+  <h1 style="font-size: 20px;">Kiosk Device Compatibility Check</h1>
+  <p>This page tests one thing at a time. Each line will say OK or FAILED. Screenshot this whole page once it's done (give it a few seconds).</p>
+  <ol id="results" style="font-family: monospace; font-size: 15px;">
+    <li id="t0">0. Plain script tag (non-module baseline): checking...</li>
+    <li id="t1">1. Module script tag runs at all: checking...</li>
+    <li id="t2">2. Optional chaining (?.): pending</li>
+    <li id="t3">3. Nullish coalescing (??): pending</li>
+    <li id="t4">4. Async/await: pending</li>
+    <li id="t5">5. Dynamic import(): pending</li>
+    <li id="t6">6. Actual Firebase SDK import (firebase-app.js): pending</li>
+    <li id="t7">7. Actual Firebase SDK import (firebase-auth.js): pending</li>
+    <li id="t8">8. Actual Firebase SDK import (firebase-database.js): pending</li>
+  </ol>
+  <p id="final" style="font-weight: bold;"></p>
+
+  <script>
+    try {
+      document.getElementById('t0').textContent = '0. Plain script tag (non-module baseline): OK';
+    } catch (e) {
+      document.getElementById('t0').textContent = '0. Plain script tag: FAILED - ' + e.message;
+    }
+  </script>
+
+  <script type="module">
+    const set = (id, msg) => { const el = document.getElementById(id); if (el) el.textContent = msg; };
+
+    set('t1', '1. Module script tag runs at all: OK');
+
+    try {
+      const obj = { a: { b: 1 } };
+      const val = obj?.a?.b;
+      const missing = obj?.x?.y;
+      set('t2', val === 1 ? '2. Optional chaining (?.): OK' : '2. Optional chaining (?.): unexpected result');
+    } catch (e) {
+      set('t2', '2. Optional chaining (?.): FAILED - ' + e.message);
+    }
+
+    try {
+      const val = null ?? 'fallback';
+      set('t3', val === 'fallback' ? '3. Nullish coalescing (??): OK' : '3. Nullish coalescing (??): unexpected result');
+    } catch (e) {
+      set('t3', '3. Nullish coalescing (??): FAILED - ' + e.message);
+    }
+
+    (async () => {
+      try {
+        await new Promise(r => setTimeout(r, 10));
+        set('t4', '4. Async/await: OK');
+      } catch (e) {
+        set('t4', '4. Async/await: FAILED - ' + e.message);
+      }
+    })();
+
+    (async () => {
+      try {
+        await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
+        set('t5', '5. Dynamic import(): OK');
+        set('t6', '6. Actual Firebase SDK import (firebase-app.js): OK');
+      } catch (e) {
+        set('t5', '5. Dynamic import(): FAILED - ' + e.message);
+        set('t6', '6. Actual Firebase SDK import (firebase-app.js): FAILED - ' + e.message);
+      }
+
+      try {
+        await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
+        set('t7', '7. Actual Firebase SDK import (firebase-auth.js): OK');
+      } catch (e) {
+        set('t7', '7. Actual Firebase SDK import (firebase-auth.js): FAILED - ' + e.message);
+      }
+
+      try {
+        await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js');
+        set('t8', '8. Actual Firebase SDK import (firebase-database.js): OK');
+      } catch (e) {
+        set('t8', '8. Actual Firebase SDK import (firebase-database.js): FAILED - ' + e.message);
+      }
+
+      document.getElementById('final').textContent = 'All tests complete. Screenshot this page now.';
+    })();
+  </script>
+</body>
+</html>
