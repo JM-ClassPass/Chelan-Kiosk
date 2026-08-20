@@ -9,7 +9,7 @@
     <link rel="icon" type="image/png" href="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png">
     
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="styles.css">
     
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -205,8 +205,8 @@
                     </div>
                 </div>
 
-                <!-- Quick Add Student Card -->
-                <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm flex flex-col mt-auto">
+                <!-- Quick Add Student Card (super-admin only — writes to the shared master roster) -->
+                <div id="quick-add-section" class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm flex flex-col mt-auto hidden">
                     <h3 class="font-bold text-xs flex items-center gap-1.5 text-slate-700 mb-2"><span>🛠️</span> Quick Add Student</h3>
                     <form id="quick-add-form" class="flex flex-col gap-1.5">
                         <input type="text" id="add-student-id" placeholder="ID / Barcode" required class="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg focus:outline-none focus:border-chelan bg-slate-50">
