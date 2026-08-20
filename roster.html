@@ -8,7 +8,7 @@
   <!-- Mountain Goat Favicon -->
   <link rel="icon" type="image/png" href="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png">
   
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-[#f0f4f8] min-h-screen flex flex-col font-sans text-slate-800 antialiased select-none">
@@ -109,8 +109,8 @@
   <main class="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto">
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-      <!-- ================= LEFT COLUMN: UNIFIED ROSTER TOOLS CARD (5 cols) ================= -->
-      <section class="lg:col-span-5">
+      <!-- ================= LEFT COLUMN: UNIFIED ROSTER TOOLS CARD (5 cols) — super-admin only, writes to the shared master roster ================= -->
+      <section id="roster-tools-section" class="lg:col-span-5 hidden">
         <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 flex flex-col gap-6">
           
           <!-- Master Card Header -->
