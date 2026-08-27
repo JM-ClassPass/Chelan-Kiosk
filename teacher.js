@@ -9,6 +9,18 @@ const auth = getAuth(app);
 const db = getDatabase(app);
 const provider = new GoogleAuthProvider();
 
+// Every link to index.html/teacher.html/roster.html on this page needs to
+// carry the CURRENT room forward, or clicking between dashboard/roster/kiosk
+// silently drops back to the default room. Rewriting hrefs here instead of
+// hand-editing every link in the HTML means new nav links added later pick
+// this up automatically too.
+document.querySelectorAll('a[href]').forEach(a => {
+    const href = a.getAttribute('href');
+    if (/^(index|teacher|roster)\.html$/.test(href)) {
+        a.setAttribute('href', `${href}?room=${encodeURIComponent(APP_CONFIG.roomKey)}`);
+    }
+});
+
 // Live clock — this existed in the HTML markup but was never wired up to
 // any JS, so it just sat frozen at its placeholder text. Mirrors the same
 // approach kiosk.js already uses.
