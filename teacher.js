@@ -33,6 +33,11 @@ if (liveClockEl) {
   setInterval(tickClock, 1000);
 }
 
+// Room label — was hardcoded as static "ROOM 176" text with no JS behind it
+// at all, so it never updated per-room, even though the kiosk correctly did.
+const roomLabelEl = document.getElementById('room-label');
+if (roomLabelEl) roomLabelEl.textContent = `TEACHER STATION • ${APP_CONFIG.department}`;
+
 // Header Profile Elements
 const userProfile = document.getElementById("user-profile");
 const userEmailSpan = document.getElementById("user-email");
