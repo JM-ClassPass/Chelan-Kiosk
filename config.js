@@ -126,6 +126,12 @@ export const APP_CONFIG = {
   ...roomConfig
 };
 
+// Which room this page loaded as (the actual ?room= value, or DEFAULT_ROOM if
+// none was given). Used by teacher.js/roster.js to keep the top nav links
+// pointed at the SAME room when switching between dashboard/roster/kiosk —
+// otherwise clicking between them silently drops back to the default room.
+APP_CONFIG.roomKey = requestedRoom;
+
 // Total selectable pockets — always derived from pocketLayout above, so this
 // number can never drift out of sync with the grid the way it did before
 // (config used to say 30 while the kiosk grid actually rendered 35).
