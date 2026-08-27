@@ -11,6 +11,16 @@ const auth = getAuth(app);
 const db = getDatabase(app);
 const provider = new GoogleAuthProvider();
 
+// Same fixup as teacher.js — keep every nav link on this page pointed at
+// whatever room is currently loaded, instead of silently dropping back to
+// the default room when switching between dashboard/roster/kiosk.
+document.querySelectorAll('a[href]').forEach(a => {
+    const href = a.getAttribute('href');
+    if (/^(index|teacher|roster)\.html$/.test(href)) {
+        a.setAttribute('href', `${href}?room=${encodeURIComponent(APP_CONFIG.roomKey)}`);
+    }
+});
+
 // Header Profile Elements
 const userProfile = document.getElementById("user-profile");
 const userEmailSpan = document.getElementById("user-email");
@@ -450,13 +460,7 @@ if (btnBrowse && csvInput) {
 
   csvInput.addEventListener('change', (e) => {
     if (e.target.files.length > 0) {
-      const file = e.target.files[0];
-      if (!/\.(csv|xlsx|xls)$/i.test(file.name)) {
-        alert("Please select a .csv, .xlsx, or .xls file.");
-        csvInput.value = '';
-        return;
-      }
-      csvFileToImport = file;
+      csvFileToImport = e.target.files[0];
       if (dropZoneText) {
         dropZoneText.textContent = `Selected: ${csvFileToImport.name}`;
         dropZoneText.classList.add('text-[#0B4F2C]');
@@ -481,13 +485,13 @@ if (dropZone) {
     
     if (e.dataTransfer.files.length > 0) {
       csvFileToImport = e.dataTransfer.files[0];
-      if (/\.(csv|xlsx|xls)$/i.test(csvFileToImport.name)) {
+      if (csvFileToImport.name.endsWith('.csv')) {
         if (dropZoneText) {
           dropZoneText.textContent = `Ready: ${csvFileToImport.name}`;
           dropZoneText.classList.add('text-[#0B4F2C]');
         }
       } else {
-        alert("Please upload a .csv, .xlsx, or .xls file.");
+        alert("Please upload a valid .csv file.");
         csvFileToImport = null;
       }
     }
@@ -497,91 +501,48 @@ if (dropZone) {
 if (btnProcessImport) {
   btnProcessImport.addEventListener('click', () => {
     if (!csvFileToImport) {
-      return alert("Please select or drop a file first.");
+      return alert("Please select or drop a CSV file first.");
     }
 
-    const isSpreadsheet = /\.(xlsx|xls)$/i.test(csvFileToImport.name);
-
-    const finishImport = async (rows) => {
-      // rows: array of arrays, each like [id, firstName, lastName, ...],
-      // NOT including the header row.
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const text = e.target.result;
+      const lines = text.split('\n').filter(line => line.trim() !== '');
+      
       const modeEl = document.querySelector('input[name="import-mode"]:checked');
       const mode = modeEl ? modeEl.value : 'append';
-
+      
       if (mode === 'replace') {
-        if (!confirm("WARNING: This will delete your entire existing roster before importing. Continue?")) return;
+        if(!confirm("WARNING: This will delete your entire existing roster before importing. Continue?")) return;
         await remove(ref(db, 'classroom_roster'));
       }
 
-      // Build one multi-path update instead of writing each student
-      // separately — for a real class-sized (or larger) roster, N
-      // sequential awaited writes is slow with no way to show real
-      // progress, and a page refresh mid-import would leave it half
-      // done. A single atomic update avoids both problems.
-      const updates = {};
       let importedCount = 0;
 
-      for (const row of rows) {
-        const sid = String(row[0] ?? '').replace(/[^a-zA-Z0-9]/g, '');
-        const fn = String(row[1] ?? '').trim();
-        const ln = String(row[2] ?? '').trim();
-
-        if (sid && fn && ln) {
-          updates[`classroom_roster/${sid}`] = { firstName: fn, lastName: ln };
-          importedCount++;
+      for (let i = 1; i < lines.length; i++) {
+        const parts = lines[i].split(',').map(p => p.trim());
+        if (parts.length >= 3) {
+          const sid = parts[0].replace(/[^a-zA-Z0-9]/g, '');
+          const fn = parts[1];
+          const ln = parts[2];
+          
+          if (sid && fn && ln) {
+            await set(ref(db, `classroom_roster/${sid}`), { firstName: fn, lastName: ln });
+            importedCount++;
+          }
         }
       }
-
-      if (importedCount === 0) {
-        alert("No valid rows found. Expected columns: ID, First Name, Last Name (with a header row).");
-        return;
-      }
-
-      try {
-        await update(ref(db), updates);
-        alert(`Successfully processed ${importedCount} students!`);
-      } catch (err) {
-        console.error("Import failed:", err);
-        alert("Import failed: " + err.message);
-        return;
-      }
-
+      
+      alert(`Successfully processed ${importedCount} students!`);
       csvFileToImport = null;
       if (dropZoneText) {
-        dropZoneText.textContent = "Drag & Drop CSV or Excel File Here";
+        dropZoneText.textContent = "Drag & Drop CSV File Here";
         dropZoneText.classList.remove('text-[#0B4F2C]');
       }
-      if (csvInput) csvInput.value = '';
+      if (csvInput) csvInput.value = ''; 
     };
-
-    if (isSpreadsheet) {
-      if (typeof XLSX === 'undefined') {
-        alert("Spreadsheet support failed to load — check your internet connection and try again, or use a .csv file instead.");
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const workbook = XLSX.read(e.target.result, { type: 'array' });
-          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-          const allRows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
-          finishImport(allRows.slice(1)); // skip header row, same as the CSV path
-        } catch (err) {
-          console.error("Spreadsheet parse failed:", err);
-          alert("Couldn't read that spreadsheet file: " + err.message);
-        }
-      };
-      reader.readAsArrayBuffer(csvFileToImport);
-    } else {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const text = e.target.result;
-        const lines = text.split('\n').filter(line => line.trim() !== '');
-        const allRows = lines.map(line => line.split(',').map(p => p.trim()));
-        finishImport(allRows.slice(1)); // skip header row
-      };
-      reader.readAsText(csvFileToImport);
-    }
+    
+    reader.readAsText(csvFileToImport);
   });
 }
 
