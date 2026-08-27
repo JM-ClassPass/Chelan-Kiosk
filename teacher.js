@@ -108,6 +108,7 @@ let bathroomPassesData = {};
 let hallPassesData = {};
 let pendingApprovalsData = {};
 let logsData = {};
+let rosterData = {}; // for the Manual Pass Override search — not currently rendered as a full roster view here, just used for name lookups
 let currentSort = 'last';
 
 // ==========================================
@@ -343,8 +344,134 @@ window.forceClearPass = async (passType, studentId) => {
     }
 };
 
-window.approvePendingStudent = async (id) => {
-    const item = pendingApprovalsData[id];
+window.issueManualPass = async (studentId, passType) => {
+    const student = rosterData[studentId];
+    if (!student) return;
+    const fullName = `${student.firstName} ${student.lastName}`.trim();
+
+    // Deliberately does NOT check for an active phone check-in — that's
+    // exactly the restriction this button exists to bypass, for students
+    // who legitimately don't have a phone to check in. Everything else
+    // (already has a pass out, only one bathroom pass at a time) still
+    // applies, same as the kiosk enforces.
+    if (bathroomPassesData[studentId] || hallPassesData[studentId]) {
+        alert(`${fullName} already has an active pass out.`);
+        return;
+    }
+
+    const node = passType === 'bathroom' ? 'active_bathroom_passes' : 'active_hall_passes';
+
+    if (passType === 'bathroom' && Object.keys(bathroomPassesData).length >= 1) {
+        alert('The bathroom pass is currently in use by another student.');
+        return;
+    }
+
+    const now = Date.now();
+    try {
+        await set(ref(db, `${node}/${studentId}`), { studentName: fullName, timestamp: now });
+        await push(ref(db, 'system_logs'), {
+            studentId: studentId,
+            name: fullName,
+            type: passType === 'bathroom' ? 'BP' : 'HP',
+            details: (passType === 'bathroom' ? 'BP-O' : 'HP-O') + ' (Staff)',
+            timestamp: now,
+            duration: '--'
+        });
+        if (manualPassSearch) manualPassSearch.value = '';
+        renderManualPassResults('');
+    } catch (err) {
+        console.error("Manual pass issue error:", err);
+        alert("Error issuing pass: " + err.message);
+    }
+};
+
+// ==========================================
+// MANUAL PASS OVERRIDE — SEARCH
+// ==========================================
+const manualPassSearch = document.getElementById('manual-pass-search');
+const manualPassResults = document.getElementById('manual-pass-results');
+
+function renderManualPassResults(query) {
+    if (!manualPassResults) return;
+    const q = query.trim().toLowerCase();
+    if (!q) { manualPassResults.innerHTML = ''; return; }
+
+    const matches = Object.entries(rosterData).filter(([id, s]) => {
+        const full = `${s.firstName || ''} ${s.lastName || ''}`.toLowerCase();
+        return id.toLowerCase().includes(q) || full.includes(q);
+    }).slice(0, 8); // cap the list so it can't grow unbounded on a broad search
+
+    if (matches.length === 0) {
+        manualPassResults.innerHTML = `<p class="text-[11px] text-slate-400 italic px-1">No matching students.</p>`;
+        return;
+    }
+
+    manualPassResults.innerHTML = matches.map(([id, s]) => {
+        const name = escapeHtml(`${s.firstName || ''} ${s.lastName || ''}`.trim());
+        const safeId = escapeHtml(id);
+        return `
+            <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs">
+                <span class="font-bold text-slate-800 truncate mr-1">${name}</span>
+                <div class="flex gap-1 flex-shrink-0">
+                    <button onclick="issueManualPass('${safeId}', 'bathroom')" class="bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded font-bold text-[10px]" title="Issue Bathroom Pass">🚻 BP</button>
+                    <button onclick="issueManualPass('${safeId}', 'hall')" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-2 py-1 rounded font-bold text-[10px]" title="Issue Hall Pass">🎟️ HP</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+if (manualPassSearch) {
+    manualPassSearch.addEventListener('input', (e) => renderManualPassResults(e.target.value));
+}
+
+// ==========================================
+// BATHROOM PASS REMINDER — recurring toast every 5 minutes per student
+// ==========================================
+let bathroomReminderLastShown = {}; // studentId -> highest 5-min threshold already shown
+
+function showToast(title, message) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = 'pointer-events-auto bg-amber-50 border-2 border-amber-300 rounded-2xl shadow-lg p-3.5 max-w-xs';
+    toast.innerHTML = `
+        <div class="flex justify-between items-start gap-2">
+            <div>
+                <p class="font-black text-amber-900 text-xs uppercase tracking-wider mb-1">${escapeHtml(title)}</p>
+                <p class="text-xs text-amber-800 font-medium">${escapeHtml(message)}</p>
+            </div>
+            <button class="text-amber-700 hover:text-amber-900 font-bold text-sm leading-none flex-shrink-0" aria-label="Dismiss">&times;</button>
+        </div>
+    `;
+    toast.querySelector('button').addEventListener('click', () => toast.remove());
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 20000); // auto-dismiss after 20s if not manually closed
+}
+
+function checkBathroomReminders() {
+    const activeIds = new Set(Object.keys(bathroomPassesData));
+
+    // Clean up tracking for anyone no longer out (they returned).
+    for (const id of Object.keys(bathroomReminderLastShown)) {
+        if (!activeIds.has(id)) delete bathroomReminderLastShown[id];
+    }
+
+    for (const [id, data] of Object.entries(bathroomPassesData)) {
+        if (!data.timestamp) continue;
+        const elapsedMin = Math.floor((Date.now() - data.timestamp) / 60000);
+        const lastShown = bathroomReminderLastShown[id] || 0;
+        const nextThreshold = lastShown + 5;
+        if (elapsedMin >= nextThreshold) {
+            bathroomReminderLastShown[id] = nextThreshold;
+            showToast('Bathroom Pass Reminder', `${data.studentName || id} has been out for ${elapsedMin} minute${elapsedMin === 1 ? '' : 's'}.`);
+        }
+    }
+}
+
+setInterval(checkBathroomReminders, 15000); // check every 15s so a threshold isn't missed by much
+
+
     if (!item) return;
 
     const firstName = item.firstName || '';
@@ -465,6 +592,9 @@ onValue(ref(db, 'system_logs'), s => {
     logsData = s.val() || {};
     renderLogs(logsData);
     updateStatsOverview();
+});
+onValue(ref(db, 'classroom_roster'), s => {
+    rosterData = s.val() || {};
 });
 
 // ==========================================
