@@ -471,7 +471,8 @@ function checkBathroomReminders() {
 
 setInterval(checkBathroomReminders, 15000); // check every 15s so a threshold isn't missed by much
 
-
+window.approvePendingStudent = async (id) => {
+    const item = pendingApprovalsData[id];
     if (!item) return;
 
     const firstName = item.firstName || '';
