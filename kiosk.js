@@ -333,7 +333,7 @@ setPersistence(auth, browserSessionPersistence)
             studentId, name: fullName, type: 'Phone', details: 'COS', timestamp: serverTimestamp(), duration: durationStr
           });
 
-          showOverlay(`PHONE RETRIEVED`, `${studentData.firstName} removed phone from pocket ${oldPocket}`, 'success');
+          showOverlay(`PHONE RETRIEVED`, `${studentData.firstName} removed phone from pocket ${oldPocket}.', 'Remember to put it in your backpack!`, 'success');
           idInput.value = '';
         } else {
           // --- PHONE CHECK-IN LOGIC ---
