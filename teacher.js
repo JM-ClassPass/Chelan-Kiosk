@@ -361,11 +361,6 @@ window.issueManualPass = async (studentId, passType) => {
 
     const node = passType === 'bathroom' ? 'active_bathroom_passes' : 'active_hall_passes';
 
-    if (passType === 'bathroom' && Object.keys(bathroomPassesData).length >= 1) {
-        alert('The bathroom pass is currently in use by another student.');
-        return;
-    }
-
     const now = Date.now();
     try {
         await set(ref(db, `${node}/${studentId}`), { studentName: fullName, timestamp: now });
