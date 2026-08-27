@@ -770,10 +770,10 @@ function renderPasses(type, data) {
     const keys = Object.keys(data);
     if(type === 'b') {
         const passCount = document.getElementById('dash-pass-count');
-        if (passCount) passCount.textContent = `${keys.length}/1 Out`;
+        if (passCount) passCount.textContent = `${keys.length} Out`;
         const d = document.getElementById('bathroom-status-detail');
         if (d) {
-            d.innerHTML = keys.length ? `<div class="w-full flex justify-between items-center"><span class="font-bold text-slate-800 not-italic">${escapeHtml(data[keys[0]].studentName)}</span><button onclick="forceClearPass('bathroom', '${keys[0]}')" class="text-xs bg-red-100 hover:bg-red-200 text-red-700 px-2 py-0.5 rounded font-bold not-italic transition">Return</button></div>` : 'No students out.';
+            d.innerHTML = keys.length ? keys.map(k => `<div class="w-full flex justify-between items-center mb-1"><span class="font-bold text-slate-800 not-italic">${escapeHtml(data[k].studentName)}</span><button onclick="forceClearPass('bathroom', '${k}')" class="text-xs bg-red-100 hover:bg-red-200 text-red-700 px-2 py-0.5 rounded font-bold not-italic transition">Return</button></div>`).join('') : 'No students out.';
         }
     } else {
         const hallCount = document.getElementById('dash-hall-count');
