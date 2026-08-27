@@ -11,6 +11,22 @@ const auth = getAuth(app);
 const db = getDatabase(app);
 const provider = new GoogleAuthProvider();
 
+// Room label — was hardcoded as static "ROOM 176" text with no JS behind it
+// at all, so it never updated per-room. Same fix as teacher.js.
+const roomLabelEl = document.getElementById('room-label');
+if (roomLabelEl) roomLabelEl.textContent = `TEACHER STATION • ${APP_CONFIG.department}`;
+
+// Live clock — roster.html has the same placeholder teacher.html had before
+// it was wired up. Same fix, ported over.
+const liveClockEl = document.getElementById('live-clock');
+if (liveClockEl) {
+  const tickClock = () => {
+    liveClockEl.textContent = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+  };
+  tickClock();
+  setInterval(tickClock, 1000);
+}
+
 // Same fixup as teacher.js — keep every nav link on this page pointed at
 // whatever room is currently loaded, instead of silently dropping back to
 // the default room when switching between dashboard/roster/kiosk.
