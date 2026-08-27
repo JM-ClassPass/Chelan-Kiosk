@@ -9,6 +9,18 @@ const auth = getAuth(app);
 const db = getDatabase(app);
 const provider = new GoogleAuthProvider();
 
+// Live clock — this existed in the HTML markup but was never wired up to
+// any JS, so it just sat frozen at its placeholder text. Mirrors the same
+// approach kiosk.js already uses.
+const liveClockEl = document.getElementById('live-clock');
+if (liveClockEl) {
+  const tickClock = () => {
+    liveClockEl.textContent = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+  };
+  tickClock();
+  setInterval(tickClock, 1000);
+}
+
 // Header Profile Elements
 const userProfile = document.getElementById("user-profile");
 const userEmailSpan = document.getElementById("user-email");
