@@ -383,3 +383,10 @@ body{margin:0;line-height:inherit;}
 .space-y-1 > :not([hidden]) ~ :not([hidden]){margin-top:0.25rem;}
 .text-amber-700{color:#b45309;}
 .hover\:text-amber-900:hover{color:#78350f;}
+
+/* Added for the activity-by-hour bar chart */
+.h-16{height:4rem;}
+.rounded-t{border-top-left-radius:0.25rem;border-top-right-radius:0.25rem;}
+.px-0\.5{padding-left:0.125rem;padding-right:0.125rem;}
+.bg-amber-400{background-color:#fbbf24;}
+.text-\[9px\]{font-size:9px;}
