@@ -635,20 +635,26 @@ function updateStatsOverview() {
         }
     });
 
-    let peakText = "--";
-    if (peakHour !== null) {
-        const ampm = peakHour >= 12 ? 'PM' : 'AM';
-        const formattedHour = peakHour % 12 || 12;
-        peakText = `${formattedHour}:00 ${ampm}`;
+    // Bar chart across the school day, 8am-4pm (8 one-hour buckets).
+    // Reuses the same hourCounts already computed above for Peak Time.
+    const chartHours = [8, 9, 10, 11, 12, 13, 14, 15];
+    const chartMax = Math.max(1, ...chartHours.map(h => hourCounts[h] || 0)); // avoid divide-by-zero when nothing's happened yet
+    const chartEl = document.getElementById('activity-chart');
+    if (chartEl) {
+        chartEl.innerHTML = chartHours.map(h => {
+            const count = hourCounts[h] || 0;
+            const pct = Math.max(4, Math.round((count / chartMax) * 100)); // 4% floor so a zero hour still shows a visible sliver
+            const isPeak = h === peakHour && count > 0;
+            const label = `${h % 12 || 12}${h >= 12 ? 'PM' : 'AM'}: ${count} event${count === 1 ? '' : 's'}`;
+            return `<div class="flex-1 ${isPeak ? 'bg-amber-400' : 'bg-slate-200'} rounded-t" style="height:${pct}%" title="${label}"></div>`;
+        }).join('');
     }
 
     const statCheckins = document.getElementById('stat-checkins');
     const statPasses = document.getElementById('stat-passes');
-    const statPeak = document.getElementById('stat-peak');
 
     if (statCheckins) statCheckins.textContent = checkinCount;
     if (statPasses) statPasses.textContent = passCount;
-    if (statPeak) statPeak.textContent = peakText;
 }
 
 function renderPendingApprovals() {
