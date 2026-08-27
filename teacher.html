@@ -117,12 +117,12 @@
     <div class="max-w-[1700px] w-full mx-auto p-4 lg:p-6 flex-grow flex flex-col">
         <main class="grid grid-cols-1 xl:grid-cols-12 gap-6 flex-grow">
 
-            <!-- LEFT COLUMN: Currently In Room -->
+            <!-- LEFT COLUMN: Devices Checked In -->
             <div class="xl:col-span-4 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col h-[500px] xl:h-[calc(100vh-100px)]">
                 <div class="p-4 border-b border-slate-100 flex flex-col gap-2.5">
                     <div class="flex justify-between items-center">
                         <h2 class="text-lg font-bold flex items-center gap-2">
-                            <span>📱</span> Currently In Room
+                            <span>📱</span> Devices Checked-In
                         </h2>
                         <button onclick="clearAllActivity()" class="bg-red-700 hover:bg-red-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm">
                             Check Out All
@@ -157,10 +157,10 @@
                     <div id="pending-approvals-list" class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-1"></div>
                 </div>
                 
-                <!-- Bathroom Pass Card -->
+                <!-- Bathroom Passes Card -->
                 <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm border-t-4 border-t-red-600 flex flex-col min-h-[100px]">
                     <div class="flex justify-between items-center mb-1.5">
-                        <h3 class="font-bold text-base flex items-center gap-1.5"><span>🚻</span> Bathroom Pass</h3>
+                        <h3 class="font-bold text-base flex items-center gap-1.5"><span>🚻</span> Bathroom Passes</h3>
                         <span id="dash-pass-count" class="bg-red-50 text-red-700 text-xs font-bold px-2 py-0.5 rounded-md border border-red-100">0/1 Out</span>
                     </div>
                     <div id="bathroom-status-detail" class="flex-grow flex items-center text-xs text-slate-400 italic">
@@ -171,7 +171,7 @@
                 <!-- Hall Pass Card -->
                 <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm border-t-4 border-t-indigo-600 flex flex-col min-h-[100px]">
                     <div class="flex justify-between items-center mb-1.5">
-                        <h3 class="font-bold text-base flex items-center gap-1.5"><span>🎟️</span> Hall Pass</h3>
+                        <h3 class="font-bold text-base flex items-center gap-1.5"><span>🎟️</span> Hall Passes</h3>
                         <span id="dash-hall-count" class="bg-indigo-50 text-indigo-700 text-xs font-bold px-2 py-0.5 rounded-md border border-indigo-100">0 Out</span>
                     </div>
                     <div id="hallpass-status-detail" class="flex-grow flex items-start flex-col gap-1 overflow-y-auto custom-scrollbar text-xs text-slate-400 italic pt-1">
