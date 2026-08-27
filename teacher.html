@@ -157,14 +157,6 @@
                     <div id="pending-approvals-list" class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-1"></div>
                 </div>
                 
-                <!-- Manual Pass Override Card -->
-                <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm">
-                    <h3 class="font-bold text-xs flex items-center gap-1.5 text-slate-700 mb-1"><span>🆘</span> Manual Pass Override</h3>
-                    <p class="text-[10px] text-slate-400 mb-2">For students without a phone checked in — search, then issue a pass directly.</p>
-                    <input type="text" id="manual-pass-search" placeholder="Search by name or ID..." class="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg focus:outline-none focus:border-chelan bg-slate-50 mb-2">
-                    <div id="manual-pass-results" class="space-y-1 max-h-40 overflow-y-auto custom-scrollbar"></div>
-                </div>
-
                 <!-- Bathroom Pass Card -->
                 <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm border-t-4 border-t-red-600 flex flex-col min-h-[100px]">
                     <div class="flex justify-between items-center mb-1.5">
@@ -185,6 +177,14 @@
                     <div id="hallpass-status-detail" class="flex-grow flex items-start flex-col gap-1 overflow-y-auto custom-scrollbar text-xs text-slate-400 italic pt-1">
                         No students out.
                     </div>
+                </div>
+                
+ <!-- Manual Pass Override Card -->
+                <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm">
+                    <h3 class="font-bold text-xs flex items-center gap-1.5 text-slate-700 mb-1"><span>🆘</span> Manual Pass Override</h3>
+                    <p class="text-[10px] text-slate-400 mb-2">For students without a phone checked in — search, then issue a pass directly.</p>
+                    <input type="text" id="manual-pass-search" placeholder="Search by name or ID..." class="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg focus:outline-none focus:border-chelan bg-slate-50 mb-2">
+                    <div id="manual-pass-results" class="space-y-1 max-h-40 overflow-y-auto custom-scrollbar"></div>
                 </div>
 
                 <!-- Daily Metrics Card -->
