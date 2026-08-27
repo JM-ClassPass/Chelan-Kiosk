@@ -24,15 +24,15 @@ setPersistence(auth, browserSessionPersistence)
     
     // ==========================================
     // 1. KIOSK CONFIGURATION
-    // Other teachers can easily update their room details below.
+    // Room name comes from APP_CONFIG.department (set per-room in config.js's
+    // ROOMS registry) — no separate room number to keep in sync here anymore.
     // ==========================================
     const KIOSK_CONFIG = {
-      roomNumber: "176",
       kioskName: "STUDENT KIOSK",
     };
 
     // Apply Configuration to the UI
-    document.getElementById('kiosk-room').innerHTML = `${KIOSK_CONFIG.kioskName} &bull; ROOM ${KIOSK_CONFIG.roomNumber}`;
+    document.getElementById('kiosk-room').innerHTML = `${KIOSK_CONFIG.kioskName} &bull; ${APP_CONFIG.department}`;
 
     // ==========================================
     // 2. State Variables
