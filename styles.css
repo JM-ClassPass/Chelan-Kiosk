@@ -390,3 +390,39 @@ body{margin:0;line-height:inherit;}
 .px-0\.5{padding-left:0.125rem;padding-right:0.125rem;}
 .bg-amber-400{background-color:#fbbf24;}
 .text-\[9px\]{font-size:9px;}
+
+/* Pill toggle switch for kiosk self-checkout on/off (bathroom/hall passes).
+   Hand-built rather than composed from utility classes since a real toggle
+   needs a track + sliding knob with state-based color/position, which isn't
+   expressible as simple Tailwind fragments. */
+.pass-toggle {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: 9999px;
+  background-color: #cbd5e1;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background-color 150ms ease;
+}
+.pass-toggle[data-enabled="true"] {
+  background-color: #16a34a;
+}
+.pass-toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background-color: #ffffff;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+  transition: transform 150ms ease;
+}
+.pass-toggle[data-enabled="true"] .pass-toggle-knob {
+  transform: translateX(16px);
+}
+.opacity-40{opacity:0.4;}
+.opacity-50{opacity:0.5;}
