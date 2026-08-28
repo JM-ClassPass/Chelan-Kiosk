@@ -33,6 +33,21 @@ if (liveClockEl) {
   setInterval(tickClock, 1000);
 }
 
+// Running elapsed-time clocks on each bathroom/hall pass row. These need
+// their own tick separate from Firebase's onValue callbacks, since Firebase
+// only re-renders when the underlying DATA changes (a pass starting or
+// ending) — nothing pushes an update just because a second passed. This
+// reads the timestamp already stamped into each row's data-timestamp
+// attribute at render time, so it works for however many rows exist at
+// any moment without needing to know about them in advance.
+setInterval(() => {
+  document.querySelectorAll('.pass-timer').forEach(el => {
+    const ts = parseInt(el.dataset.timestamp, 10);
+    if (!ts) { el.textContent = '--'; return; }
+    el.textContent = formatDuration(Date.now() - ts);
+  });
+}, 1000);
+
 // Room label — was hardcoded as static "ROOM 176" text with no JS behind it
 // at all, so it never updated per-room, even though the kiosk correctly did.
 const roomLabelEl = document.getElementById('room-label');
@@ -828,14 +843,14 @@ function renderPasses(type, data) {
         if (passCount) passCount.textContent = `${keys.length} Out`;
         const d = document.getElementById('bathroom-status-detail');
         if (d) {
-            d.innerHTML = keys.length ? keys.map(k => `<div class="w-full flex justify-between items-center mb-1"><span class="font-bold text-slate-800 not-italic">${escapeHtml(data[k].studentName)}</span><button onclick="forceClearPass('bathroom', '${k}')" class="text-xs bg-red-100 hover:bg-red-200 text-red-700 px-2 py-0.5 rounded font-bold not-italic transition">Return</button></div>`).join('') : 'No students out.';
+            d.innerHTML = keys.length ? keys.map(k => `<div class="w-full flex justify-between items-center mb-1"><span class="font-bold text-slate-800 not-italic">${escapeHtml(data[k].studentName)}</span><span class="pass-timer font-mono text-slate-500 not-italic mx-2" data-timestamp="${data[k].timestamp || ''}">--</span><button onclick="forceClearPass('bathroom', '${k}')" class="text-xs bg-red-100 hover:bg-red-200 text-red-700 px-2 py-0.5 rounded font-bold not-italic transition">Return</button></div>`).join('') : 'No students out.';
         }
     } else {
         const hallCount = document.getElementById('dash-hall-count');
         if (hallCount) hallCount.textContent = `${keys.length} Out`;
         const d = document.getElementById('hallpass-status-detail');
         if (d) {
-            d.innerHTML = keys.length ? keys.map(k => `<div class="w-full flex justify-between items-center mb-1"><span class="font-bold text-slate-800 not-italic">${escapeHtml(data[k].studentName)}</span><button onclick="forceClearPass('hall', '${k}')" class="text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-2 py-0.5 rounded font-bold not-italic transition">Return</button></div>`).join('') : 'No students out.';
+            d.innerHTML = keys.length ? keys.map(k => `<div class="w-full flex justify-between items-center mb-1"><span class="font-bold text-slate-800 not-italic">${escapeHtml(data[k].studentName)}</span><span class="pass-timer font-mono text-slate-500 not-italic mx-2" data-timestamp="${data[k].timestamp || ''}">--</span><button onclick="forceClearPass('hall', '${k}')" class="text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-2 py-0.5 rounded font-bold not-italic transition">Return</button></div>`).join('') : 'No students out.';
         }
     }
 }
