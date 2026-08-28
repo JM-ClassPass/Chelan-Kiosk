@@ -161,7 +161,13 @@
                 <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm border-t-4 border-t-red-600 flex flex-col min-h-[100px]">
                     <div class="flex justify-between items-center mb-1.5">
                         <h3 class="font-bold text-base flex items-center gap-1.5"><span>🚻</span> Bathroom Passes</h3>
-                        <span id="dash-pass-count" class="bg-red-50 text-red-700 text-xs font-bold px-2 py-0.5 rounded-md border border-red-100">0/1 Out</span>
+                        <span id="dash-pass-count" class="bg-red-50 text-red-700 text-xs font-bold px-2 py-0.5 rounded-md border border-red-100">0 Out</span>
+                    </div>
+                    <div class="flex justify-between items-center mb-1.5 bg-slate-50 rounded-lg px-2 py-1">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Kiosk Self-Checkout</span>
+                        <button type="button" id="toggle-bathroom-kiosk" class="pass-toggle" data-enabled="true" aria-label="Toggle kiosk-issued bathroom passes">
+                            <span class="pass-toggle-knob"></span>
+                        </button>
                     </div>
                     <div id="bathroom-status-detail" class="flex-grow flex items-start flex-col gap-1 overflow-y-auto custom-scrollbar text-xs text-slate-400 italic pt-1">
                         No students out.
@@ -173,6 +179,12 @@
                     <div class="flex justify-between items-center mb-1.5">
                         <h3 class="font-bold text-base flex items-center gap-1.5"><span>🎟️</span> Hall Passes</h3>
                         <span id="dash-hall-count" class="bg-indigo-50 text-indigo-700 text-xs font-bold px-2 py-0.5 rounded-md border border-indigo-100">0 Out</span>
+                    </div>
+                    <div class="flex justify-between items-center mb-1.5 bg-slate-50 rounded-lg px-2 py-1">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Kiosk Self-Checkout</span>
+                        <button type="button" id="toggle-hall-kiosk" class="pass-toggle" data-enabled="true" aria-label="Toggle kiosk-issued hall passes">
+                            <span class="pass-toggle-knob"></span>
+                        </button>
                     </div>
                     <div id="hallpass-status-detail" class="flex-grow flex items-start flex-col gap-1 overflow-y-auto custom-scrollbar text-xs text-slate-400 italic pt-1">
                         No students out.
