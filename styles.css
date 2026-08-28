@@ -426,3 +426,5 @@ body{margin:0;line-height:inherit;}
 }
 .opacity-40{opacity:0.4;}
 .opacity-50{opacity:0.5;}
+.mx-2{margin-left:0.5rem;margin-right:0.5rem;}
+.not-italic{font-style:normal;}
