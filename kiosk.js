@@ -83,6 +83,72 @@ setPersistence(auth, browserSessionPersistence)
       hall: { badge: 'Hall Pass Mode Active', title: 'Hall Pass', subtitle: 'Scan/Enter ID to sign out/in with a hall pass.' }
     };
 
+    // Teacher-controlled on/off switches for kiosk self-service bathroom/hall
+    // passes. Default to true (enabled) when the node doesn't exist yet, so
+    // existing classrooms aren't suddenly locked out the moment this ships.
+    // This only gates NEW kiosk-initiated requests — it never touches
+    // active_bathroom_passes/active_hall_passes, so anything already checked
+    // out stays exactly as-is regardless of the toggle.
+    let bathroomKioskEnabled = true;
+    let hallKioskEnabled = true;
+
+    function isModeKioskEnabled(mode) {
+      if (mode === 'bathroom') return bathroomKioskEnabled;
+      if (mode === 'hall') return hallKioskEnabled;
+      return true; // phone storage is never gated by this
+    }
+
+    // Re-renders whichever tab is currently selected — used both on tab
+    // click and whenever the teacher flips a toggle live, so a student
+    // standing at the kiosk sees the disabled message appear immediately
+    // rather than only after their next tap.
+    function renderCurrentModeScreen() {
+      const disabled = !isModeKioskEnabled(currentMode);
+      const cfg = tabConfigs[currentMode];
+
+      if (disabled) {
+        const passLabel = currentMode === 'bathroom' ? 'Bathroom Passes' : 'Hall Passes';
+        badge.textContent = `${cfg.title} — Disabled`;
+        title.textContent = 'Currently Unavailable';
+        subtitle.textContent = `Kiosk-issued ${passLabel} are currently disabled by the teacher.`;
+        pocketContainer.classList.add('hidden');
+        idInput.disabled = true;
+        idInput.placeholder = 'Unavailable — see your teacher';
+        submitIdBtn.disabled = true;
+        submitIdBtn.classList.add('opacity-50', 'cursor-not-allowed');
+      } else {
+        badge.textContent = cfg.badge;
+        title.textContent = cfg.title;
+        subtitle.textContent = cfg.subtitle;
+        idInput.disabled = false;
+        idInput.placeholder = 'Scan or Type ID...';
+        submitIdBtn.disabled = false;
+        submitIdBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        if (currentMode === 'phone') {
+          pocketContainer.classList.remove('hidden');
+        } else {
+          pocketContainer.classList.add('hidden');
+        }
+      }
+    }
+
+    // Dims (but doesn't remove) the tab buttons for any mode the teacher has
+    // disabled, so it's visually clear before a student even taps it.
+    function updateTabDimming() {
+      tabs.forEach(t => {
+        const mode = t.dataset.action;
+        t.classList.toggle('opacity-40', !isModeKioskEnabled(mode));
+      });
+    }
+
+    onValue(ref(db, 'kiosk_settings'), (snap) => {
+      const data = snap.val() || {};
+      bathroomKioskEnabled = data.bathroomEnabled !== false;
+      hallKioskEnabled = data.hallEnabled !== false;
+      updateTabDimming();
+      renderCurrentModeScreen();
+    });
+
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
         tabs.forEach(t => {
@@ -91,18 +157,15 @@ setPersistence(auth, browserSessionPersistence)
         
         tab.className = "kiosk-tab py-3.5 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 transition bg-[#0B4F2C] text-white shadow-md";
         currentMode = tab.dataset.action;
-        
-        badge.textContent = tabConfigs[currentMode].badge;
-        title.textContent = tabConfigs[currentMode].title;
-        subtitle.textContent = tabConfigs[currentMode].subtitle;
+        updateTabDimming();
 
-        if (currentMode === 'phone') {
-          pocketContainer.classList.remove('hidden');
-          autoSelectLowestPocket();
-        } else {
-          pocketContainer.classList.add('hidden');
+        if (currentMode !== 'phone') {
           selectedPocket = null;
         }
+        if (isModeKioskEnabled(currentMode)) {
+          if (currentMode === 'phone') autoSelectLowestPocket();
+        }
+        renderCurrentModeScreen();
         idInput.focus();
       });
     });
@@ -246,6 +309,8 @@ setPersistence(auth, browserSessionPersistence)
 
     // Initial load
     buildPocketGrid();
+    renderCurrentModeScreen();
+    updateTabDimming();
 
     // 7. Core Database Operations
     submitIdBtn.addEventListener('click', () => handleIdSubmit());
@@ -368,6 +433,11 @@ setPersistence(auth, browserSessionPersistence)
           showOverlay(`WELCOME BACK`, `${studentData.firstName} has returned`, 'success');
         } else {
           // --- BATHROOM OUT LOGIC ---
+          if (!bathroomKioskEnabled) {
+            showOverlay('ACTION DENIED', 'Kiosk-issued Bathroom Passes are currently disabled by the teacher.', 'error');
+            idInput.value = '';
+            return;
+          }
           if (!hasPhone) {
             showOverlay('ACTION DENIED', 'You must check in your phone first.', 'error');
             idInput.value = '';
@@ -403,6 +473,11 @@ setPersistence(auth, browserSessionPersistence)
           showOverlay(`WELCOME BACK`, `${studentData.firstName} has returned`, 'success');
         } else {
           // --- HALL OUT LOGIC ---
+          if (!hallKioskEnabled) {
+            showOverlay('ACTION DENIED', 'Kiosk-issued Hall Passes are currently disabled by the teacher.', 'error');
+            idInput.value = '';
+            return;
+          }
           if (!hasPhone) {
             showOverlay('ACTION DENIED', 'You must check in your phone first.', 'error');
             idInput.value = '';
