@@ -597,6 +597,38 @@ onValue(ref(db, 'active_hall_passes'), s => {
     renderPasses('h', hallPassesData);
     renderPhones();
 });
+
+// Kiosk self-checkout toggles (bathroom/hall). Default to enabled (true)
+// when the node doesn't exist yet, matching kiosk.js's own default.
+const toggleBathroomKiosk = document.getElementById('toggle-bathroom-kiosk');
+const toggleHallKiosk = document.getElementById('toggle-hall-kiosk');
+
+onValue(ref(db, 'kiosk_settings'), s => {
+    const data = s.val() || {};
+    const bathroomEnabled = data.bathroomEnabled !== false;
+    const hallEnabled = data.hallEnabled !== false;
+    if (toggleBathroomKiosk) toggleBathroomKiosk.setAttribute('data-enabled', bathroomEnabled ? 'true' : 'false');
+    if (toggleHallKiosk) toggleHallKiosk.setAttribute('data-enabled', hallEnabled ? 'true' : 'false');
+});
+
+if (toggleBathroomKiosk) {
+    toggleBathroomKiosk.addEventListener('click', () => {
+        const currentlyEnabled = toggleBathroomKiosk.getAttribute('data-enabled') === 'true';
+        set(ref(db, 'kiosk_settings/bathroomEnabled'), !currentlyEnabled).catch(err => {
+            console.error("Toggle bathroom kiosk setting failed:", err);
+            alert("Couldn't update the setting: " + err.message);
+        });
+    });
+}
+if (toggleHallKiosk) {
+    toggleHallKiosk.addEventListener('click', () => {
+        const currentlyEnabled = toggleHallKiosk.getAttribute('data-enabled') === 'true';
+        set(ref(db, 'kiosk_settings/hallEnabled'), !currentlyEnabled).catch(err => {
+            console.error("Toggle hall kiosk setting failed:", err);
+            alert("Couldn't update the setting: " + err.message);
+        });
+    });
+}
 onValue(ref(db, 'pending_roster_approvals'), s => {
     pendingApprovalsData = s.val() || {};
     renderPendingApprovals();
