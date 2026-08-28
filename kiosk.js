@@ -108,22 +108,16 @@ setPersistence(auth, browserSessionPersistence)
 
       if (disabled) {
         const passLabel = currentMode === 'bathroom' ? 'Bathroom Passes' : 'Hall Passes';
-        badge.textContent = `${cfg.title} — Disabled`;
-        title.textContent = 'Currently Unavailable';
-        subtitle.textContent = `Kiosk-issued ${passLabel} are currently disabled by the teacher.`;
+        badge.textContent = `${cfg.title} — New Checkouts Disabled`;
+        title.textContent = cfg.title;
+        subtitle.textContent = `Kiosk-issued ${passLabel} are disabled for new checkouts by the teacher. If you're already out, scan your ID to check back in.`;
         pocketContainer.classList.add('hidden');
-        idInput.disabled = true;
-        idInput.placeholder = 'Unavailable — see your teacher';
-        submitIdBtn.disabled = true;
-        submitIdBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        idInput.placeholder = 'Scan or Type ID...';
       } else {
         badge.textContent = cfg.badge;
         title.textContent = cfg.title;
         subtitle.textContent = cfg.subtitle;
-        idInput.disabled = false;
         idInput.placeholder = 'Scan or Type ID...';
-        submitIdBtn.disabled = false;
-        submitIdBtn.classList.remove('opacity-50', 'cursor-not-allowed');
         if (currentMode === 'phone') {
           pocketContainer.classList.remove('hidden');
         } else {
@@ -434,7 +428,7 @@ setPersistence(auth, browserSessionPersistence)
         } else {
           // --- BATHROOM OUT LOGIC ---
           if (!bathroomKioskEnabled) {
-            showOverlay('ACTION DENIED', 'Kiosk-issued Bathroom Passes are currently disabled by the teacher.', 'error');
+            showOverlay('ACTION DENIED', 'New Bathroom Pass checkouts are currently disabled by the teacher.', 'error');
             idInput.value = '';
             return;
           }
@@ -474,7 +468,7 @@ setPersistence(auth, browserSessionPersistence)
         } else {
           // --- HALL OUT LOGIC ---
           if (!hallKioskEnabled) {
-            showOverlay('ACTION DENIED', 'Kiosk-issued Hall Passes are currently disabled by the teacher.', 'error');
+            showOverlay('ACTION DENIED', 'New Hall Pass checkouts are currently disabled by the teacher.', 'error');
             idInput.value = '';
             return;
           }
