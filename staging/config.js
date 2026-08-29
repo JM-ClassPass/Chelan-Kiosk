@@ -44,6 +44,7 @@ const DEFAULT_ROOM = "dev";
 const ROOMS = {
   "176": {
     schoolName: "Chelan High",
+    logoUrl: "https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png",
     department: "ROOM 176",
     pocketLayout: {
       rows: 5,                          // Rows in the phone pocket grid
@@ -71,6 +72,7 @@ const ROOMS = {
 
   "150": {
     schoolName: "Chelan High",
+    logoUrl: "https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png",
     department: "ROOM 150",
     pocketLayout: {
       rows: 5,                          // Rows in the phone pocket grid
@@ -94,7 +96,8 @@ const ROOMS = {
   },
 
   "dev": {
-    schoolName: "Chelan High",
+    schoolName: "ClassPass Dev",
+    logoUrl: "", // intentionally empty — dev shouldn't depend on school-hosted assets at all
     department: "DEV / STAGING",
     pocketLayout: {
       rows: 5,
@@ -120,6 +123,7 @@ const ROOMS = {
   // Add new classrooms here, e.g.:
   // "203": {
   //   schoolName: "Chelan High",
+  //   logoUrl: "https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png", // or "" to show no logo
   //   department: "ROOM 203",
   //   pocketLayout: { rows: 4, cols: 8 },
   //   maxBathroomPasses: 1,
@@ -151,7 +155,7 @@ if (!roomConfig) {
 }
 
 export const APP_CONFIG = {
-  version: "***Dev2.1.1***",
+  version: "v2.1.1",
   ...roomConfig
 };
 
@@ -208,4 +212,45 @@ export function escapeHtml(str) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+// Applies this room's school name / logo everywhere those used to be
+// hardcoded directly in the HTML. Call once, early, on every page.
+// Looks for elements marked with a data-brand attribute rather than
+// specific IDs, so it works identically across index.html/teacher.html/
+// roster.html without needing three separate copies of this logic:
+//   data-brand="school-name"  -> filled with APP_CONFIG.schoolName
+//   data-brand="logo"         -> src set to APP_CONFIG.logoUrl, or
+//                                 hidden entirely if logoUrl is empty
+//   data-brand="footer"       -> filled with a standard footer line
+// Also updates the favicon and (optionally) the page title.
+export function applyBranding(titleSuffix) {
+  const schoolName = APP_CONFIG.schoolName || "ClassPass";
+  const logoUrl = APP_CONFIG.logoUrl || "";
+
+  document.querySelectorAll('[data-brand="school-name"]').forEach(el => {
+    el.textContent = schoolName;
+  });
+
+  document.querySelectorAll('[data-brand="logo"]').forEach(el => {
+    if (logoUrl) {
+      el.src = logoUrl;
+      el.style.display = "";
+    } else {
+      el.style.display = "none";
+    }
+  });
+
+  const favicon = document.querySelector('link[rel="icon"]');
+  if (favicon && logoUrl) {
+    favicon.href = logoUrl;
+  }
+
+  document.querySelectorAll('[data-brand="footer"]').forEach(el => {
+    el.textContent = `${schoolName} Classroom Pass System \u2022 Powered by Firebase`;
+  });
+
+  if (titleSuffix) {
+    document.title = `${schoolName} \u2014 ClassPass ${titleSuffix}`;
+  }
 }

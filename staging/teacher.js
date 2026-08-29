@@ -1,13 +1,14 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getDatabase, ref, get, onValue, set, push, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-import { APP_CONFIG, escapeHtml } from "./config.js";
+import { APP_CONFIG, escapeHtml, applyBranding } from "./config.js";
 
 // 1. Initialize Firebase App, Auth & DB
 const app = initializeApp(APP_CONFIG.firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 const provider = new GoogleAuthProvider();
+applyBranding("Dashboard");
 
 // Every link to index.html/teacher.html/roster.html on this page needs to
 // carry the CURRENT room forward, or clicking between dashboard/roster/kiosk
