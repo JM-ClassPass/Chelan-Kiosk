@@ -154,7 +154,7 @@ const ROOMS = {
     }
   },
 
-  "moe": {
+  "M211": {
     schoolName: "Morgen Owings Elementary",
     logoUrl: "", // M.O.E.'s own logo, once you have one to use
     department: "Room 211",
@@ -215,7 +215,7 @@ if (!roomConfig) {
 }
 
 export const APP_CONFIG = {
-  version: "v3.0.1",
+  version: "v2.1.1",
   ...roomConfig
 };
 
