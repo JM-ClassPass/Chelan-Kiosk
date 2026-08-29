@@ -10,6 +10,21 @@ const db = getDatabase(app);
 const provider = new GoogleAuthProvider();
 applyBranding("Dashboard");
 
+// Rooms without phone storage (M.O.E.) don't need the Devices Checked-In
+// card at all — hide it and give that freed width to the middle column
+// (pass cards, manual override, etc.) instead. Rooms with phone storage
+// (Chelan HS) are completely untouched by this, since the condition is
+// false there and neither element's classes get changed.
+if (!APP_CONFIG.enablePhoneStorage) {
+    const phoneCardColumn = document.getElementById('phone-card-column');
+    const middleColumn = document.getElementById('middle-column');
+    if (phoneCardColumn) phoneCardColumn.classList.add('hidden');
+    if (middleColumn) {
+        middleColumn.classList.remove('xl:col-span-3');
+        middleColumn.classList.add('xl:col-span-7'); // 3 + the freed 4 from the phone card
+    }
+}
+
 // Every link to index.html/teacher.html/roster.html on this page needs to
 // carry the CURRENT room forward, or clicking between dashboard/roster/kiosk
 // silently drops back to the default room. Rewriting hrefs here instead of
@@ -710,7 +725,8 @@ function updateStatsOverview() {
                 checkinCount++;
             }
 
-            if (type === 'BP' || type === 'HP' || details.includes('BP-') || details.includes('HP-')) {
+            const passLogCodes = APP_CONFIG.enabledPassTypes.map(pt => PASS_TYPES[pt].logCode);
+            if (passLogCodes.includes(type) || passLogCodes.some(code => details.includes(code + '-'))) {
                 passCount++;
             }
 
@@ -912,12 +928,20 @@ function renderLogs(data) {
         let duration = l.duration || '--';
 
         let badgeClass = "bg-green-100 text-green-800 border-green-300";
-        if (actionType === 'BP' || detailsCode.startsWith('BP')) {
-            actionType = 'BP';
-            badgeClass = "bg-red-100 text-red-800 border-red-300";
-        } else if (actionType === 'HP' || detailsCode.startsWith('HP')) {
-            actionType = 'HP';
-            badgeClass = "bg-indigo-100 text-indigo-800 border-indigo-300";
+
+        // Match this log entry's type/details against every enabled pass
+        // type's logCode (BP, HP, GR, ...) instead of hardcoding just BP/HP
+        // — this is what makes Goat Room (and any future pass type) show
+        // up correctly here automatically, with no further code changes.
+        const matchedPassType = APP_CONFIG.enabledPassTypes.find(pt => {
+            const code = PASS_TYPES[pt].logCode;
+            return actionType === code || detailsCode.startsWith(code);
+        });
+
+        if (matchedPassType) {
+            const meta = PASS_TYPES[matchedPassType];
+            actionType = meta.logCode;
+            badgeClass = `bg-${meta.color}-100 text-${meta.color}-800 border-${meta.color}-300`;
         } else {
             actionType = 'Phone';
         }
