@@ -190,7 +190,7 @@ if (!roomConfig) {
 }
 
 export const APP_CONFIG = {
-  version: "v2.1.1",
+  version: "v3.0.0",
   ...roomConfig
 };
 
