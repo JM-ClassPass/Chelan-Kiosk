@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getDatabase, ref, get, onValue, set, push, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-import { APP_CONFIG, escapeHtml, applyBranding } from "./config.js";
+import { APP_CONFIG, PASS_TYPES, escapeHtml, applyBranding } from "./config.js";
 
 // 1. Initialize Firebase App, Auth & DB
 const app = initializeApp(APP_CONFIG.firebaseConfig);
@@ -137,8 +137,7 @@ if (logoutBtn) {
 // 4. STATE VARIABLES
 // ==========================================
 let phonesData = {};
-let bathroomPassesData = {};
-let hallPassesData = {};
+let passesData = {}; // { bathroom: {studentId: {...}}, hall: {...}, ... } - one key per APP_CONFIG.enabledPassTypes
 let pendingApprovalsData = {};
 let logsData = {};
 let rosterData = {}; // for the Manual Pass Override search — not currently rendered as a full roster view here, just used for name lookups
@@ -275,26 +274,20 @@ window.forceRemovePhone = async (id) => {
             });
         }
 
-        // Also close out any bathroom pass this student still has open —
-        // "Check Out" for a student should mean fully checked out, not just
-        // their phone, same as what Check Out All does across everyone.
-        const bathroomPass = bathroomPassesData[id];
-        if (bathroomPass) {
-            const duration = formatDuration(now - (bathroomPass.timestamp || now));
-            await remove(ref(db, `active_bathroom_passes/${id}`));
-            await push(ref(db, 'system_logs'), {
-                studentId: id, name: studentName, type: 'BP', details: 'BP-I', timestamp: now, duration: duration
-            });
-        }
-
-        // Same for an open hall pass.
-        const hallPass = hallPassesData[id];
-        if (hallPass) {
-            const duration = formatDuration(now - (hallPass.timestamp || now));
-            await remove(ref(db, `active_hall_passes/${id}`));
-            await push(ref(db, 'system_logs'), {
-                studentId: id, name: studentName, type: 'HP', details: 'HP-I', timestamp: now, duration: duration
-            });
+        // Also close out any active pass this student still has open, of
+        // ANY enabled pass type — "Check Out" for a student should mean
+        // fully checked out, not just their phone, same as what Check Out
+        // All does across everyone.
+        for (const pt of APP_CONFIG.enabledPassTypes) {
+            const activePass = (passesData[pt] || {})[id];
+            if (activePass) {
+                const meta = PASS_TYPES[pt];
+                const duration = formatDuration(now - (activePass.timestamp || now));
+                await remove(ref(db, `active_passes/${pt}/${id}`));
+                await push(ref(db, 'system_logs'), {
+                    studentId: id, name: studentName, type: meta.logCode, details: `${meta.logCode}-I`, timestamp: now, duration: duration
+                });
+            }
         }
     } catch (err) {
         console.error("Checkout error:", err);
@@ -303,9 +296,13 @@ window.forceRemovePhone = async (id) => {
 
 window.clearAllActivity = async () => {
     const phoneKeys = Object.keys(phonesData);
-    const bpKeys = Object.keys(bathroomPassesData);
-    const hpKeys = Object.keys(hallPassesData);
-    const totalItems = phoneKeys.length + bpKeys.length + hpKeys.length;
+    const passKeysByType = {};
+    let totalPassItems = 0;
+    APP_CONFIG.enabledPassTypes.forEach(pt => {
+        passKeysByType[pt] = Object.keys(passesData[pt] || {});
+        totalPassItems += passKeysByType[pt].length;
+    });
+    const totalItems = phoneKeys.length + totalPassItems;
 
     if (totalItems === 0) return;
     if (!confirm(`Are you sure you want to Check Out ALL ${totalItems} active items (Phones & Passes)?`)) return;
@@ -324,27 +321,19 @@ window.clearAllActivity = async () => {
         }
         await remove(ref(db, 'active_phones_in_class'));
 
-        for (const id of bpKeys) {
-            const pass = bathroomPassesData[id];
-            const name = pass ? pass.studentName : id;
-            const duration = formatDuration(now - (pass.timestamp || now));
-            
-            await push(ref(db, 'system_logs'), {
-                studentId: id, name: name, type: 'BP', details: 'BP-I', timestamp: now, duration: duration
-            });
-        }
-        await remove(ref(db, 'active_bathroom_passes'));
+        for (const pt of APP_CONFIG.enabledPassTypes) {
+            const meta = PASS_TYPES[pt];
+            for (const id of passKeysByType[pt]) {
+                const pass = (passesData[pt] || {})[id];
+                const name = pass ? pass.studentName : id;
+                const duration = formatDuration(now - (pass.timestamp || now));
 
-        for (const id of hpKeys) {
-            const pass = hallPassesData[id];
-            const name = pass ? pass.studentName : id;
-            const duration = formatDuration(now - (pass.timestamp || now));
-            
-            await push(ref(db, 'system_logs'), {
-                studentId: id, name: name, type: 'HP', details: 'HP-I', timestamp: now, duration: duration
-            });
+                await push(ref(db, 'system_logs'), {
+                    studentId: id, name: name, type: meta.logCode, details: `${meta.logCode}-I`, timestamp: now, duration: duration
+                });
+            }
+            await remove(ref(db, `active_passes/${pt}`));
         }
-        await remove(ref(db, 'active_hall_passes'));
 
     } catch (err) {
         console.error("Clear all error:", err);
@@ -352,11 +341,10 @@ window.clearAllActivity = async () => {
 };
 
 window.forceClearPass = async (passType, studentId) => {
-    const node = passType === 'bathroom' ? 'active_bathroom_passes' : 'active_hall_passes';
-    const logCode = passType === 'bathroom' ? 'BP-I' : 'HP-I';
-    const actionType = passType === 'bathroom' ? 'BP' : 'HP';
-    
-    const passData = passType === 'bathroom' ? bathroomPassesData[studentId] : hallPassesData[studentId];
+    const meta = PASS_TYPES[passType];
+    const node = `active_passes/${passType}`;
+
+    const passData = (passesData[passType] || {})[studentId];
     const name = passData ? passData.studentName : studentId;
     
     const now = Date.now();
@@ -367,8 +355,8 @@ window.forceClearPass = async (passType, studentId) => {
         await push(ref(db, 'system_logs'), {
             studentId: studentId,
             name: name,
-            type: actionType,
-            details: logCode,
+            type: meta.logCode,
+            details: `${meta.logCode}-I`,
             timestamp: now,
             duration: duration
         });
@@ -381,18 +369,20 @@ window.issueManualPass = async (studentId, passType) => {
     const student = rosterData[studentId];
     if (!student) return;
     const fullName = `${student.firstName} ${student.lastName}`.trim();
+    const meta = PASS_TYPES[passType];
 
-    // Deliberately does NOT check for an active phone check-in — that's
-    // exactly the restriction this button exists to bypass, for students
-    // who legitimately don't have a phone to check in. Everything else
-    // (already has a pass out, only one bathroom pass at a time) still
-    // applies, same as the kiosk enforces.
-    if (bathroomPassesData[studentId] || hallPassesData[studentId]) {
+    // Deliberately does NOT check for an active phone check-in, and
+    // deliberately does NOT check maxConcurrent (e.g. the "only one
+    // bathroom pass at a time" limit) — both are exactly the restrictions
+    // this button exists to bypass. Only "already has some other pass out"
+    // still applies, same as the kiosk enforces.
+    const alreadyHasAnyPass = APP_CONFIG.enabledPassTypes.some(pt => (passesData[pt] || {})[studentId]);
+    if (alreadyHasAnyPass) {
         alert(`${fullName} already has an active pass out.`);
         return;
     }
 
-    const node = passType === 'bathroom' ? 'active_bathroom_passes' : 'active_hall_passes';
+    const node = `active_passes/${passType}`;
 
     const now = Date.now();
     try {
@@ -400,8 +390,8 @@ window.issueManualPass = async (studentId, passType) => {
         await push(ref(db, 'system_logs'), {
             studentId: studentId,
             name: fullName,
-            type: passType === 'bathroom' ? 'BP' : 'HP',
-            details: (passType === 'bathroom' ? 'BP-O' : 'HP-O') + ' (Staff)',
+            type: meta.logCode,
+            details: `${meta.logCode}-O (Staff)`,
             timestamp: now,
             duration: '--'
         });
@@ -437,13 +427,14 @@ function renderManualPassResults(query) {
     manualPassResults.innerHTML = matches.map(([id, s]) => {
         const name = escapeHtml(`${s.firstName || ''} ${s.lastName || ''}`.trim());
         const safeId = escapeHtml(id);
+        const buttons = APP_CONFIG.enabledPassTypes.map(pt => {
+            const meta = PASS_TYPES[pt];
+            return `<button onclick="issueManualPass('${safeId}', '${pt}')" class="bg-${meta.color}-100 hover:bg-${meta.color}-200 text-${meta.color}-700 px-2 py-1 rounded font-bold text-[10px]" title="Issue ${escapeHtml(meta.label)}">${meta.icon} ${meta.logCode}</button>`;
+        }).join('');
         return `
             <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs">
                 <span class="font-bold text-slate-800 truncate mr-1">${name}</span>
-                <div class="flex gap-1 flex-shrink-0">
-                    <button onclick="issueManualPass('${safeId}', 'bathroom')" class="bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded font-bold text-[10px]" title="Issue Bathroom Pass">🚻 BP</button>
-                    <button onclick="issueManualPass('${safeId}', 'hall')" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-2 py-1 rounded font-bold text-[10px]" title="Issue Hall Pass">🎟️ HP</button>
-                </div>
+                <div class="flex gap-1 flex-shrink-0">${buttons}</div>
             </div>
         `;
     }).join('');
@@ -454,9 +445,12 @@ if (manualPassSearch) {
 }
 
 // ==========================================
-// BATHROOM PASS REMINDER — recurring toast every 5 minutes per student
+// PASS REMINDER — recurring toast every 5 minutes per student, for any
+// enabled pass type (originally bathroom-only; generalized here since the
+// underlying data is now unified across pass types anyway).
 // ==========================================
-let bathroomReminderLastShown = {}; // studentId -> highest 5-min threshold already shown
+let reminderLastShown = {}; // { bathroom: {studentId: lastThreshold}, hall: {...}, ... }
+APP_CONFIG.enabledPassTypes.forEach(pt => { reminderLastShown[pt] = {}; });
 
 function showToast(title, message) {
     const container = document.getElementById('toast-container');
@@ -477,27 +471,31 @@ function showToast(title, message) {
     setTimeout(() => toast.remove(), 20000); // auto-dismiss after 20s if not manually closed
 }
 
-function checkBathroomReminders() {
-    const activeIds = new Set(Object.keys(bathroomPassesData));
+function checkPassReminders() {
+    APP_CONFIG.enabledPassTypes.forEach(pt => {
+        const data = passesData[pt] || {};
+        const activeIds = new Set(Object.keys(data));
+        const lastShownForType = reminderLastShown[pt];
 
-    // Clean up tracking for anyone no longer out (they returned).
-    for (const id of Object.keys(bathroomReminderLastShown)) {
-        if (!activeIds.has(id)) delete bathroomReminderLastShown[id];
-    }
-
-    for (const [id, data] of Object.entries(bathroomPassesData)) {
-        if (!data.timestamp) continue;
-        const elapsedMin = Math.floor((Date.now() - data.timestamp) / 60000);
-        const lastShown = bathroomReminderLastShown[id] || 0;
-        const nextThreshold = lastShown + 5;
-        if (elapsedMin >= nextThreshold) {
-            bathroomReminderLastShown[id] = nextThreshold;
-            showToast('Bathroom Pass Reminder', `${data.studentName || id} has been out for ${elapsedMin} minute${elapsedMin === 1 ? '' : 's'}.`);
+        // Clean up tracking for anyone no longer out (they returned).
+        for (const id of Object.keys(lastShownForType)) {
+            if (!activeIds.has(id)) delete lastShownForType[id];
         }
-    }
+
+        for (const [id, passInfo] of Object.entries(data)) {
+            if (!passInfo.timestamp) continue;
+            const elapsedMin = Math.floor((Date.now() - passInfo.timestamp) / 60000);
+            const lastShown = lastShownForType[id] || 0;
+            const nextThreshold = lastShown + 5;
+            if (elapsedMin >= nextThreshold) {
+                lastShownForType[id] = nextThreshold;
+                showToast(`${PASS_TYPES[pt].label} Reminder`, `${passInfo.studentName || id} has been out for ${elapsedMin} minute${elapsedMin === 1 ? '' : 's'}.`);
+            }
+        }
+    });
 }
 
-setInterval(checkBathroomReminders, 15000); // check every 15s so a threshold isn't missed by much
+setInterval(checkPassReminders, 15000); // check every 15s so a threshold isn't missed by much
 
 window.approvePendingStudent = async (id) => {
     const item = pendingApprovalsData[id];
@@ -506,31 +504,34 @@ window.approvePendingStudent = async (id) => {
     const firstName = item.firstName || '';
     const lastName = item.lastName || '';
     const fullName = `${firstName} ${lastName}`.trim() || id;
-    const pocketNum = item.pocket !== undefined ? item.pocket : 0;
     const now = Date.now();
+    // Older pending requests (from before the mode field existed) never
+    // recorded which tab they came from — treat those as phone, matching
+    // the old behavior, since a set pocket is a reliable enough sign.
+    const mode = item.mode || (item.pocket !== undefined && item.pocket !== null ? 'phone' : null);
 
     try {
         await set(ref(db, `classroom_roster/${id}`), { firstName, lastName });
 
-        const phoneEntry = {
-            studentName: fullName,
-            firstName: firstName,
-            lastName: lastName,
-            pocket: pocketNum,
-            timestamp: now
-        };
-
-        await set(ref(db, `active_phones_in_class/${id}`), phoneEntry);
-
-        const formattedPocket = String(pocketNum).padStart(2, '0');
-        await push(ref(db, 'system_logs'), {
-            studentId: id,
-            name: fullName,
-            type: 'Phone',
-            details: `CI-${formattedPocket}`,
-            timestamp: now,
-            duration: '--'
-        });
+        if (mode === 'phone') {
+            const pocketNum = item.pocket !== undefined && item.pocket !== null ? item.pocket : 0;
+            await set(ref(db, `active_phones_in_class/${id}`), {
+                studentName: fullName, firstName, lastName, pocket: pocketNum, timestamp: now
+            });
+            const formattedPocket = String(pocketNum).padStart(2, '0');
+            await push(ref(db, 'system_logs'), {
+                studentId: id, name: fullName, type: 'Phone', details: `CI-${formattedPocket}`, timestamp: now, duration: '--'
+            });
+        } else if (mode && APP_CONFIG.enabledPassTypes.includes(mode)) {
+            const meta = PASS_TYPES[mode];
+            await set(ref(db, `active_passes/${mode}/${id}`), { studentName: fullName, timestamp: now });
+            await push(ref(db, 'system_logs'), {
+                studentId: id, name: fullName, type: meta.logCode, details: `${meta.logCode}-O`, timestamp: now, duration: '--'
+            });
+        }
+        // If mode is missing/unrecognized, the student still gets added to
+        // the roster above — just without an automatic check-in, since we
+        // don't know which one they actually wanted.
 
         await remove(ref(db, `pending_roster_approvals/${id}`));
 
@@ -599,52 +600,79 @@ if (form) {
 // ==========================================
 // 8. FIREBASE REALTIME LISTENERS
 // ==========================================
+// Builds one pass card per entry in APP_CONFIG.enabledPassTypes, in the
+// same visual style the old hardcoded bathroom/hall cards used. This is
+// what lets a new pass type (Goat Room, Library) show up on the dashboard
+// just by being listed in config — no HTML or JS changes needed here.
+const passCardsContainer = document.getElementById('pass-cards-container');
+if (passCardsContainer) {
+    passCardsContainer.innerHTML = APP_CONFIG.enabledPassTypes.map(pt => {
+        const meta = PASS_TYPES[pt];
+        return `
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm border-t-4 border-t-${meta.color}-600 flex flex-col min-h-[100px]">
+                <div class="flex justify-between items-center mb-1.5">
+                    <h3 class="font-bold text-base flex items-center gap-1.5"><span>${meta.icon}</span> ${escapeHtml(meta.label)}es</h3>
+                    <span id="dash-pass-count-${pt}" class="bg-${meta.color}-50 text-${meta.color}-700 text-xs font-bold px-2 py-0.5 rounded-md border border-${meta.color}-100">0 Out</span>
+                </div>
+                <div class="flex justify-between items-center mb-1.5 bg-slate-50 rounded-lg px-2 py-1">
+                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Kiosk Self-Checkout</span>
+                    <button type="button" id="toggle-kiosk-${pt}" class="pass-toggle" data-enabled="true" aria-label="Toggle kiosk-issued ${escapeHtml(meta.label.toLowerCase())}es">
+                        <span class="pass-toggle-knob"></span>
+                    </button>
+                </div>
+                <div id="pass-status-detail-${pt}" class="flex-grow flex items-start flex-col gap-1 overflow-y-auto custom-scrollbar text-xs text-slate-400 italic pt-1">
+                    No students out.
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
 onValue(ref(db, 'active_phones_in_class'), s => {
     phonesData = s.val() || {};
     renderPhones();
 });
-onValue(ref(db, 'active_bathroom_passes'), s => {
-    bathroomPassesData = s.val() || {};
-    renderPasses('b', bathroomPassesData);
-    renderPhones();
-});
-onValue(ref(db, 'active_hall_passes'), s => {
-    hallPassesData = s.val() || {};
-    renderPasses('h', hallPassesData);
-    renderPhones();
+
+// One listener per enabled pass type, instead of one hand-written listener
+// per hardcoded type. Adding Goat Room later means this loop just runs one
+// more time — nothing here needs to change.
+APP_CONFIG.enabledPassTypes.forEach(pt => {
+    onValue(ref(db, `active_passes/${pt}`), s => {
+        passesData[pt] = s.val() || {};
+        renderPasses(pt, passesData[pt]);
+        renderPhones();
+    });
 });
 
-// Kiosk self-checkout toggles (bathroom/hall). Default to enabled (true)
-// when the node doesn't exist yet, matching kiosk.js's own default.
-const toggleBathroomKiosk = document.getElementById('toggle-bathroom-kiosk');
-const toggleHallKiosk = document.getElementById('toggle-hall-kiosk');
+// Kiosk self-checkout toggles — one per enabled pass type. Default to
+// enabled (true) when the node doesn't exist yet, matching kiosk.js's own
+// default.
+const kioskToggleButtons = {}; // { bathroom: <button element>, hall: <button element>, ... }
+APP_CONFIG.enabledPassTypes.forEach(pt => {
+    kioskToggleButtons[pt] = document.getElementById(`toggle-kiosk-${pt}`);
+});
 
 onValue(ref(db, 'kiosk_settings'), s => {
     const data = s.val() || {};
-    const bathroomEnabled = data.bathroomEnabled !== false;
-    const hallEnabled = data.hallEnabled !== false;
-    if (toggleBathroomKiosk) toggleBathroomKiosk.setAttribute('data-enabled', bathroomEnabled ? 'true' : 'false');
-    if (toggleHallKiosk) toggleHallKiosk.setAttribute('data-enabled', hallEnabled ? 'true' : 'false');
+    APP_CONFIG.enabledPassTypes.forEach(pt => {
+        const enabled = (data[pt] && data[pt].enabled) !== false;
+        const btn = kioskToggleButtons[pt];
+        if (btn) btn.setAttribute('data-enabled', enabled ? 'true' : 'false');
+    });
 });
 
-if (toggleBathroomKiosk) {
-    toggleBathroomKiosk.addEventListener('click', () => {
-        const currentlyEnabled = toggleBathroomKiosk.getAttribute('data-enabled') === 'true';
-        set(ref(db, 'kiosk_settings/bathroomEnabled'), !currentlyEnabled).catch(err => {
-            console.error("Toggle bathroom kiosk setting failed:", err);
+APP_CONFIG.enabledPassTypes.forEach(pt => {
+    const btn = kioskToggleButtons[pt];
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+        const currentlyEnabled = btn.getAttribute('data-enabled') === 'true';
+        set(ref(db, `kiosk_settings/${pt}/enabled`), !currentlyEnabled).catch(err => {
+            console.error(`Toggle ${pt} kiosk setting failed:`, err);
             alert("Couldn't update the setting: " + err.message);
         });
     });
-}
-if (toggleHallKiosk) {
-    toggleHallKiosk.addEventListener('click', () => {
-        const currentlyEnabled = toggleHallKiosk.getAttribute('data-enabled') === 'true';
-        set(ref(db, 'kiosk_settings/hallEnabled'), !currentlyEnabled).catch(err => {
-            console.error("Toggle hall kiosk setting failed:", err);
-            alert("Couldn't update the setting: " + err.message);
-        });
-    });
-}
+});
+
 onValue(ref(db, 'pending_roster_approvals'), s => {
     pendingApprovalsData = s.val() || {};
     renderPendingApprovals();
@@ -802,21 +830,17 @@ function renderPhones() {
 
     list.innerHTML = gridOrderedItems.map(item => {
         const id = item.id;
-        const hasBathroomPass = !!bathroomPassesData[id];
-        const hasHallPass = !!hallPassesData[id];
+        const activePassType = APP_CONFIG.enabledPassTypes.find(pt => (passesData[pt] || {})[id]);
 
         let containerClass = "border-green-200 bg-green-50/70";
         let badgeClass = "text-green-800 bg-green-200/80";
         let passTag = "";
 
-        if (hasBathroomPass) {
-            containerClass = "border-red-300 bg-red-100/90 shadow-sm";
-            badgeClass = "text-red-900 bg-red-200 font-black";
-            passTag = `<span class="text-[9px] bg-red-600 text-white font-black px-1 py-0.5 rounded uppercase">BP</span>`;
-        } else if (hasHallPass) {
-            containerClass = "border-indigo-300 bg-indigo-100/90 shadow-sm";
-            badgeClass = "text-indigo-900 bg-indigo-200 font-black";
-            passTag = `<span class="text-[9px] bg-indigo-600 text-white font-black px-1 py-0.5 rounded uppercase">HP</span>`;
+        if (activePassType) {
+            const meta = PASS_TYPES[activePassType];
+            containerClass = `border-${meta.color}-300 bg-${meta.color}-100/90 shadow-sm`;
+            badgeClass = `text-${meta.color}-900 bg-${meta.color}-200 font-black`;
+            passTag = `<span class="text-[9px] bg-${meta.color}-600 text-white font-black px-1 py-0.5 rounded uppercase">${meta.logCode}</span>`;
         }
 
         const displayNameRaw = item.studentName || `${item.firstName || ''} ${item.lastName || ''}`.trim() || 'Student';
@@ -837,22 +861,14 @@ function renderPhones() {
     }).join('');
 }
 
-function renderPasses(type, data) {
+function renderPasses(passType, data) {
     const keys = Object.keys(data);
-    if(type === 'b') {
-        const passCount = document.getElementById('dash-pass-count');
-        if (passCount) passCount.textContent = `${keys.length} Out`;
-        const d = document.getElementById('bathroom-status-detail');
-        if (d) {
-            d.innerHTML = keys.length ? keys.map(k => `<div class="w-full flex justify-between items-center mb-1"><span class="font-bold text-slate-800 not-italic">${escapeHtml(data[k].studentName)}</span><span class="pass-timer font-mono text-slate-500 not-italic mx-2" data-timestamp="${data[k].timestamp || ''}">--</span><button onclick="forceClearPass('bathroom', '${k}')" class="text-xs bg-red-100 hover:bg-red-200 text-red-700 px-2 py-0.5 rounded font-bold not-italic transition">Return</button></div>`).join('') : 'No students out.';
-        }
-    } else {
-        const hallCount = document.getElementById('dash-hall-count');
-        if (hallCount) hallCount.textContent = `${keys.length} Out`;
-        const d = document.getElementById('hallpass-status-detail');
-        if (d) {
-            d.innerHTML = keys.length ? keys.map(k => `<div class="w-full flex justify-between items-center mb-1"><span class="font-bold text-slate-800 not-italic">${escapeHtml(data[k].studentName)}</span><span class="pass-timer font-mono text-slate-500 not-italic mx-2" data-timestamp="${data[k].timestamp || ''}">--</span><button onclick="forceClearPass('hall', '${k}')" class="text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-2 py-0.5 rounded font-bold not-italic transition">Return</button></div>`).join('') : 'No students out.';
-        }
+    const meta = PASS_TYPES[passType];
+    const countEl = document.getElementById(`dash-pass-count-${passType}`);
+    if (countEl) countEl.textContent = `${keys.length} Out`;
+    const d = document.getElementById(`pass-status-detail-${passType}`);
+    if (d) {
+        d.innerHTML = keys.length ? keys.map(k => `<div class="w-full flex justify-between items-center mb-1"><span class="font-bold text-slate-800 not-italic">${escapeHtml(data[k].studentName)}</span><span class="pass-timer font-mono text-slate-500 not-italic mx-2" data-timestamp="${data[k].timestamp || ''}">--</span><button onclick="forceClearPass('${passType}', '${k}')" class="text-xs bg-${meta.color}-100 hover:bg-${meta.color}-200 text-${meta.color}-700 px-2 py-0.5 rounded font-bold not-italic transition">Return</button></div>`).join('') : 'No students out.';
     }
 }
 

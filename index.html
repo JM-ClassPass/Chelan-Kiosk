@@ -40,16 +40,8 @@
 
   <!-- Main Navigation Screen Tabs -->
   <main class="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1400px] w-full mx-auto flex flex-col">
-    <div class="grid grid-cols-3 gap-3 mb-6 bg-slate-200/60 p-1.5 rounded-2xl border border-slate-300/60">
-      <button id="tab-phone" class="kiosk-tab py-3.5 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 transition bg-[#0B4F2C] text-white shadow-md" data-action="phone">
-        <i class="fa-solid fa-mobile-screen-button text-base"></i> Phone Storage
-      </button>
-      <button id="tab-bathroom" class="kiosk-tab py-3.5 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 transition text-slate-600 hover:text-slate-900 hover:bg-white/60" data-action="bathroom">
-        <i class="fa-solid fa-restroom text-base"></i> Bathroom Pass
-      </button>
-      <button id="tab-hall" class="kiosk-tab py-3.5 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 transition text-slate-600 hover:text-slate-900 hover:bg-white/60" data-action="hall">
-        <i class="fa-solid fa-person-walking text-base"></i> Hall Pass
-      </button>
+    <div id="tab-container" class="grid gap-3 mb-6 bg-slate-200/60 p-1.5 rounded-2xl border border-slate-300/60">
+      <!-- Tabs built by kiosk.js from APP_CONFIG.enablePhoneStorage / enabledPassTypes -->
     </div>
 
     <!-- Main Active Screen Content Area -->
