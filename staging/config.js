@@ -41,6 +41,37 @@
 // copied over when promoting tested files out of /staging/.
 const DEFAULT_ROOM = "dev";
 
+// PASS_TYPES is the one place a new kind of pass gets defined — its display
+// label, icon, color, which database node it lives in, and its log code.
+// Adding Goat Room or Library Pass later means adding an entry HERE and
+// listing it in a room's enabledPassTypes below — nothing else in this file,
+// and nothing in kiosk.js/teacher.js/teacher.html, needs to change. Rules
+// don't need touching either: database.rules.json uses a $passType wildcard
+// that covers whatever key is used here automatically.
+export const PASS_TYPES = {
+  bathroom: {
+    label: "Bathroom Pass",
+    icon: "🚻",
+    color: "red",       // must match a family with real CSS in styles.css
+    logCode: "BP",
+    maxConcurrent: 1    // null = unlimited; a number caps global concurrent count (still overridable via Manual Pass Override)
+  },
+  hall: {
+    label: "Hall Pass",
+    icon: "🎟️",
+    color: "indigo",
+    logCode: "HP",
+    maxConcurrent: null
+  }
+  // goatroom: {
+  //   label: "Goat Room Pass",
+  //   icon: "🐐",
+  //   color: "amber",
+  //   logCode: "GR",
+  //   maxConcurrent: null
+  // }
+};
+
 const ROOMS = {
   "176": {
     schoolName: "Chelan High",
@@ -50,7 +81,8 @@ const ROOMS = {
       rows: 5,                          // Rows in the phone pocket grid
       cols: 7                           // Columns in the phone pocket grid
     },
-    maxBathroomPasses: 1,             // Max active bathroom passes allowed
+    enablePhoneStorage: true,
+    enabledPassTypes: ["bathroom", "hall"],
     // Dedicated permanent sign-in used by this room's kiosk (not a real
     // mailbox). This is public the same way everything else in this file
     // is public — access control comes from database.rules.json on this
@@ -78,7 +110,8 @@ const ROOMS = {
       rows: 5,                          // Rows in the phone pocket grid
       cols: 7                           // Columns in the phone pocket grid
     },
-    maxBathroomPasses: 1,             // Max active bathroom passes allowed
+    enablePhoneStorage: true,
+    enabledPassTypes: ["bathroom", "hall"],
     kioskAuth: {
       email: "classpass-room150@chelanschools.net",
       password: "Michael2026!"
@@ -103,7 +136,8 @@ const ROOMS = {
       rows: 5,
       cols: 7
     },
-    maxBathroomPasses: 1,
+    enablePhoneStorage: true,
+    enabledPassTypes: ["bathroom", "hall"],
     kioskAuth: {
       email: "jm-classpass-dev@jdoggg.com",
       password: "Classpassdev2026!"
@@ -126,7 +160,8 @@ const ROOMS = {
   //   logoUrl: "https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png", // or "" to show no logo
   //   department: "ROOM 203",
   //   pocketLayout: { rows: 4, cols: 8 },
-  //   maxBathroomPasses: 1,
+  //   enablePhoneStorage: true,
+  //   enabledPassTypes: ["bathroom", "hall"], // add "goatroom" etc. once defined in PASS_TYPES above
   //   kioskAuth: { email: "classpass-room203@chelanschools.net", password: "..." },
   //   firebaseConfig: {
   //     apiKey: "...",             // same as room 176 if same Firebase project

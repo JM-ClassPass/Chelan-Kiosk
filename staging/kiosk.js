@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getDatabase, ref, onValue, get, set, push, remove, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-import { APP_CONFIG, applyBranding } from "./config.js";
+import { APP_CONFIG, PASS_TYPES, applyBranding } from "./config.js";
 
 // 1. Initialize Firebase App, Auth, and Database
 const app = initializeApp(APP_CONFIG.firebaseConfig);
@@ -43,14 +43,14 @@ setPersistence(auth, browserSessionPersistence)
     // ==========================================
     // 2. State Variables
     // ==========================================
-    let currentMode = 'phone';
+    let currentMode = APP_CONFIG.enablePhoneStorage ? 'phone' : APP_CONFIG.enabledPassTypes[0];
     let selectedPocket = null;
     let occupiedPockets = [];
     let unrecognizedAttempts = {};
 
     // 3. UI Element References
     const clockEl = document.getElementById('kiosk-clock');
-    const tabs = document.querySelectorAll('.kiosk-tab');
+    const tabContainer = document.getElementById('tab-container');
     const pocketContainer = document.getElementById('phone-pocket-container');
     const pocketGrid = document.getElementById('pocket-grid');
 
@@ -83,25 +83,57 @@ setPersistence(auth, browserSessionPersistence)
     }, 1000);
 
     // 5. Tab UI Switching Logic
-    const tabConfigs = {
-      phone: { badge: 'Phone Storage Mode Active', title: 'Phone Storage', subtitle: 'Scan/Enter your student ID to check your mobile device in/out of a pocket.' },
-      bathroom: { badge: 'Bathroom Pass Mode Active', title: 'Bathroom Pass', subtitle: 'Scan/Enter ID to sign out/in for the restroom.' },
-      hall: { badge: 'Hall Pass Mode Active', title: 'Hall Pass', subtitle: 'Scan/Enter ID to sign out/in with a hall pass.' }
-    };
+    // The tab LIST itself is built from config now (phone, if enabled, plus
+    // every entry in enabledPassTypes) instead of three fixed HTML buttons —
+    // this is what lets M.O.E. run with no phone tab and a third pass type
+    // without touching this file or index.html at all.
+    const tabList = [
+      ...(APP_CONFIG.enablePhoneStorage ? ['phone'] : []),
+      ...APP_CONFIG.enabledPassTypes
+    ];
 
-    // Teacher-controlled on/off switches for kiosk self-service bathroom/hall
-    // passes. Default to true (enabled) when the node doesn't exist yet, so
-    // existing classrooms aren't suddenly locked out the moment this ships.
-    // This only gates NEW kiosk-initiated requests — it never touches
-    // active_bathroom_passes/active_hall_passes, so anything already checked
-    // out stays exactly as-is regardless of the toggle.
-    let bathroomKioskEnabled = true;
-    let hallKioskEnabled = true;
+    const tabConfigs = {
+      phone: { icon: '📱', label: 'Phone Storage', badge: 'Phone Storage Mode Active', title: 'Phone Storage', subtitle: 'Scan/Enter your student ID to check your mobile device in/out of a pocket.' }
+    };
+    APP_CONFIG.enabledPassTypes.forEach(pt => {
+      const meta = PASS_TYPES[pt];
+      tabConfigs[pt] = {
+        icon: meta.icon,
+        label: meta.label,
+        badge: `${meta.label} Mode Active`,
+        title: meta.label,
+        subtitle: `Scan/Enter ID to sign out/in with a ${meta.label.toLowerCase()}.`
+      };
+    });
+
+    // Build the tab buttons themselves, reusing the exact same classes the
+    // old static buttons used, so the look is unchanged even though the
+    // markup is now generated.
+    tabContainer.style.gridTemplateColumns = `repeat(${tabList.length}, minmax(0, 1fr))`;
+    tabContainer.innerHTML = tabList.map(mode => {
+      const cfg = tabConfigs[mode];
+      const activeClasses = mode === currentMode
+        ? 'bg-[#0B4F2C] text-white shadow-md'
+        : 'text-slate-600 hover:text-slate-900 hover:bg-white/60';
+      return `<button class="kiosk-tab py-3.5 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 transition ${activeClasses}" data-action="${mode}">
+        <span class="text-base">${cfg.icon}</span> ${cfg.label}
+      </button>`;
+    }).join('');
+    const tabs = tabContainer.querySelectorAll('.kiosk-tab');
+
+    // Teacher-controlled on/off switches for kiosk self-service checkouts,
+    // one per pass type. Default to true (enabled) when the node doesn't
+    // exist yet, so existing classrooms aren't suddenly locked out the
+    // moment this ships. This only gates NEW kiosk-initiated requests — it
+    // never touches active_passes, so anything already checked out stays
+    // exactly as-is regardless of the toggle. Phone storage is never gated
+    // by this at all.
+    let kioskEnabledState = {}; // { bathroom: true, hall: true, ... }
+    APP_CONFIG.enabledPassTypes.forEach(pt => { kioskEnabledState[pt] = true; });
 
     function isModeKioskEnabled(mode) {
-      if (mode === 'bathroom') return bathroomKioskEnabled;
-      if (mode === 'hall') return hallKioskEnabled;
-      return true; // phone storage is never gated by this
+      if (mode === 'phone') return true;
+      return kioskEnabledState[mode] !== false;
     }
 
     // Re-renders whichever tab is currently selected — used both on tab
@@ -113,10 +145,9 @@ setPersistence(auth, browserSessionPersistence)
       const cfg = tabConfigs[currentMode];
 
       if (disabled) {
-        const passLabel = currentMode === 'bathroom' ? 'Bathroom Passes' : 'Hall Passes';
         badge.textContent = `${cfg.title} — New Checkouts Disabled`;
         title.textContent = cfg.title;
-        subtitle.textContent = `Kiosk-issued ${passLabel} are disabled for new checkouts by the teacher. If you're already out, scan your ID to check back in.`;
+        subtitle.textContent = `Kiosk-issued ${cfg.label}es are disabled for new checkouts by the teacher. If you're already out, scan your ID to check back in.`;
         pocketContainer.classList.add('hidden');
         idInput.placeholder = 'Scan or Type ID...';
       } else {
@@ -143,8 +174,9 @@ setPersistence(auth, browserSessionPersistence)
 
     onValue(ref(db, 'kiosk_settings'), (snap) => {
       const data = snap.val() || {};
-      bathroomKioskEnabled = data.bathroomEnabled !== false;
-      hallKioskEnabled = data.hallEnabled !== false;
+      APP_CONFIG.enabledPassTypes.forEach(pt => {
+        kioskEnabledState[pt] = (data[pt] && data[pt].enabled) !== false;
+      });
       updateTabDimming();
       renderCurrentModeScreen();
     });
@@ -355,20 +387,26 @@ setPersistence(auth, browserSessionPersistence)
     async function processAction(studentId, studentData) {
       const fullName = `${studentData.firstName} ${studentData.lastName}`;
 
-      // Grab all three potential active states simultaneously
-      const phoneRef = ref(db, `active_phones_in_class/${studentId}`);
-      const bathroomRef = ref(db, `active_bathroom_passes/${studentId}`);
-      const hallRef = ref(db, `active_hall_passes/${studentId}`);
+      // Grab phone state (if enabled) plus every enabled pass type's state,
+      // all at once — however many pass types this room has configured.
+      const phoneRef = APP_CONFIG.enablePhoneStorage ? ref(db, `active_phones_in_class/${studentId}`) : null;
+      const passRefs = {};
+      APP_CONFIG.enabledPassTypes.forEach(pt => {
+        passRefs[pt] = ref(db, `active_passes/${pt}/${studentId}`);
+      });
 
-      const [phoneSnap, bathroomSnap, hallSnap] = await Promise.all([
-        get(phoneRef),
-        get(bathroomRef),
-        get(hallRef)
+      const [phoneSnap, ...passSnapsArr] = await Promise.all([
+        phoneRef ? get(phoneRef) : Promise.resolve(null),
+        ...APP_CONFIG.enabledPassTypes.map(pt => get(passRefs[pt]))
       ]);
 
-      const hasPhone = phoneSnap.exists();
-      const hasBathroom = bathroomSnap.exists();
-      const hasHall = hallSnap.exists();
+      const hasPhone = phoneSnap ? phoneSnap.exists() : false;
+      const passSnaps = {};   // { bathroom: snapshot, hall: snapshot, ... }
+      const hasPass = {};     // { bathroom: true/false, hall: true/false, ... }
+      APP_CONFIG.enabledPassTypes.forEach((pt, i) => {
+        passSnaps[pt] = passSnapsArr[i];
+        hasPass[pt] = passSnapsArr[i].exists();
+      });
 
       // Helper to calculate duration in minutes/hours
       const getDuration = (startTimestamp) => {
@@ -382,9 +420,9 @@ setPersistence(auth, browserSessionPersistence)
       if (currentMode === 'phone') {
         if (hasPhone) {
           // --- PHONE CHECKOUT LOGIC ---
-          if (hasBathroom || hasHall) {
-            const passType = hasBathroom ? "bathroom" : "hall";
-            showOverlay('ACTION DENIED', `Please return your ${passType} pass before retrieving your phone.`, 'error');
+          const activeOtherPass = APP_CONFIG.enabledPassTypes.find(pt => hasPass[pt]);
+          if (activeOtherPass) {
+            showOverlay('ACTION DENIED', `Please return your ${PASS_TYPES[activeOtherPass].label.toLowerCase()} before retrieving your phone.`, 'error');
             idInput.value = '';
             return;
           }
@@ -423,75 +461,52 @@ setPersistence(auth, browserSessionPersistence)
           showOverlay(`PHONE STORED`, `${studentData.firstName} secured phone in pocket ${pocketToUse}`, 'success');
           idInput.value = '';
         }
-      } 
-      else if (currentMode === 'bathroom') {
-        if (hasBathroom) {
-          // --- BATHROOM RETURN LOGIC ---
-          const durationStr = getDuration(bathroomSnap.val().timestamp); // Calculate Duration
-          await remove(bathroomRef);
-          await set(push(ref(db, 'system_logs')), { studentId, name: fullName, type: 'BP', details: 'BP-I', timestamp: serverTimestamp(), duration: durationStr });
+      }
+      else if (APP_CONFIG.enabledPassTypes.includes(currentMode)) {
+        // --- GENERIC PASS TYPE LOGIC — covers bathroom, hall, and any
+        // future pass type (Goat Room, Library, ...) with no new code. ---
+        const pt = currentMode;
+        const meta = PASS_TYPES[pt];
+        const passRef = passRefs[pt];
+
+        if (hasPass[pt]) {
+          // --- RETURN LOGIC ---
+          const durationStr = getDuration(passSnaps[pt].val().timestamp);
+          await remove(passRef);
+          await set(push(ref(db, 'system_logs')), { studentId, name: fullName, type: meta.logCode, details: `${meta.logCode}-I`, timestamp: serverTimestamp(), duration: durationStr });
           showOverlay(`WELCOME BACK`, `${studentData.firstName} has returned`, 'success');
         } else {
-          // --- BATHROOM OUT LOGIC ---
-          if (!bathroomKioskEnabled) {
-            showOverlay('ACTION DENIED', 'New Bathroom Pass checkouts are currently disabled by the teacher.', 'error');
+          // --- CHECKOUT LOGIC ---
+          if (!isModeKioskEnabled(pt)) {
+            showOverlay('ACTION DENIED', `New ${meta.label} checkouts are currently disabled by the teacher.`, 'error');
             idInput.value = '';
             return;
           }
-          if (!hasPhone) {
+          if (APP_CONFIG.enablePhoneStorage && !hasPhone) {
             showOverlay('ACTION DENIED', 'You must check in your phone first.', 'error');
             idInput.value = '';
             return;
           }
-          if (hasHall) {
-            showOverlay('ACTION DENIED', 'You already have a hall pass out.', 'error');
-            idInput.value = '';
-            return;
-          }
-          
-          // STRICT RULE: Only 1 bathroom pass at a time globally
-          const allBathroomRef = ref(db, 'active_bathroom_passes');
-          const allBathroomSnap = await get(allBathroomRef);
-          if (allBathroomSnap.exists() && Object.keys(allBathroomSnap.val()).length >= 1) {
-            showOverlay('ACTION DENIED', 'The bathroom pass is currently in use by another student.', 'error');
+          const conflictingPass = APP_CONFIG.enabledPassTypes.find(other => other !== pt && hasPass[other]);
+          if (conflictingPass) {
+            showOverlay('ACTION DENIED', `You already have a ${PASS_TYPES[conflictingPass].label.toLowerCase()} out.`, 'error');
             idInput.value = '';
             return;
           }
 
-          await set(bathroomRef, { studentName: fullName, timestamp: serverTimestamp() });
-          await set(push(ref(db, 'system_logs')), { studentId, name: fullName, type: 'BP', details: 'BP-O', timestamp: serverTimestamp(), duration: '--' });
-          showOverlay(`PASS CREATED`, `${studentData.firstName} signed out for bathroom`, 'success');
-        }
-        idInput.value = '';
-      } 
-      else if (currentMode === 'hall') {
-        if (hasHall) {
-          // --- HALL RETURN LOGIC ---
-          const durationStr = getDuration(hallSnap.val().timestamp); // Calculate Duration
-          await remove(hallRef);
-          await set(push(ref(db, 'system_logs')), { studentId, name: fullName, type: 'HP', details: 'HP-I', timestamp: serverTimestamp(), duration: durationStr });
-          showOverlay(`WELCOME BACK`, `${studentData.firstName} has returned`, 'success');
-        } else {
-          // --- HALL OUT LOGIC ---
-          if (!hallKioskEnabled) {
-            showOverlay('ACTION DENIED', 'New Hall Pass checkouts are currently disabled by the teacher.', 'error');
-            idInput.value = '';
-            return;
-          }
-          if (!hasPhone) {
-            showOverlay('ACTION DENIED', 'You must check in your phone first.', 'error');
-            idInput.value = '';
-            return;
-          }
-          if (hasBathroom) {
-            showOverlay('ACTION DENIED', 'You already have a bathroom pass out.', 'error');
-            idInput.value = '';
-            return;
+          if (meta.maxConcurrent !== null && meta.maxConcurrent !== undefined) {
+            const allSnap = await get(ref(db, `active_passes/${pt}`));
+            const currentCount = allSnap.exists() ? Object.keys(allSnap.val()).length : 0;
+            if (currentCount >= meta.maxConcurrent) {
+              showOverlay('ACTION DENIED', `The ${meta.label.toLowerCase()} is currently in use by another student.`, 'error');
+              idInput.value = '';
+              return;
+            }
           }
 
-          await set(hallRef, { studentName: fullName, timestamp: serverTimestamp() });
-          await set(push(ref(db, 'system_logs')), { studentId, name: fullName, type: 'HP', details: 'HP-O', timestamp: serverTimestamp(), duration: '--' });
-          showOverlay(`PASS CREATED`, `${studentData.firstName} signed out for hallway`, 'success');
+          await set(passRef, { studentName: fullName, timestamp: serverTimestamp() });
+          await set(push(ref(db, 'system_logs')), { studentId, name: fullName, type: meta.logCode, details: `${meta.logCode}-O`, timestamp: serverTimestamp(), duration: '--' });
+          showOverlay(`PASS CREATED`, `${studentData.firstName} signed out for ${meta.label.toLowerCase()}`, 'success');
         }
         idInput.value = '';
       }
@@ -534,6 +549,7 @@ setPersistence(auth, browserSessionPersistence)
         await set(ref(db, `pending_roster_approvals/${sId}`), {
           firstName: fName,
           lastName: lName,
+          mode: currentMode,
           pocket: currentMode === 'phone' ? selectedPocket : null,
           timestamp: serverTimestamp()
         });
