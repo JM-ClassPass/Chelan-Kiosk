@@ -63,13 +63,13 @@ export const PASS_TYPES = {
     logCode: "HP",
     maxConcurrent: null
   }
-  // goatroom: {
-  //   label: "Goat Room Pass",
-  //   icon: "🐐",
-  //   color: "amber",
-  //   logCode: "GR",
-  //   maxConcurrent: null
-  // }
+  goatroom: {
+    label: "Goat Room Pass",
+    icon: "🐐",
+    color: "amber",
+    logCode: "GR",
+    maxConcurrent: null
+  }
 };
 
 const ROOMS = {
@@ -152,6 +152,31 @@ const ROOMS = {
       messagingSenderId: "645480807479",
       appId: "1:645480807479:web:d280d4ef38e8754a9953b2"
     }
+  },
+
+  "moe": {
+    schoolName: "Morgen Owings Elementary",
+    logoUrl: "", // M.O.E.'s own logo, once you have one to use
+    department: "Room 211",
+    enablePhoneStorage: false, // no phone check-in at the elementary level
+    enabledPassTypes: ["bathroom", "hall", "goatroom"],
+    kioskAuth: {
+      email: "classpass@jdoggg.com",
+      password: "ClassPass2026!"
+    },
+    // This is a GENUINELY SEPARATE Firebase project, not just a new
+    // database instance — every single field below differs from Chelan
+    // HS's, not just databaseURL. Pull all of these from that new
+    // project's own Settings → General → Your apps → SDK config snippet.
+    firebaseConfig: {
+      apiKey: "AIzaSyBgIFhw50ofWS78TyDKo8YVVsXlbfSWSZ0",
+      authDomain: "moe-classpass.firebaseapp.com",
+      databaseURL: "https://moe-classpass-default-rtdb.firebaseio.com",
+      projectId: "moe-classpass",
+      storageBucket: "moe-classpass.firebasestorage.app",
+      messagingSenderId: "776663685229",
+      appId: "1:776663685229:web:c4fbf94add5818dd98c764"
+    }
   }
 
   // Add new classrooms here, e.g.:
@@ -204,6 +229,13 @@ APP_CONFIG.roomKey = requestedRoom;
 // number can never drift out of sync with the grid the way it did before
 // (config used to say 30 while the kiosk grid actually rendered 35).
 // To change pocket count, edit pocketLayout.rows / pocketLayout.cols only.
+// Rooms with enablePhoneStorage: false (like M.O.E.) can skip pocketLayout
+// entirely — defaults to 1x1 here so nothing crashes; it's never rendered
+// anyway, since the pocket grid only shows in phone mode, which those rooms
+// never enter.
+if (!APP_CONFIG.pocketLayout) {
+  APP_CONFIG.pocketLayout = { rows: 1, cols: 1 };
+}
 APP_CONFIG.pocketsAvailable = APP_CONFIG.pocketLayout.rows * APP_CONFIG.pocketLayout.cols;
 
 /**
