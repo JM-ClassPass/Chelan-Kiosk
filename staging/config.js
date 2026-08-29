@@ -62,7 +62,7 @@ export const PASS_TYPES = {
     color: "indigo",
     logCode: "HP",
     maxConcurrent: null
-  }
+  },
   goatroom: {
     label: "Goat Room Pass",
     icon: "🐐",
