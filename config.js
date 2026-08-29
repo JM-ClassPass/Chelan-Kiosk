@@ -34,11 +34,16 @@
  *   5. Push. Send the teacher their three ?room= URLs.
  */
 
+// Defaults to "176" if no ?room= is given, so existing bookmarks from
+// before the multi-room system existed keep working unchanged. The
+// /staging/ copy of this file intentionally overrides this to "dev" —
+// that override should NEVER be copied back here when promoting.
 const DEFAULT_ROOM = "176";
 
 const ROOMS = {
   "176": {
     schoolName: "Chelan High",
+    logoUrl: "https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png",
     department: "ROOM 176",
     pocketLayout: {
       rows: 5,                          // Rows in the phone pocket grid
@@ -66,6 +71,7 @@ const ROOMS = {
 
   "150": {
     schoolName: "Chelan High",
+    logoUrl: "https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png",
     department: "ROOM 150",
     pocketLayout: {
       rows: 5,                          // Rows in the phone pocket grid
@@ -86,11 +92,37 @@ const ROOMS = {
       messagingSenderId: "645480807479",
       appId: "1:645480807479:web:d280d4ef38e8754a9953b2"
     }
+  },
+
+  "dev": {
+    schoolName: "ClassPass Dev",
+    logoUrl: "", // intentionally empty — dev shouldn't depend on school-hosted assets at all
+    department: "DEV / STAGING",
+    pocketLayout: {
+      rows: 5,
+      cols: 7
+    },
+    maxBathroomPasses: 1,
+    kioskAuth: {
+      email: "jm-classpass-dev@jdoggg.com",
+      password: "Classpassdev2026!"
+    },
+    firebaseConfig: {
+      // Same project as every other room — only databaseURL differs.
+      apiKey: "AIzaSyDOqjLMzMydaR31WWUA35sr1FrNLfHPxuI",
+      authDomain: "chelan-classroom-pass-a811e.firebaseapp.com",
+      databaseURL: "https://jm-classpass-dev.firebaseio.com",
+      projectId: "chelan-classroom-pass-a811e",
+      storageBucket: "chelan-classroom-pass-a811e.firebasestorage.app",
+      messagingSenderId: "645480807479",
+      appId: "1:645480807479:web:d280d4ef38e8754a9953b2"
+    }
   }
 
   // Add new classrooms here, e.g.:
   // "203": {
   //   schoolName: "Chelan High",
+  //   logoUrl: "https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png", // or "" to show no logo
   //   department: "ROOM 203",
   //   pocketLayout: { rows: 4, cols: 8 },
   //   maxBathroomPasses: 1,
@@ -122,7 +154,7 @@ if (!roomConfig) {
 }
 
 export const APP_CONFIG = {
-  version: "v2.2",
+  version: "v2.1.1",
   ...roomConfig
 };
 
@@ -179,4 +211,45 @@ export function escapeHtml(str) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+// Applies this room's school name / logo everywhere those used to be
+// hardcoded directly in the HTML. Call once, early, on every page.
+// Looks for elements marked with a data-brand attribute rather than
+// specific IDs, so it works identically across index.html/teacher.html/
+// roster.html without needing three separate copies of this logic:
+//   data-brand="school-name"  -> filled with APP_CONFIG.schoolName
+//   data-brand="logo"         -> src set to APP_CONFIG.logoUrl, or
+//                                 hidden entirely if logoUrl is empty
+//   data-brand="footer"       -> filled with a standard footer line
+// Also updates the favicon and (optionally) the page title.
+export function applyBranding(titleSuffix) {
+  const schoolName = APP_CONFIG.schoolName || "ClassPass";
+  const logoUrl = APP_CONFIG.logoUrl || "";
+
+  document.querySelectorAll('[data-brand="school-name"]').forEach(el => {
+    el.textContent = schoolName;
+  });
+
+  document.querySelectorAll('[data-brand="logo"]').forEach(el => {
+    if (logoUrl) {
+      el.src = logoUrl;
+      el.style.display = "";
+    } else {
+      el.style.display = "none";
+    }
+  });
+
+  const favicon = document.querySelector('link[rel="icon"]');
+  if (favicon && logoUrl) {
+    favicon.href = logoUrl;
+  }
+
+  document.querySelectorAll('[data-brand="footer"]').forEach(el => {
+    el.textContent = `${schoolName} Classroom Pass System \u2022 Powered by Firebase`;
+  });
+
+  if (titleSuffix) {
+    document.title = `${schoolName} \u2014 ClassPass ${titleSuffix}`;
+  }
 }

@@ -1,12 +1,18 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getDatabase, ref, onValue, get, set, push, remove, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-import { APP_CONFIG } from "./config.js";
+import { APP_CONFIG, applyBranding } from "./config.js";
 
 // 1. Initialize Firebase App, Auth, and Database
 const app = initializeApp(APP_CONFIG.firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
+
+// Apply branding immediately — doesn't depend on Firebase auth succeeding,
+// so it shouldn't wait on it. If sign-in is slow or fails, the page should
+// still show the right school name/logo rather than sitting on whatever
+// fallback text is in the raw HTML.
+applyBranding("Kiosk");
 
 // 2. Authenticate the Kiosk
 // IMPORTANT: use tab-scoped (session) persistence, not the default

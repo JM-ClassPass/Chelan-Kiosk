@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getDatabase, ref, onValue, set, remove, get, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-import { APP_CONFIG, escapeHtml } from './config.js';
+import { APP_CONFIG, escapeHtml, applyBranding } from './config.js';
 
 // ==========================================
 // 1. FIREBASE INITIALIZATION & AUTH SETUP
@@ -10,6 +10,7 @@ const app = initializeApp(APP_CONFIG.firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 const provider = new GoogleAuthProvider();
+applyBranding("Roster");
 
 // Room label — was hardcoded as static "ROOM 176" text with no JS behind it
 // at all, so it never updated per-room. Same fix as teacher.js.
