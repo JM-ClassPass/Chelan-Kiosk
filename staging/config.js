@@ -102,14 +102,14 @@ const ROOMS = {
     },
     maxBathroomPasses: 1,
     kioskAuth: {
-      email: "REPLACE_WITH_DEV_KIOSK_EMAIL",       // e.g. classpass-dev@chelanschools.net
-      password: "REPLACE_WITH_DEV_KIOSK_PASSWORD"
+      email: "jm-classpass-dev@jdoggg.com",
+      password: "Classpassdev2026!"
     },
     firebaseConfig: {
       // Same project as every other room — only databaseURL differs.
       apiKey: "AIzaSyDOqjLMzMydaR31WWUA35sr1FrNLfHPxuI",
       authDomain: "chelan-classroom-pass-a811e.firebaseapp.com",
-      databaseURL: "REPLACE_WITH_DEV_DATABASE_URL", // e.g. https://chelan-classroom-pass-dev.firebaseio.com
+      databaseURL: "https://jm-classpass-dev.firebaseio.com",
       projectId: "chelan-classroom-pass-a811e",
       storageBucket: "chelan-classroom-pass-a811e.firebasestorage.app",
       messagingSenderId: "645480807479",
