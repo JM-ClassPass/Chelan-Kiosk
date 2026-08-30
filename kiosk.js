@@ -131,6 +131,14 @@ setPersistence(auth, browserSessionPersistence)
     let kioskEnabledState = {}; // { bathroom: true, hall: true, ... }
     APP_CONFIG.enabledPassTypes.forEach(pt => { kioskEnabledState[pt] = true; });
 
+    // Separate from kioskEnabledState above: this one controls whether a
+    // phone must be checked in at all before a student can get ANY pass.
+    // Defaults to true (required), matching the original behavior. Teacher
+    // can flip it off from the dashboard to let students get passes with
+    // no phone checked in — useful for students who don't have a phone,
+    // or a day the phone system itself is being worked around.
+    let requirePhoneCheckin = true;
+
     function isModeKioskEnabled(mode) {
       if (mode === 'phone') return true;
       return kioskEnabledState[mode] !== false;
@@ -177,6 +185,7 @@ setPersistence(auth, browserSessionPersistence)
       APP_CONFIG.enabledPassTypes.forEach(pt => {
         kioskEnabledState[pt] = (data[pt] && data[pt].enabled) !== false;
       });
+      requirePhoneCheckin = data.requirePhoneCheckin !== false;
       updateTabDimming();
       renderCurrentModeScreen();
     });
@@ -482,7 +491,7 @@ setPersistence(auth, browserSessionPersistence)
             idInput.value = '';
             return;
           }
-          if (APP_CONFIG.enablePhoneStorage && !hasPhone) {
+          if (APP_CONFIG.enablePhoneStorage && requirePhoneCheckin && !hasPhone) {
             showOverlay('ACTION DENIED', 'You must check in your phone first.', 'error');
             idInput.value = '';
             return;

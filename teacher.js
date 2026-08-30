@@ -667,6 +667,12 @@ APP_CONFIG.enabledPassTypes.forEach(pt => {
     kioskToggleButtons[pt] = document.getElementById(`toggle-kiosk-${pt}`);
 });
 
+// Separate from the per-pass-type toggles above: this one controls whether
+// a phone must be checked in at all before a student can get ANY pass.
+// Defaults to true (required) to match the kiosk's existing behavior —
+// flipping it off lets students get passes with no phone checked in.
+const toggleRequirePhone = document.getElementById('toggle-require-phone');
+
 onValue(ref(db, 'kiosk_settings'), s => {
     const data = s.val() || {};
     APP_CONFIG.enabledPassTypes.forEach(pt => {
@@ -674,6 +680,8 @@ onValue(ref(db, 'kiosk_settings'), s => {
         const btn = kioskToggleButtons[pt];
         if (btn) btn.setAttribute('data-enabled', enabled ? 'true' : 'false');
     });
+    const requirePhone = data.requirePhoneCheckin !== false;
+    if (toggleRequirePhone) toggleRequirePhone.setAttribute('data-enabled', requirePhone ? 'true' : 'false');
 });
 
 APP_CONFIG.enabledPassTypes.forEach(pt => {
@@ -687,6 +695,16 @@ APP_CONFIG.enabledPassTypes.forEach(pt => {
         });
     });
 });
+
+if (toggleRequirePhone) {
+    toggleRequirePhone.addEventListener('click', () => {
+        const currentlyRequired = toggleRequirePhone.getAttribute('data-enabled') === 'true';
+        set(ref(db, 'kiosk_settings/requirePhoneCheckin'), !currentlyRequired).catch(err => {
+            console.error('Toggle require-phone setting failed:', err);
+            alert("Couldn't update the setting: " + err.message);
+        });
+    });
+}
 
 onValue(ref(db, 'pending_roster_approvals'), s => {
     pendingApprovalsData = s.val() || {};

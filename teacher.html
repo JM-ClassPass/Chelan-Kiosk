@@ -137,6 +137,12 @@
                             <button id="sort-pocket" onclick="setPhoneSort('pocket')" class="px-2 py-0.5 rounded-md hover:text-slate-800">Pocket #</button>
                         </div>
                     </div>
+                    <div class="flex justify-between items-center bg-slate-50 rounded-lg px-2 py-1">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Require Phone for Passes</span>
+                        <button type="button" id="toggle-require-phone" class="pass-toggle" data-enabled="true" aria-label="Toggle whether a phone must be checked in before getting a pass">
+                            <span class="pass-toggle-knob"></span>
+                        </button>
+                    </div>
                 </div>
                 
                 <div id="active-phones-list" class="p-3 overflow-y-auto custom-scrollbar flex-grow grid grid-cols-2 gap-2 content-start">
