@@ -382,11 +382,28 @@ setPersistence(auth, browserSessionPersistence)
     // waits a real, substantial delay - long enough that no reasonable
     // browser heuristic would still consider it linked to the original tap
     // - before refocusing scanner-catcher for the next scan.
+    // Re-establishes focus on scanner-catcher so a barcode scan keeps
+    // working after any UI interaction. A fixed delay wasn't enough on its
+    // own: with several different places each scheduling their own
+    // independent delayed refocus (tab switches, submissions, etc.), a
+    // PREVIOUS interaction's still-pending timer could fire while a
+    // student was mid-way through a fresh, fast sequence elsewhere -
+    // landing close enough to a live tap that iOS still allowed the
+    // keyboard through. This is debounced instead: every call cancels
+    // whatever refocus was previously scheduled and starts a fresh wait,
+    // so as long as activity keeps happening, nothing ever actually fires.
+    // The real focus only happens once things have genuinely gone quiet
+    // for a moment - never while someone's still actively typing.
+    let refocusTimer = null;
     function refocusScannerCatcher() {
       if (document.activeElement && document.activeElement.blur) {
         document.activeElement.blur();
       }
-      setTimeout(() => scannerCatcher.focus(), 400);
+      if (refocusTimer) clearTimeout(refocusTimer);
+      refocusTimer = setTimeout(() => {
+        scannerCatcher.focus();
+        refocusTimer = null;
+      }, 700);
     }
 
     // A barcode scanner emulates a real keyboard - it types characters into
@@ -423,13 +440,12 @@ setPersistence(auth, browserSessionPersistence)
         idInput.value += key;
       }
       scannerCatcher.value = idInput.value;
-      // Deliberately NOT refocusing scanner-catcher here. The keypad works
-      // entirely by writing directly to .value - it never needs focus to
-      // function - and refocusing after every single tap was exactly what
-      // was still summoning the keyboard on some Android devices even with
-      // the blur+delay trick. Scanner readiness gets re-established at the
-      // next safe point instead (after a submission completes, or the next
-      // full page load).
+      // Safe to call here now that refocusScannerCatcher is debounced -
+      // every tap just pushes the pending timer further out, so it can
+      // never fire mid-sequence. This also cancels any leftover pending
+      // refocus from an EARLIER interaction (like page load or a tab
+      // switch) that hadn't fired yet when fast typing started.
+      refocusScannerCatcher();
     });
 
     async function handleIdSubmit(isRetry = false) {
