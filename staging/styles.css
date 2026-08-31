@@ -441,3 +441,12 @@ body{margin:0;line-height:inherit;}
    keyboard can ever attach to it, not because it should look inactive, so
    override the browser's default disabled appearance back to normal. */
 .kiosk-display-input:disabled{opacity:1;-webkit-text-fill-color:#1e293b;color:#1e293b;cursor:default;}
+
+/* Disables iOS Safari's native double-tap-to-zoom gesture across the whole
+   app. Without this, two taps landing close together in time - exactly
+   what fast keypad typing produces - get interpreted as "zoom in here",
+   completely independent of any focus/keyboard behavior. This is the
+   purpose-built fix for that specific gesture, not a workaround. */
+html, body {
+  touch-action: manipulation;
+}
