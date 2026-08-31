@@ -209,7 +209,7 @@ setPersistence(auth, browserSessionPersistence)
           if (currentMode === 'phone') autoSelectLowestPocket();
         }
         renderCurrentModeScreen();
-        setTimeout(() => scannerCatcher.focus(), 0);
+        refocusScannerCatcher();
       });
     });
 
@@ -262,7 +262,7 @@ setPersistence(auth, browserSessionPersistence)
       if (activeBtn) {
         activeBtn.className = 'bg-[#0B4F2C] text-white border-[#0B4F2C] font-bold py-2 rounded-lg transform scale-105 shadow-md transition text-xs';
       }
-      setTimeout(() => scannerCatcher.focus(), 0);
+      refocusScannerCatcher();
     }
 
     function autoSelectLowestPocket() {
@@ -354,7 +354,7 @@ setPersistence(auth, browserSessionPersistence)
     buildPocketGrid();
     renderCurrentModeScreen();
     updateTabDimming();
-    setTimeout(() => scannerCatcher.focus(), 0);
+    refocusScannerCatcher();
 
     // 7. Core Database Operations
     submitIdBtn.addEventListener('click', () => handleIdSubmit());
@@ -371,6 +371,22 @@ setPersistence(auth, browserSessionPersistence)
     function clearIdField() {
       idInput.value = '';
       scannerCatcher.value = '';
+    }
+
+    // Re-establishes focus on scanner-catcher so a barcode scan keeps
+    // working after any UI interaction. A plain 0ms-deferred focus() still
+    // counted as "part of the same tap" on Android and re-triggered the
+    // keyboard, so this does two things instead of relying on timing
+    // alone: explicitly blurs whatever's currently focused (dismissing any
+    // keyboard immediately, synchronously, before it can matter), then
+    // waits a real, substantial delay - long enough that no reasonable
+    // browser heuristic would still consider it linked to the original tap
+    // - before refocusing scanner-catcher for the next scan.
+    function refocusScannerCatcher() {
+      if (document.activeElement && document.activeElement.blur) {
+        document.activeElement.blur();
+      }
+      setTimeout(() => scannerCatcher.focus(), 400);
     }
 
     // A barcode scanner emulates a real keyboard - it types characters into
@@ -407,7 +423,7 @@ setPersistence(auth, browserSessionPersistence)
         idInput.value += key;
       }
       scannerCatcher.value = idInput.value;
-      setTimeout(() => scannerCatcher.focus(), 0);
+      refocusScannerCatcher();
     });
 
     async function handleIdSubmit(isRetry = false) {
@@ -585,7 +601,7 @@ setPersistence(auth, browserSessionPersistence)
       } else {
         showOverlay('ID NOT FOUND', `Attempt ${unrecognizedAttempts[studentId]} of 3. Try again.`, 'error');
         clearIdField();
-        setTimeout(() => scannerCatcher.focus(), 0);
+        refocusScannerCatcher();
       }
     }
 
@@ -593,7 +609,7 @@ setPersistence(auth, browserSessionPersistence)
       guestModal.classList.add('hidden');
       guestModal.classList.remove('flex');
       clearIdField();
-      setTimeout(() => scannerCatcher.focus(), 0);
+      refocusScannerCatcher();
     });
 
     btnSubmitGuest.addEventListener('click', async () => {
@@ -643,7 +659,7 @@ setPersistence(auth, browserSessionPersistence)
         overlay.classList.add('hidden');
         overlay.classList.remove('flex');
         if (currentMode === 'phone') autoSelectLowestPocket();
-        setTimeout(() => scannerCatcher.focus(), 0);
+        refocusScannerCatcher();
       }, 2000); 
     }
 
