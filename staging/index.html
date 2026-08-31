@@ -100,11 +100,19 @@
                ANY text input with a font-size under 16px receives focus,
                even one that's invisible and off-screen like this one. That
                zoom was what caused rapid keypad taps to land on the wrong
-               button mid-sequence. -->
+               button mid-sequence. inputmode="none" is a second, independent
+               layer specifically for Android, where a delayed refocus still
+               summoned the keyboard even with the blur+delay trick below -
+               unlike that trick, this is a standing hint the browser can
+               honor on every future focus, not something that depends on
+               getting the timing right. Doesn't affect barcode scanners at
+               all - their keystrokes are synthetic key events that bypass
+               the on-screen keyboard mechanism entirely. -->
           <input
              type="text"
              id="scanner-catcher"
              autocomplete="off"
+             inputmode="none"
              style="position:absolute; opacity:0; width:1px; height:1px; pointer-events:none; left:-9999px; font-size:16px;"
           />
         </div>

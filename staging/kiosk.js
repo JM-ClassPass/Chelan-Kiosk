@@ -423,7 +423,13 @@ setPersistence(auth, browserSessionPersistence)
         idInput.value += key;
       }
       scannerCatcher.value = idInput.value;
-      refocusScannerCatcher();
+      // Deliberately NOT refocusing scanner-catcher here. The keypad works
+      // entirely by writing directly to .value - it never needs focus to
+      // function - and refocusing after every single tap was exactly what
+      // was still summoning the keyboard on some Android devices even with
+      // the blur+delay trick. Scanner readiness gets re-established at the
+      // next safe point instead (after a submission completes, or the next
+      // full page load).
     });
 
     async function handleIdSubmit(isRetry = false) {
