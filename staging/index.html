@@ -81,9 +81,41 @@
              id="kiosk-id-input" 
              placeholder="Scan or Type ID..." 
              class="w-full text-center text-2xl font-mono font-black py-3.5 px-6 rounded-2xl border-2 border-slate-300 focus:border-[#0B4F2C] focus:ring-4 focus:ring-emerald-100 focus:outline-none transition tracking-widest text-slate-800 bg-slate-50"
-             autofocus
+             readonly
              autocomplete="off"
           />
+          <!-- Invisible, always-focused input that a barcode scanner types into.
+               Kept separate from the readonly display above so a scanner's
+               simulated keystrokes still register (readonly blocks typed
+               input from ANY source, scanner included) while the visible
+               field stays readonly to keep the on-screen mobile keyboard
+               from popping up on a touch tap. Positioned off-screen and
+               pointer-events:none so a direct tap can't land on it either. -->
+          <input
+             type="text"
+             id="scanner-catcher"
+             autocomplete="off"
+             style="position:absolute; opacity:0; width:1px; height:1px; pointer-events:none; left:-9999px;"
+          />
+        </div>
+
+        <!-- On-screen number pad — lets students enter an ID by touch
+             without triggering the device's native keyboard, which on
+             Android/iPad covers most of the screen. Digit buttons append
+             to the ID display; Enter submits the same as the button below. -->
+        <div id="number-pad" class="grid grid-cols-3 gap-2">
+          <button type="button" data-key="1" class="keypad-btn bg-slate-100 hover:bg-slate-200 active:scale-[0.96] text-slate-800 font-black text-2xl py-4 rounded-xl transition">1</button>
+          <button type="button" data-key="2" class="keypad-btn bg-slate-100 hover:bg-slate-200 active:scale-[0.96] text-slate-800 font-black text-2xl py-4 rounded-xl transition">2</button>
+          <button type="button" data-key="3" class="keypad-btn bg-slate-100 hover:bg-slate-200 active:scale-[0.96] text-slate-800 font-black text-2xl py-4 rounded-xl transition">3</button>
+          <button type="button" data-key="4" class="keypad-btn bg-slate-100 hover:bg-slate-200 active:scale-[0.96] text-slate-800 font-black text-2xl py-4 rounded-xl transition">4</button>
+          <button type="button" data-key="5" class="keypad-btn bg-slate-100 hover:bg-slate-200 active:scale-[0.96] text-slate-800 font-black text-2xl py-4 rounded-xl transition">5</button>
+          <button type="button" data-key="6" class="keypad-btn bg-slate-100 hover:bg-slate-200 active:scale-[0.96] text-slate-800 font-black text-2xl py-4 rounded-xl transition">6</button>
+          <button type="button" data-key="7" class="keypad-btn bg-slate-100 hover:bg-slate-200 active:scale-[0.96] text-slate-800 font-black text-2xl py-4 rounded-xl transition">7</button>
+          <button type="button" data-key="8" class="keypad-btn bg-slate-100 hover:bg-slate-200 active:scale-[0.96] text-slate-800 font-black text-2xl py-4 rounded-xl transition">8</button>
+          <button type="button" data-key="9" class="keypad-btn bg-slate-100 hover:bg-slate-200 active:scale-[0.96] text-slate-800 font-black text-2xl py-4 rounded-xl transition">9</button>
+          <button type="button" data-key="clear" class="keypad-btn bg-red-50 hover:bg-red-100 active:scale-[0.96] text-red-600 font-black text-sm uppercase py-4 rounded-xl transition">Clear</button>
+          <button type="button" data-key="0" class="keypad-btn bg-slate-100 hover:bg-slate-200 active:scale-[0.96] text-slate-800 font-black text-2xl py-4 rounded-xl transition">0</button>
+          <button type="button" data-key="backspace" class="keypad-btn bg-amber-50 hover:bg-amber-100 active:scale-[0.96] text-amber-700 font-black text-xl py-4 rounded-xl transition">⌫</button>
         </div>
         
         <button id="btn-submit-id" type="button" class="w-full bg-[#0B4F2C] hover:bg-[#07381e] active:scale-[0.98] text-white font-extrabold py-3.5 rounded-2xl shadow-md transition text-sm uppercase tracking-wider flex items-center justify-center gap-2">

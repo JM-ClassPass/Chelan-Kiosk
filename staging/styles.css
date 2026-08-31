@@ -362,6 +362,7 @@ body{margin:0;line-height:inherit;}
 @media (min-width:1280px){.xl\:col-span-3{grid-column:span 3 / span 3;}}
 @media (min-width:1280px){.xl\:col-span-4{grid-column:span 4 / span 4;}}
 @media (min-width:1280px){.xl\:col-span-5{grid-column:span 5 / span 5;}}
+@media (min-width:1280px){.xl\:col-span-7{grid-column:span 7 / span 7;}}
 @media (min-width:1280px){.xl\:grid-cols-12{grid-template-columns:repeat(12,minmax(0,1fr));}}
 @media (min-width:1280px){.xl\:h-\[calc(100vh-100px)\]{height:calc(100vh-100px);}}
 .z-10{z-index:10;}
@@ -429,3 +430,9 @@ body{margin:0;line-height:inherit;}
 .mx-2{margin-left:0.5rem;margin-right:0.5rem;}
 .not-italic{font-style:normal;}
 .contents{display:contents;}
+.border-amber-100{border-color:#fef3c7;}
+.border-t-amber-600{border-top-color:#d97706;}
+.bg-amber-300{background-color:#fcd34d;}
+.bg-amber-600{background-color:#d97706;}
+.active\:scale-\[0\.96\]:active{transform:scale(0.96);}
+.text-red-600{color:#dc2626;}

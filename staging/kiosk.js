@@ -65,6 +65,8 @@ setPersistence(auth, browserSessionPersistence)
 
     const idInput = document.getElementById('kiosk-id-input');
     const submitIdBtn = document.getElementById('btn-submit-id');
+    const scannerCatcher = document.getElementById('scanner-catcher');
+    const numberPad = document.getElementById('number-pad');
 
     const guestModal = document.getElementById('guest-request-modal');
     const guestIdDisplay = document.getElementById('guest-id-display');
@@ -207,7 +209,7 @@ setPersistence(auth, browserSessionPersistence)
           if (currentMode === 'phone') autoSelectLowestPocket();
         }
         renderCurrentModeScreen();
-        idInput.focus();
+        scannerCatcher.focus();
       });
     });
 
@@ -260,7 +262,7 @@ setPersistence(auth, browserSessionPersistence)
       if (activeBtn) {
         activeBtn.className = 'bg-[#0B4F2C] text-white border-[#0B4F2C] font-bold py-2 rounded-lg transform scale-105 shadow-md transition text-xs';
       }
-      idInput.focus();
+      scannerCatcher.focus();
     }
 
     function autoSelectLowestPocket() {
@@ -352,11 +354,59 @@ setPersistence(auth, browserSessionPersistence)
     buildPocketGrid();
     renderCurrentModeScreen();
     updateTabDimming();
+    scannerCatcher.focus();
 
     // 7. Core Database Operations
     submitIdBtn.addEventListener('click', () => handleIdSubmit());
     idInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') handleIdSubmit();
+    });
+
+    // Clears both the visible display AND the scanner-catching input
+    // together. Scanners don't clear a field before typing into it - they
+    // just type - so if scanner-catcher were left holding old text, the
+    // next scan's characters would append onto stale leftovers instead of
+    // starting clean.
+    function clearIdField() {
+      idInput.value = '';
+      scannerCatcher.value = '';
+    }
+
+    // A barcode scanner emulates a real keyboard - it types characters into
+    // whatever element is focused, then sends Enter. Since kiosk-id-input
+    // is now readonly (to stop the on-screen mobile keyboard from covering
+    // most of the screen when a student taps it), a scanner's simulated
+    // keystrokes would be silently blocked there too - readonly blocks
+    // typed input from ANY source, not just touch. scanner-catcher is a
+    // separate, invisible, non-readonly input that stays focused instead;
+    // its value mirrors live into the visible display below.
+    scannerCatcher.addEventListener('input', () => {
+      idInput.value = scannerCatcher.value;
+    });
+    scannerCatcher.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') handleIdSubmit();
+    });
+
+    // On-screen number pad - lets a student build up an ID by touch without
+    // ever focusing a real text input, so no native keyboard has a reason
+    // to appear. Writes directly to the same idInput.value that
+    // handleIdSubmit() already reads from, and keeps scanner-catcher in
+    // sync so a half-typed-by-touch ID doesn't get silently overwritten by
+    // a stale scanner value the next time someone scans.
+    numberPad.addEventListener('click', (e) => {
+      const btn = e.target.closest('.keypad-btn');
+      if (!btn) return;
+      const key = btn.dataset.key;
+
+      if (key === 'clear') {
+        clearIdField();
+      } else if (key === 'backspace') {
+        idInput.value = idInput.value.slice(0, -1);
+      } else {
+        idInput.value += key;
+      }
+      scannerCatcher.value = idInput.value;
+      scannerCatcher.focus();
     });
 
     async function handleIdSubmit(isRetry = false) {
@@ -432,7 +482,7 @@ setPersistence(auth, browserSessionPersistence)
           const activeOtherPass = APP_CONFIG.enabledPassTypes.find(pt => hasPass[pt]);
           if (activeOtherPass) {
             showOverlay('ACTION DENIED', `Please return your ${PASS_TYPES[activeOtherPass].label.toLowerCase()} before retrieving your phone.`, 'error');
-            idInput.value = '';
+            clearIdField();
             return;
           }
 
@@ -446,7 +496,7 @@ setPersistence(auth, browserSessionPersistence)
           });
 
           showOverlay(`PHONE RETURNED TO BACKPACK`, `${studentData.firstName} removed phone from pocket ${oldPocket}`, 'success');
-          idInput.value = '';
+          clearIdField();
         } else {
           // --- PHONE CHECK-IN LOGIC ---
           if (!selectedPocket) {
@@ -468,7 +518,7 @@ setPersistence(auth, browserSessionPersistence)
           });
 
           showOverlay(`PHONE STORED`, `${studentData.firstName} secured phone in pocket ${pocketToUse}`, 'success');
-          idInput.value = '';
+          clearIdField();
         }
       }
       else if (APP_CONFIG.enabledPassTypes.includes(currentMode)) {
@@ -488,18 +538,18 @@ setPersistence(auth, browserSessionPersistence)
           // --- CHECKOUT LOGIC ---
           if (!isModeKioskEnabled(pt)) {
             showOverlay('ACTION DENIED', `New ${meta.label} checkouts are currently disabled by the teacher.`, 'error');
-            idInput.value = '';
+            clearIdField();
             return;
           }
           if (APP_CONFIG.enablePhoneStorage && requirePhoneCheckin && !hasPhone) {
             showOverlay('ACTION DENIED', 'You must check in your phone first.', 'error');
-            idInput.value = '';
+            clearIdField();
             return;
           }
           const conflictingPass = APP_CONFIG.enabledPassTypes.find(other => other !== pt && hasPass[other]);
           if (conflictingPass) {
             showOverlay('ACTION DENIED', `You already have a ${PASS_TYPES[conflictingPass].label.toLowerCase()} out.`, 'error');
-            idInput.value = '';
+            clearIdField();
             return;
           }
 
@@ -508,7 +558,7 @@ setPersistence(auth, browserSessionPersistence)
             const currentCount = allSnap.exists() ? Object.keys(allSnap.val()).length : 0;
             if (currentCount >= meta.maxConcurrent) {
               showOverlay('ACTION DENIED', `The ${meta.label.toLowerCase()} is currently in use by another student.`, 'error');
-              idInput.value = '';
+              clearIdField();
               return;
             }
           }
@@ -517,7 +567,7 @@ setPersistence(auth, browserSessionPersistence)
           await set(push(ref(db, 'system_logs')), { studentId, name: fullName, type: meta.logCode, details: `${meta.logCode}-O`, timestamp: serverTimestamp(), duration: '--' });
           showOverlay(`PASS CREATED`, `${studentData.firstName} signed out for ${meta.label.toLowerCase()}`, 'success');
         }
-        idInput.value = '';
+        clearIdField();
       }
     }
     
@@ -533,16 +583,16 @@ setPersistence(auth, browserSessionPersistence)
         guestNameInput.focus();
       } else {
         showOverlay('ID NOT FOUND', `Attempt ${unrecognizedAttempts[studentId]} of 3. Try again.`, 'error');
-        idInput.value = '';
-        idInput.focus();
+        clearIdField();
+        scannerCatcher.focus();
       }
     }
 
     btnCancelGuest.addEventListener('click', () => {
       guestModal.classList.add('hidden');
       guestModal.classList.remove('flex');
-      idInput.value = '';
-      idInput.focus();
+      clearIdField();
+      scannerCatcher.focus();
     });
 
     btnSubmitGuest.addEventListener('click', async () => {
@@ -566,7 +616,7 @@ setPersistence(auth, browserSessionPersistence)
         guestModal.classList.add('hidden');
         guestModal.classList.remove('flex');
         showOverlay('REQUEST SENT', 'Awaiting teacher approval.', 'success');
-        idInput.value = '';
+        clearIdField();
       } catch (err) {
         alert("Error sending request.");
       }
@@ -592,7 +642,7 @@ setPersistence(auth, browserSessionPersistence)
         overlay.classList.add('hidden');
         overlay.classList.remove('flex');
         if (currentMode === 'phone') autoSelectLowestPocket();
-        idInput.focus();
+        scannerCatcher.focus();
       }, 2000); 
     }
 
