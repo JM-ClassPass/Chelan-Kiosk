@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>CHS ClassPass Kiosk</title>
   <link rel="icon" type="image/png" href="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png">
   <link rel="stylesheet" href="styles.css">
@@ -80,10 +80,60 @@
              type="text" 
              id="kiosk-id-input" 
              placeholder="Scan or Type ID..." 
-             class="w-full text-center text-2xl font-mono font-black py-3.5 px-6 rounded-2xl border-2 border-slate-300 focus:border-[#0B4F2C] focus:ring-4 focus:ring-emerald-100 focus:outline-none transition tracking-widest text-slate-800 bg-slate-50"
-             autofocus
+             class="w-full text-center text-2xl font-mono font-black py-3.5 px-6 rounded-2xl border-2 border-slate-300 focus:border-[#0B4F2C] focus:ring-4 focus:ring-emerald-100 focus:outline-none transition tracking-widest text-slate-800 bg-slate-50 kiosk-display-input"
+             disabled
              autocomplete="off"
           />
+          <!-- Invisible, always-focused input that a barcode scanner types into.
+               Kept separate from the disabled display above so a scanner's
+               simulated keystrokes still register (a disabled/readonly field
+               blocks typed input from ANY source, scanner included) while the
+               visible field stays disabled to guarantee the on-screen mobile
+               keyboard can never appear - a disabled element can't receive
+               focus at all, in any browser, so there's nothing for a keyboard
+               to attach to. (readonly alone wasn't reliable enough in
+               practice - some browser/OS combos still summoned the keyboard
+               on a readonly field despite it blocking edits.)
+               Positioned off-screen and pointer-events:none so a direct tap
+               can't land on it either. font-size:16px is also required here
+               specifically - iOS Safari auto-zooms the whole page whenever
+               ANY text input with a font-size under 16px receives focus,
+               even one that's invisible and off-screen like this one. That
+               zoom was what caused rapid keypad taps to land on the wrong
+               button mid-sequence. inputmode="none" is a second, independent
+               layer specifically for Android, where a delayed refocus still
+               summoned the keyboard even with the blur+delay trick below -
+               unlike that trick, this is a standing hint the browser can
+               honor on every future focus, not something that depends on
+               getting the timing right. Doesn't affect barcode scanners at
+               all - their keystrokes are synthetic key events that bypass
+               the on-screen keyboard mechanism entirely. -->
+          <input
+             type="text"
+             id="scanner-catcher"
+             autocomplete="off"
+             inputmode="none"
+             style="position:absolute; opacity:0; width:1px; height:1px; pointer-events:none; left:-9999px; font-size:16px;"
+          />
+        </div>
+
+        <!-- On-screen number pad — lets students enter an ID by touch
+             without triggering the device's native keyboard, which on
+             Android/iPad covers most of the screen. Digit buttons append
+             to the ID display; Enter submits the same as the button below. -->
+        <div id="number-pad" class="grid grid-cols-3 gap-2">
+          <button type="button" data-key="1" class="keypad-btn bg-slate-100 hover:bg-slate-200 active:scale-[0.96] text-slate-800 font-black text-2xl py-4 rounded-xl transition">1</button>
+          <button type="button" data-key="2" class="keypad-btn bg-slate-100 hover:bg-slate-200 active:scale-[0.96] text-slate-800 font-black text-2xl py-4 rounded-xl transition">2</button>
+          <button type="button" data-key="3" class="keypad-btn bg-slate-100 hover:bg-slate-200 active:scale-[0.96] text-slate-800 font-black text-2xl py-4 rounded-xl transition">3</button>
+          <button type="button" data-key="4" class="keypad-btn bg-slate-100 hover:bg-slate-200 active:scale-[0.96] text-slate-800 font-black text-2xl py-4 rounded-xl transition">4</button>
+          <button type="button" data-key="5" class="keypad-btn bg-slate-100 hover:bg-slate-200 active:scale-[0.96] text-slate-800 font-black text-2xl py-4 rounded-xl transition">5</button>
+          <button type="button" data-key="6" class="keypad-btn bg-slate-100 hover:bg-slate-200 active:scale-[0.96] text-slate-800 font-black text-2xl py-4 rounded-xl transition">6</button>
+          <button type="button" data-key="7" class="keypad-btn bg-slate-100 hover:bg-slate-200 active:scale-[0.96] text-slate-800 font-black text-2xl py-4 rounded-xl transition">7</button>
+          <button type="button" data-key="8" class="keypad-btn bg-slate-100 hover:bg-slate-200 active:scale-[0.96] text-slate-800 font-black text-2xl py-4 rounded-xl transition">8</button>
+          <button type="button" data-key="9" class="keypad-btn bg-slate-100 hover:bg-slate-200 active:scale-[0.96] text-slate-800 font-black text-2xl py-4 rounded-xl transition">9</button>
+          <button type="button" data-key="clear" class="keypad-btn bg-red-50 hover:bg-red-100 active:scale-[0.96] text-red-600 font-black text-sm uppercase py-4 rounded-xl transition">Clear</button>
+          <button type="button" data-key="0" class="keypad-btn bg-slate-100 hover:bg-slate-200 active:scale-[0.96] text-slate-800 font-black text-2xl py-4 rounded-xl transition">0</button>
+          <button type="button" data-key="backspace" class="keypad-btn bg-amber-50 hover:bg-amber-100 active:scale-[0.96] text-amber-700 font-black text-xl py-4 rounded-xl transition">⌫</button>
         </div>
         
         <button id="btn-submit-id" type="button" class="w-full bg-[#0B4F2C] hover:bg-[#07381e] active:scale-[0.98] text-white font-extrabold py-3.5 rounded-2xl shadow-md transition text-sm uppercase tracking-wider flex items-center justify-center gap-2">
