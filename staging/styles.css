@@ -436,3 +436,8 @@ body{margin:0;line-height:inherit;}
 .bg-amber-600{background-color:#d97706;}
 .active\:scale-\[0\.96\]:active{transform:scale(0.96);}
 .text-red-600{color:#dc2626;}
+/* Disabled inputs are normally grayed out and get a "not-allowed" cursor
+   by default - this input is disabled specifically to guarantee no mobile
+   keyboard can ever attach to it, not because it should look inactive, so
+   override the browser's default disabled appearance back to normal. */
+.kiosk-display-input:disabled{opacity:1;-webkit-text-fill-color:#1e293b;color:#1e293b;cursor:default;}

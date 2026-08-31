@@ -358,9 +358,10 @@ setPersistence(auth, browserSessionPersistence)
 
     // 7. Core Database Operations
     submitIdBtn.addEventListener('click', () => handleIdSubmit());
-    idInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') handleIdSubmit();
-    });
+    // Note: no keypress listener on idInput itself - it's disabled, which
+    // means it can never receive focus or keyboard events at all. Enter-key
+    // handling lives on scanner-catcher below instead, since that's the
+    // only element that ever actually has focus.
 
     // Clears both the visible display AND the scanner-catching input
     // together. Scanners don't clear a field before typing into it - they

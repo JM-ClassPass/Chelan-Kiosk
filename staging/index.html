@@ -80,17 +80,22 @@
              type="text" 
              id="kiosk-id-input" 
              placeholder="Scan or Type ID..." 
-             class="w-full text-center text-2xl font-mono font-black py-3.5 px-6 rounded-2xl border-2 border-slate-300 focus:border-[#0B4F2C] focus:ring-4 focus:ring-emerald-100 focus:outline-none transition tracking-widest text-slate-800 bg-slate-50"
-             readonly
+             class="w-full text-center text-2xl font-mono font-black py-3.5 px-6 rounded-2xl border-2 border-slate-300 focus:border-[#0B4F2C] focus:ring-4 focus:ring-emerald-100 focus:outline-none transition tracking-widest text-slate-800 bg-slate-50 kiosk-display-input"
+             disabled
              autocomplete="off"
           />
           <!-- Invisible, always-focused input that a barcode scanner types into.
-               Kept separate from the readonly display above so a scanner's
-               simulated keystrokes still register (readonly blocks typed
-               input from ANY source, scanner included) while the visible
-               field stays readonly to keep the on-screen mobile keyboard
-               from popping up on a touch tap. Positioned off-screen and
-               pointer-events:none so a direct tap can't land on it either. -->
+               Kept separate from the disabled display above so a scanner's
+               simulated keystrokes still register (a disabled/readonly field
+               blocks typed input from ANY source, scanner included) while the
+               visible field stays disabled to guarantee the on-screen mobile
+               keyboard can never appear - a disabled element can't receive
+               focus at all, in any browser, so there's nothing for a keyboard
+               to attach to. (readonly alone wasn't reliable enough in
+               practice - some browser/OS combos still summoned the keyboard
+               on a readonly field despite it blocking edits.)
+               Positioned off-screen and pointer-events:none so a direct tap
+               can't land on it either. -->
           <input
              type="text"
              id="scanner-catcher"
