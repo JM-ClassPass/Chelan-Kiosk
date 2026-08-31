@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>CHS ClassPass Kiosk</title>
   <link rel="icon" type="image/png" href="https://assets-rst7.rschooltoday.com/rst7files/uploads/sites/396/2025/08/12090756/Logo-Header.png">
   <link rel="stylesheet" href="styles.css">
@@ -95,12 +95,17 @@
                practice - some browser/OS combos still summoned the keyboard
                on a readonly field despite it blocking edits.)
                Positioned off-screen and pointer-events:none so a direct tap
-               can't land on it either. -->
+               can't land on it either. font-size:16px is also required here
+               specifically - iOS Safari auto-zooms the whole page whenever
+               ANY text input with a font-size under 16px receives focus,
+               even one that's invisible and off-screen like this one. That
+               zoom was what caused rapid keypad taps to land on the wrong
+               button mid-sequence. -->
           <input
              type="text"
              id="scanner-catcher"
              autocomplete="off"
-             style="position:absolute; opacity:0; width:1px; height:1px; pointer-events:none; left:-9999px;"
+             style="position:absolute; opacity:0; width:1px; height:1px; pointer-events:none; left:-9999px; font-size:16px;"
           />
         </div>
 
