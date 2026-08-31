@@ -209,7 +209,7 @@ setPersistence(auth, browserSessionPersistence)
           if (currentMode === 'phone') autoSelectLowestPocket();
         }
         renderCurrentModeScreen();
-        scannerCatcher.focus();
+        setTimeout(() => scannerCatcher.focus(), 0);
       });
     });
 
@@ -262,7 +262,7 @@ setPersistence(auth, browserSessionPersistence)
       if (activeBtn) {
         activeBtn.className = 'bg-[#0B4F2C] text-white border-[#0B4F2C] font-bold py-2 rounded-lg transform scale-105 shadow-md transition text-xs';
       }
-      scannerCatcher.focus();
+      setTimeout(() => scannerCatcher.focus(), 0);
     }
 
     function autoSelectLowestPocket() {
@@ -354,7 +354,7 @@ setPersistence(auth, browserSessionPersistence)
     buildPocketGrid();
     renderCurrentModeScreen();
     updateTabDimming();
-    scannerCatcher.focus();
+    setTimeout(() => scannerCatcher.focus(), 0);
 
     // 7. Core Database Operations
     submitIdBtn.addEventListener('click', () => handleIdSubmit());
@@ -407,7 +407,7 @@ setPersistence(auth, browserSessionPersistence)
         idInput.value += key;
       }
       scannerCatcher.value = idInput.value;
-      scannerCatcher.focus();
+      setTimeout(() => scannerCatcher.focus(), 0);
     });
 
     async function handleIdSubmit(isRetry = false) {
@@ -585,7 +585,7 @@ setPersistence(auth, browserSessionPersistence)
       } else {
         showOverlay('ID NOT FOUND', `Attempt ${unrecognizedAttempts[studentId]} of 3. Try again.`, 'error');
         clearIdField();
-        scannerCatcher.focus();
+        setTimeout(() => scannerCatcher.focus(), 0);
       }
     }
 
@@ -593,7 +593,7 @@ setPersistence(auth, browserSessionPersistence)
       guestModal.classList.add('hidden');
       guestModal.classList.remove('flex');
       clearIdField();
-      scannerCatcher.focus();
+      setTimeout(() => scannerCatcher.focus(), 0);
     });
 
     btnSubmitGuest.addEventListener('click', async () => {
@@ -643,7 +643,7 @@ setPersistence(auth, browserSessionPersistence)
         overlay.classList.add('hidden');
         overlay.classList.remove('flex');
         if (currentMode === 'phone') autoSelectLowestPocket();
-        scannerCatcher.focus();
+        setTimeout(() => scannerCatcher.focus(), 0);
       }, 2000); 
     }
 
