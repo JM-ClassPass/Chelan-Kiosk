@@ -45,6 +45,16 @@ setPersistence(auth, browserSessionPersistence)
     // ==========================================
     let currentMode = APP_CONFIG.enablePhoneStorage ? 'phone' : APP_CONFIG.enabledPassTypes[0];
     let selectedPocket = null;
+    // Declared early, deliberately - a Firebase listener set up later in this
+    // file (subscribePocketOccupancy) can fire almost immediately on
+    // subscription and reach refocusScannerCatcher() before the script has
+    // finished its normal top-to-bottom execution. Since refocusTimer is a
+    // `let`, it exists but stays locked (a "temporal dead zone") until its
+    // own declaration line actually runs - so if it were declared further
+    // down near refocusScannerCatcher itself, that early listener callback
+    // could reach it before it's initialized and throw a ReferenceError,
+    // which is exactly what broke the kiosk's connection.
+    let refocusTimer = null;
     let occupiedPockets = [];
     let unrecognizedAttempts = {};
 
@@ -374,15 +384,6 @@ setPersistence(auth, browserSessionPersistence)
     }
 
     // Re-establishes focus on scanner-catcher so a barcode scan keeps
-    // working after any UI interaction. A plain 0ms-deferred focus() still
-    // counted as "part of the same tap" on Android and re-triggered the
-    // keyboard, so this does two things instead of relying on timing
-    // alone: explicitly blurs whatever's currently focused (dismissing any
-    // keyboard immediately, synchronously, before it can matter), then
-    // waits a real, substantial delay - long enough that no reasonable
-    // browser heuristic would still consider it linked to the original tap
-    // - before refocusing scanner-catcher for the next scan.
-    // Re-establishes focus on scanner-catcher so a barcode scan keeps
     // working after any UI interaction. A fixed delay wasn't enough on its
     // own: with several different places each scheduling their own
     // independent delayed refocus (tab switches, submissions, etc.), a
@@ -394,7 +395,8 @@ setPersistence(auth, browserSessionPersistence)
     // so as long as activity keeps happening, nothing ever actually fires.
     // The real focus only happens once things have genuinely gone quiet
     // for a moment - never while someone's still actively typing.
-    let refocusTimer = null;
+    // (refocusTimer itself is declared near the top of this script, not
+    // here - see the comment there for why.)
     function refocusScannerCatcher() {
       if (document.activeElement && document.activeElement.blur) {
         document.activeElement.blur();
@@ -408,12 +410,13 @@ setPersistence(auth, browserSessionPersistence)
 
     // A barcode scanner emulates a real keyboard - it types characters into
     // whatever element is focused, then sends Enter. Since kiosk-id-input
-    // is now readonly (to stop the on-screen mobile keyboard from covering
-    // most of the screen when a student taps it), a scanner's simulated
-    // keystrokes would be silently blocked there too - readonly blocks
-    // typed input from ANY source, not just touch. scanner-catcher is a
-    // separate, invisible, non-readonly input that stays focused instead;
-    // its value mirrors live into the visible display below.
+    // is disabled (to guarantee the on-screen mobile keyboard can never
+    // cover most of the screen when a student taps it), a scanner's
+    // simulated keystrokes would be silently blocked there too - a
+    // disabled field blocks typed input from ANY source, not just touch.
+    // scanner-catcher is a separate, invisible, non-disabled input that
+    // stays focused instead; its value mirrors live into the visible
+    // display below.
     scannerCatcher.addEventListener('input', () => {
       idInput.value = scannerCatcher.value;
     });
